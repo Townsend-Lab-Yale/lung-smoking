@@ -1,2 +1,3 @@
 code/.venv
 /data/gene_coordinates.csv
+code/test.py
