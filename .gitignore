@@ -3,3 +3,4 @@ code/.venv
 code/test.py
 data/clinical_data/.DS_Store
 data/*.txt
+code/test2.py

@@ -11,27 +11,21 @@ maf_clinical = maf_clinical.drop(columns=['Unnamed: 0_x','Unnamed: 0_y'])
 maf_clinical = maf_clinical[maf_clinical['is_LUAD'] == True]
 #removes mutations with unknown chromosome locations
 maf_clinical = maf_clinical[~(maf_clinical['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))]
+#removes cfDNA MAF data from tracerx
+maf_clinical = maf_clinical[~(maf_clinical['Sample ID'].str.contains('DNA'))]
+#removes multiple tracerx samples from the same patient, leaving only one sample per patient
+indices = maf_clinical[maf_clinical['Sample ID'].str.startswith('CRUK',0) & ~(maf_clinical['Sample ID'].str.endswith(('R1','LN1')))].index
+maf_clinical = maf_clinical.drop(indices)
+
 maf_clinical.to_csv("output/luad_maf_clinical.txt")
 
-
-
 '''Below are checks to ensure that the columns contain expected values.'''
-#print(maf_clinical['Chromosome'].unique())
 '''
-['9' '4' '12' '19' '2' '21' '18' '10' '13' '3' '17' '20' '1' '11' '5' '6'
- '16' '22' '7' '15' '14' 'X' '8' 'Y' 'GL000230.1' 'hs37d5' 'GL000211.1'
- 'MT' 'GL000192.1' 'GL000214.1' 'GL000241.1' 'GL000220.1' 'GL000212.1'
- 'GL000205.1' 'GL000195.1' 'GL000218.1' 'GL000216.1' 'GL000226.1'
- 'GL000224.1' 'GL000231.1' 'GL000221.1' 'GL000234.1' 'GL000219.1'
- 'GL000191.1' 'GL000229.1' 'GL000238.1' nan]
-'''
+print(maf_clinical['Chromosome'].unique())
 #not sure how to check these three columns
 #print (maf_clinical[pd.to_numeric(maf_clinical['Start_Position'], errors='coerce').isnull()])
 #print (maf_clinical[pd.to_numeric(maf_clinical['Progression Free Survival (months)'], errors='coerce').isnull()])
 #print (maf_clinical[pd.to_numeric(maf_clinical['Overall Survival (months)'], errors='coerce').isnull()])
-
-
-'''
 print(maf_clinical['Variant_Classification'].unique())
 print(maf_clinical['Smoker'].unique())
 print(maf_clinical['Stage'].unique())

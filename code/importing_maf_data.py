@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import numpy as np
+from importing_clinical_data import dup_sample_ids
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -140,11 +140,14 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     return data
 
-files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "mskcc.2017.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt"]
+files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt","tracerx.nsclc.maf.txt"]
 result1 = filter_db_by_mutation(db = files1)
 
-files2 = ["tcga.luad.maf.txt"]
-result2 = filter_db_by_mutation(db = files2, patient_id_col_name="case_id")
+result2 = filter_db_by_mutation(db = "mskcc.2017.luad.maf.txt")
+result2 = result2[~result2['Sample ID'].isin(dup_sample_ids)]
 
-final = pd.concat([result1, result2])
+files3 = ["tcga.luad.maf.txt"]
+result3 = filter_db_by_mutation(db = files3, patient_id_col_name="case_id")
+
+final = pd.concat([result1, result2, result3])
 final.to_csv('output/merged_luad_maf.txt')
