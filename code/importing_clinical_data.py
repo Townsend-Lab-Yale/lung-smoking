@@ -174,6 +174,10 @@ msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 '''
 #converting primary/metastasis column to 1/0
 msk2017_df["SAMPLE_TYPE"] = msk2017_df["SAMPLE_TYPE"].apply(lambda x: True if x == 'Metastasis' else 0 if False == 'Primary' else np.NaN)
+#removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
+msk2017_df = msk2017_df.sort_values(by = ['LINES_OF_TX_PRIOR_IMPACT','SAMPLE_COVERAGE'], ascending=False)
+msk2017_df = msk2017_df.drop_duplicates(subset = ['PATIENT_ID'])
+msk2017_df[['PATIENT_ID','SAMPLE_ID','LINES_OF_TX_PRIOR_IMPACT','SAMPLE_COVERAGE']].to_csv('test2017.txt')
 msk2017_df = msk2017_df[["PATIENT_ID","SAMPLE_ID", "SMOKING_HISTORY", "STAGE_AT_DIAGNOSIS", "VITAL_STATUS","Treatment","SAMPLE_TYPE"]]
 #using sample_id instead of patient_id because that is what matches with patient_id in the maf file
 #msk2017 only has vital status rather than PFS or OS.
@@ -202,15 +206,17 @@ tracer_df = tracer_df[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS',
 tracer_df.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","Metastatic","is_LUAD"]
 tracer_df.to_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
 
+'''
 #removing repeated patients between msk 2017 and msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
 dup_patient_ids = merged_temp['Patient ID']
 dup_sample_ids = msk2017_df[msk2017_df['Patient ID'].isin(dup_patient_ids)]['Sample ID']
+print(msk2017_df[msk2017_df['Patient ID'].isin(dup_patient_ids)]['Sample ID'])
 msk2017_df = msk2017_df[~msk2017_df['Patient ID'].isin(dup_patient_ids)]
 
 msk2017_df = msk2017_df.drop(columns='Patient ID')
 msk2018_df = msk2018_df.drop(columns='Patient ID')
-
+'''
 msk2017_df.to_csv("output/unmerged_clinical/lung_msk_2017_clinical.txt")
 msk2018_df.to_csv('output/unmerged_clinical/nsclc_msk_2018_clinical.txt')
 
