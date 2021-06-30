@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from importing_clinical_data import dup_sample_ids
+from importing_clinical_data import dup_sample_ids, multi_sample_ids
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -144,6 +144,7 @@ files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "
 result1 = filter_db_by_mutation(db = files1)
 
 result2 = filter_db_by_mutation(db = "mskcc.2017.luad.maf.txt")
+result2 = result2[~result2['Sample ID'].isin(multi_sample_ids)]
 result2 = result2[~result2['Sample ID'].isin(dup_sample_ids)]
 
 files3 = ["tcga.luad.maf.txt"]
