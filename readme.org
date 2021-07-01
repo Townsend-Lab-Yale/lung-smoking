@@ -1,0 +1,30 @@
+* Objective
+
+To perform a multi-gene epistasis analysis of as big of a LUAD dataset
+as we can assemble (WGS+WXS+TGS), evaluating the impact of smoking on
+the set of mutations expected to contribute to progression, after
+mutation of TP53 and KRAS.
+
+* Data decisions
+
+- TCGA has smoking as pack years. It has NA values but not 0. We will
+  be assuming that NA means no smoking, i.e., that there was
+  information for smoking for all participants
+
+* Genes to take into account for M>4 analysis
+
+From Michael Klein's CRSO
+(https://www.embopress.org/doi/full/10.15252/msb.20209810):
+
+CDKN2A + TP53
+RB1 + TP53
+KRAS + TP53
+CDKN2A + EGFR
+BRAF + TP53
+NF1 + TP53
+
+So CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1
+
+* Future analyses
+
+- See effect of smoking person years
