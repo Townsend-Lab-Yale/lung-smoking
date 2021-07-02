@@ -175,7 +175,7 @@ msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 #converting primary/metastasis column to 1/0
 msk2017_df["SAMPLE_TYPE"] = msk2017_df["SAMPLE_TYPE"].apply(lambda x: True if x == 'Metastasis' else 0 if False == 'Primary' else np.NaN)
 #removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
-msk2017_df = msk2017_df.sort_values(by = ['LINES_OF_TX_PRIOR_IMPACT','SAMPLE_COVERAGE'], ascending=False)
+msk2017_df = msk2017_df.sort_values(by = ['SAMPLE_TYPE','LINES_OF_TX_PRIOR_IMPACT','TUMOR_PURITY'], ascending=[False, True, False])
 multi_sample_ids = msk2017_df[msk2017_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
 msk2017_df = msk2017_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
 msk2017_df[['PATIENT_ID','SAMPLE_ID','LINES_OF_TX_PRIOR_IMPACT','SAMPLE_COVERAGE']].to_csv('test2017.txt')
