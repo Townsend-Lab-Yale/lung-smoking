@@ -202,10 +202,17 @@ tracer_df['Treatment'] = tracer_df['SAMPLE_COLLECTION_TIMEPOINT'].apply(lambda x
 #none of the tumors are metastatic but this just checks to make sure
 tracer_df['Metastatic'] = tracer_df['SAMPLE_TYPE'].apply(lambda x: True if 'met' in x.lower() else False if x in ('Normal','Primary','Recurrence') else np.NaN)
 tracer_df['is_LUAD'] = tracer_df['HISTOLOGY'].apply(lambda x: True if x == 'Invasive adenocarcinoma' else False if x in ('Adenosquamous carcinoma','Carcinosarcoma','Large cell carcinoma','Large Cell Neuroendocrine','Squamous cell carcinoma') else np.NaN)
-tracer_df = tracer_df[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment','Metastatic','is_LUAD']]
+#removing cfDNA samples
+tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
+#randomly sampling from multiple samples per patient (multi-region sampling)
+tracer_df_sampled = pd.DataFrame()
+for id in pd.unique(tracer_df['PATIENT_ID']):
+    tracer_df_sampled = tracer_df_sampled.append(tracer_df[tracer_df['PATIENT_ID'] == id].sample())
+tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment','Metastatic','is_LUAD']]
 #not sure if regression free survival = progression free survival
-tracer_df.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","Metastatic","is_LUAD"]
-tracer_df.to_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
+tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","Metastatic","is_LUAD"]
+keep_tracer_samples = tracer_df_sampled['Sample ID']
+tracer_df_sampled.to_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
 
 
 #removing repeated patients between msk 2017 and msk 2018
@@ -223,6 +230,6 @@ msk2018_df.to_csv('output/unmerged_clinical/nsclc_msk_2018_clinical.txt')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled])
 
 all_clinical_df.to_csv("output/luad_all_clinical.txt")

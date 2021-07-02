@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from importing_clinical_data import dup_sample_ids, multi_sample_ids
+from importing_clinical_data import dup_sample_ids, multi_sample_ids, keep_tracer_samples
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -140,15 +140,20 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     return data
 
-files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt","tracerx.nsclc.maf.txt"]
+files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt"]
 result1 = filter_db_by_mutation(db = files1)
 
+#has to be done separately so samples from MSK 2018 with same sample IDs aren't accidentally removed
 result2 = filter_db_by_mutation(db = "mskcc.2017.luad.maf.txt")
+#multi sample ids refers to sample IDs that should be removed as they are extra samples from the same patient
 result2 = result2[~result2['Sample ID'].isin(multi_sample_ids)]
+#dup sample ids refers to IDs repeated between MSK 2017 and 2018 and then removed from 2017.
 result2 = result2[~result2['Sample ID'].isin(dup_sample_ids)]
 
-files3 = ["tcga.luad.maf.txt"]
-result3 = filter_db_by_mutation(db = files3, patient_id_col_name="case_id")
+result3 = filter_db_by_mutation(db = 'tcga.luad.maf.txt', patient_id_col_name="case_id")
 
-final = pd.concat([result1, result2, result3])
+result4 = filter_db_by_mutation(db = "tracerx.nsclc.maf.txt")
+result4 = result4[result4['Sample ID'].isin(keep_tracer_samples)]
+
+final = pd.concat([result1, result2, result3, result4])
 final.to_csv('output/merged_luad_maf.txt')
