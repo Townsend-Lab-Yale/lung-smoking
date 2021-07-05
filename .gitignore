@@ -4,3 +4,6 @@ code/test1.py
 data/clinical_data/.DS_Store
 data/*.txt
 code/test2.py
+.Rproj.user
+code/test3.py
+code/test4.py

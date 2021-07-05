@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+from pandas.core.reshape.merge import merge
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -11,7 +12,7 @@ location_data = os.path.abspath(
                  "data/"
                  "clinical_data"))
 
-files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_msk_2018", "nsclc_tracerx"]
+files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_msk_2018", "nsclc_tracerx","genie_9"]
 #files that can be auto-merged
 nm_files = ["tsp.luad.maf.txt"]
 #files that don't need merging
@@ -78,7 +79,8 @@ tcga_df["tumor_stage"] = tcga_df["tumor_stage"].str.upper().map(stage_dict).fill
 #removing duplicate rows for radiation therapy
 tcga_df = tcga_df[tcga_df['treatment_type'] == 'Pharmaceutical Therapy, NOS']
 #adding treatment column
-tcga_df['Treatment'] = tcga_df['treatment_or_therapy'].apply(lambda x: True if x == 'yes' else False if x == 'no' else np.NaN)
+#at least for now, temporarily making treatment column NaN because we are unsure whether patients are treatment naive or not/when treatments were applied.
+tcga_df['Treatment'] = np.NaN #tcga_df['treatment_or_therapy'].apply(lambda x: True if x == 'yes' else False if x == 'no' else np.NaN)
 '''
 #tcga_df['treatment_or_therapy'] = tcga_df['treatment_or_therapy'].apply(lambda x: 1 if one is yes else 0 if both no else np.NaN)
 tcga_df['Treatment'] = -1.0
@@ -176,7 +178,7 @@ msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 msk2017_df["SAMPLE_TYPE"] = msk2017_df["SAMPLE_TYPE"].apply(lambda x: True if x == 'Metastasis' else 0 if False == 'Primary' else np.NaN)
 #removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
 msk2017_df = msk2017_df.sort_values(by = ['SAMPLE_TYPE','LINES_OF_TX_PRIOR_IMPACT','TUMOR_PURITY'], ascending=[False, True, False])
-multi_sample_ids = msk2017_df[msk2017_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
+multi_sample_ids_2017 = msk2017_df[msk2017_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
 msk2017_df = msk2017_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
 msk2017_df[['PATIENT_ID','SAMPLE_ID','LINES_OF_TX_PRIOR_IMPACT','SAMPLE_COVERAGE']].to_csv('test2017.txt')
 msk2017_df = msk2017_df[["PATIENT_ID","SAMPLE_ID", "SMOKING_HISTORY", "STAGE_AT_DIAGNOSIS", "VITAL_STATUS","Treatment","SAMPLE_TYPE"]]
@@ -214,22 +216,54 @@ tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Surv
 keep_tracer_samples = tracer_df_sampled['Sample ID']
 tracer_df_sampled.to_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
 
+genie_df = pd.read_csv('output/unmerged_clinical/genie_9_clinical.txt')
+genie_df['Smoker'] = np.NaN
+genie_df['Stage'] = np.NaN
+genie_df['Treatment'] = np.NaN
+#survival column is also np.NaN (will automatically fill in when dfs are concatenated)
+genie_df['Metastatic'] = genie_df['SAMPLE_TYPE'].apply(lambda x: True if x == 'Metastasis' else False if x == 'Primary' else np.NaN)
+#removing non-LUAD samples and collecting indices to remove from maf file
+genie_non_luad_id = genie_df[genie_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarcinoma']['SAMPLE_ID']
+genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
+#TEMPORARY SOLUTION to remove multiple samples for one patient on basis of primary vs metastatic only
+genie_df = genie_df.sort_values(by = ['Metastatic'], ascending=True)
+multi_sample_ids_genie = genie_df[genie_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
+genie_df = genie_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
+#too many other cancer types and NaN values don't matter in this column because any non-True values will be removed, so not including NaN clause
+genie_df['is_LUAD'] = genie_df['CANCER_TYPE_DETAILED'].apply(lambda x: True if x == 'Lung Adenocarcinoma' else False)
+#this is only for preserving MSK patient IDs and will likely interfere with other patient IDs, but only Sample ID matters in the end
+genie_df['Patient ID'] = genie_df['PATIENT_ID'].str.slice(10)
+genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment','Metastatic','is_LUAD']]
+genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment','Metastatic','is_LUAD']
+genie_df.to_csv('output/unmerged_clinical/genie_9_clinical.txt')
 
 #removing repeated patients between msk 2017 and msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
-dup_patient_ids = merged_temp['Patient ID']
-dup_sample_ids = msk2017_df[msk2017_df['Patient ID'].isin(dup_patient_ids)]['Sample ID']
-msk2017_df = msk2017_df[~msk2017_df['Patient ID'].isin(dup_patient_ids)]
+dup_patient_ids_1718 = merged_temp['Patient ID']
+dup_sample_ids_1718 = msk2017_df[msk2017_df['Patient ID'].isin(dup_patient_ids_1718)]['Sample ID']
+msk2017_df = msk2017_df[~msk2017_df['Patient ID'].isin(dup_patient_ids_1718)]
 
+
+merged_temp = pd.merge(genie_df, msk2018_df, on = 'Patient ID', how = 'inner')
+dup_patient_ids_gen18 = merged_temp['Patient ID']
+dup_sample_ids_gen18 = genie_df[genie_df['Patient ID'].isin(dup_patient_ids_gen18)]['Sample ID']
+genie_df = genie_df[~genie_df['Patient ID'].isin(dup_patient_ids_gen18)]
+
+merged_temp = pd.merge(genie_df, msk2017_df, on = 'Patient ID', how = 'inner')
+dup_patient_ids_gen17 = merged_temp['Patient ID']
+dup_sample_ids_gen17 = genie_df[genie_df['Patient ID'].isin(dup_patient_ids_gen17)]['Sample ID']
+genie_df = genie_df[~genie_df['Patient ID'].isin(dup_patient_ids_gen17)]
+
+genie_df = genie_df.drop(columns='Patient ID')
 msk2017_df = msk2017_df.drop(columns='Patient ID')
 msk2018_df = msk2018_df.drop(columns='Patient ID')
-
+genie_df.to_csv('output/unmerged_clinical/genie_9_clinical.txt')
 msk2017_df.to_csv("output/unmerged_clinical/lung_msk_2017_clinical.txt")
 msk2018_df.to_csv('output/unmerged_clinical/nsclc_msk_2018_clinical.txt')
 
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df])
 
 all_clinical_df.to_csv("output/luad_all_clinical.txt")
