@@ -71,7 +71,7 @@ tcga_df = tcga_df.replace({"'--":-1, "not reported":''})
 tcga_df["tumor_stage"] = tcga_df["tumor_stage"].apply(lambda x: x[6:])
 #convert smoking to 1/0. multiple columns for smoking data (pack years, years, cigarettes per day), but pack years provided the least NA ('--) values
 #unfortunately, TCGA did not specify when 0 packs were smoked, leaving us unsure when '-- refers to NA or to never smoked. We will assume it means never smoked.
-tcga_df["pack_years_smoked"] = tcga_df["pack_years_smoked"].apply(lambda x: True if float(x) > 0 else 0)
+tcga_df["pack_years_smoked"] = tcga_df["pack_years_smoked"].apply(lambda x: True if float(x) > 0 else False)
 #converting days to death to months to death for comparison with PFS_months and OS_months
 tcga_df["months_to_death"] = tcga_df["days_to_death"].apply(lambda x: float(x)/30 if float(x) >= 0 else np.NaN)
 #converting stages to one format amongst all datasets
@@ -175,7 +175,7 @@ values = [1, 0]
 msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 '''
 #converting primary/metastasis column to 1/0
-msk2017_df["SAMPLE_TYPE"] = msk2017_df["SAMPLE_TYPE"].apply(lambda x: True if x == 'Metastasis' else 0 if False == 'Primary' else np.NaN)
+msk2017_df["SAMPLE_TYPE"] = msk2017_df["SAMPLE_TYPE"].apply(lambda x: True if x == 'Metastasis' else False if x == 'Primary' else np.NaN)
 #removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
 msk2017_df = msk2017_df.sort_values(by = ['SAMPLE_TYPE','LINES_OF_TX_PRIOR_IMPACT','TUMOR_PURITY'], ascending=[False, True, False])
 multi_sample_ids_2017 = msk2017_df[msk2017_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
@@ -237,18 +237,19 @@ genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment','Meta
 genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment','Metastatic','is_LUAD']
 genie_df.to_csv('output/unmerged_clinical/genie_9_clinical.txt')
 
-#removing repeated patients between msk 2017 and msk 2018
+#removing repeated patients between msk 2017 and msk 2018, keeping msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
 dup_patient_ids_1718 = merged_temp['Patient ID']
 dup_sample_ids_1718 = msk2017_df[msk2017_df['Patient ID'].isin(dup_patient_ids_1718)]['Sample ID']
 msk2017_df = msk2017_df[~msk2017_df['Patient ID'].isin(dup_patient_ids_1718)]
 
-
+#removing repeated patients between genie and msk 2018, keeping msk 2018
 merged_temp = pd.merge(genie_df, msk2018_df, on = 'Patient ID', how = 'inner')
 dup_patient_ids_gen18 = merged_temp['Patient ID']
 dup_sample_ids_gen18 = genie_df[genie_df['Patient ID'].isin(dup_patient_ids_gen18)]['Sample ID']
 genie_df = genie_df[~genie_df['Patient ID'].isin(dup_patient_ids_gen18)]
 
+#removing repeated patients between genie and msk 2017, keeping msk 2017
 merged_temp = pd.merge(genie_df, msk2017_df, on = 'Patient ID', how = 'inner')
 dup_patient_ids_gen17 = merged_temp['Patient ID']
 dup_sample_ids_gen17 = genie_df[genie_df['Patient ID'].isin(dup_patient_ids_gen17)]['Sample ID']

@@ -140,7 +140,7 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     return data
 
-files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt"]
+files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt",'genie.maf.txt']
 result1 = filter_db_by_mutation(db = files1)
 
 #has to be done separately so samples from MSK 2018 with same sample IDs aren't accidentally removed
