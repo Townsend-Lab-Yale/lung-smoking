@@ -13,7 +13,7 @@ maf_clinical = maf_clinical[maf_clinical['is_LUAD'] == True]
 #removes mutations with unknown chromosome locations
 #print(maf_clinical[(maf_clinical['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))].shape)
 maf_clinical = maf_clinical[~(maf_clinical['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))]
-print(maf_clinical.shape, maf_clinical.dropna(subset = ['Mutation']).shape)
+
 maf_clinical.to_csv("output/luad_maf_clinical.txt")
 
 '''Below are checks to ensure that the columns contain expected values.'''

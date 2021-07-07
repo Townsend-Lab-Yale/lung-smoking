@@ -170,5 +170,5 @@ result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
 
-final = pd.concat([result1, result2, result3, result4])
+final = pd.concat([result1, result2, result3, result4, result5])
 final.to_csv('output/merged_luad_maf.txt')
