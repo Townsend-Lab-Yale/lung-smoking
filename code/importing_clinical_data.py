@@ -172,6 +172,7 @@ values = [1, 0]
 msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 '''
 #removing non-primary samples
+metastatic_sample_ids_2017 = msk2017_df[msk2017_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 msk2017_df = msk2017_df.drop(msk2017_df.index[msk2017_df['SAMPLE_TYPE'] != 'Primary'])
 #removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
 msk2017_df = msk2017_df.sort_values(by = ['SAMPLE_TYPE','LINES_OF_TX_PRIOR_IMPACT','TUMOR_PURITY'], ascending=[False, True, False])
@@ -198,6 +199,7 @@ tracer_df['TUMOR_STAGE'] = tracer_df['TUMOR_STAGE'].map(stage_dict).fillna(trace
 tracer_df['Treatment'] = tracer_df['SAMPLE_COLLECTION_TIMEPOINT'].apply(lambda x: True if x == 'Post-treatment' else False if x == 'Pre-treatment' else np.NaN)
 tracer_df['is_LUAD'] = tracer_df['HISTOLOGY'].apply(lambda x: True if x == 'Invasive adenocarcinoma' else False if x in ('Adenosquamous carcinoma','Carcinosarcoma','Large cell carcinoma','Large Cell Neuroendocrine','Squamous cell carcinoma') else np.NaN)
 #removing non-primary samples
+metastatic_sample_ids_tracer = tracer_df[tracer_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 tracer_df = tracer_df.drop(tracer_df.index[tracer_df['SAMPLE_TYPE'] != 'Primary'])
 #removing cfDNA samples
 tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
@@ -220,6 +222,7 @@ genie_df['Treatment'] = np.NaN
 genie_non_luad_id = genie_df[genie_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarcinoma']['SAMPLE_ID']
 genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
 #removing non-primary samples
+metastatic_sample_ids_genie = genie_df[genie_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 genie_df = genie_df.drop(genie_df.index[genie_df['SAMPLE_TYPE'] != 'Primary'])
 #TEMPORARY SOLUTION to remove multiple samples for one patient
 multi_sample_ids_genie = genie_df[genie_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']

@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17
+from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -140,11 +140,14 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     return data
 
-files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt",'genie.maf.txt']
+files1 = ["tsp.luad.maf.txt", "oncosg.luad.maf.txt","mskcc.2015.luad.maf.txt", "broad.luad.maf.txt", "mskcc.2018.nsclc.maf.txt"]
 result1 = filter_db_by_mutation(db = files1)
+#removing metastatic sample from broad dataset
+result1 = result1[result1['Sample ID'] != 'LU-A08-43']
 
 #has to be done separately so samples from MSK 2018 with same sample IDs aren't accidentally removed
 result2 = filter_db_by_mutation(db = "mskcc.2017.luad.maf.txt")
+result2 = result2[~result2['Sample ID'].isin(metastatic_sample_ids_2017)]
 #multi sample ids refers to sample IDs that should be removed as they are extra samples from the same patient
 result2 = result2[~result2['Sample ID'].isin(multi_sample_ids_2017)]
 #dup sample ids refers to IDs repeated between MSK 2017 and 2018 and then removed from 2017.
@@ -153,6 +156,7 @@ result2 = result2[~result2['Sample ID'].isin(dup_sample_ids_1718)]
 result3 = filter_db_by_mutation(db = 'tcga.luad.maf.txt', patient_id_col_name="case_id")
 
 result4 = filter_db_by_mutation(db = "tracerx.nsclc.maf.txt")
+result4 = result4[~result4['Sample ID'].isin(metastatic_sample_ids_tracer)]
 result4 = result4[result4['Sample ID'].isin(keep_tracer_samples)]
 
 result5 = filter_db_by_mutation(db = 'genie.maf.txt')
@@ -161,6 +165,7 @@ result5 = filter_db_by_mutation(db = 'genie.maf.txt')
 result5 = result5[~result5['Sample ID'].isin(genie_non_luad_id)]
 #print(len(pd.unique(result5['Sample ID'])))
 #output: 11774 non-LUAD sample IDs in maf file vs 12926 non-LUAD sample IDs in the clinical file
+result5 = result5[~result5['Sample ID'].isin(metastatic_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
