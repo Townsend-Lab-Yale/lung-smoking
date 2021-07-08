@@ -9,10 +9,9 @@ if '__file__' not in globals():
 location_data = os.path.abspath(
     os.path.join(os.path.dirname(__file__),
                  "../"
-                 "data/"
-                 "clinical_data"))
+                 "data"))
 
-files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_msk_2018", "nsclc_tracerx","genie_9"]
+files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9"]
 #files that can be auto-merged
 nm_files = ["tsp.luad.maf.txt"]
 #files that don't need merging
@@ -27,14 +26,13 @@ for i in files:
 
 s_files = ["luad_tcga"]
 #files that need special merging procedure
-df1 = pd.read_csv("data/clinical_data/luad_tcga/clinical.tsv", sep="\t")
-df2 = pd.read_csv("data/clinical_data/luad_tcga/exposure.tsv", sep="\t")
+df1 = pd.read_csv(os.path.join(location_data,'tcga_clinical/clinical.tsv'), sep="\t")
+df2 = pd.read_csv(os.path.join(location_data,'tcga_clinical/exposure.tsv'), sep="\t")
 merged_df = pd.merge(df1, df2, on="case_id")
 merged_df.to_csv("output/unmerged_clinical/luad_tcga_clinical.txt")
 #merging on basis of patient ID
 
 stage_dict = {'I':'1','IA':'1a','IB':'1b','II':'2','IIA':'2a','IIB':'2b','III':'3','IIIA':'3a','IIIB':'3b','IV':'4'}
-
 
 '''
 COLUMN SUMMARIES:
@@ -184,7 +182,7 @@ msk2017_df = msk2017_df[["PATIENT_ID","SAMPLE_ID", "SMOKING_HISTORY", "STAGE_AT_
 msk2017_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Vital Status","Treatment"]
 msk2017_df['is_LUAD'] = True
 
-msk2018_df = pd.read_csv('output/unmerged_clinical/nsclc_msk_2018_clinical.txt')
+msk2018_df = pd.read_csv('output/unmerged_clinical/nsclc_pd1_msk_2018_clinical.txt')
 msk2018_df['SMOKER'] = msk2018_df['SMOKER'].apply(lambda x: True if x == 'Ever' else False if x == 'Never' else np.NaN)
 msk2018_df['Stage'] = np.NaN
 #all patients treated with ICI
@@ -193,7 +191,7 @@ msk2018_df['is_LUAD'] = msk2018_df['CANCER_TYPE_DETAILED'].apply(lambda x: True 
 msk2018_df = msk2018_df[['PATIENT_ID','SAMPLE_ID','SMOKER','Stage','PFS_MONTHS','Treatment','is_LUAD']]
 msk2018_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
 
-tracer_df = pd.read_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
+tracer_df = pd.read_csv('output/unmerged_clinical/nsclc_tracerx_2017_clinical.txt')
 tracer_df['SMOKING_HISTORY'] = tracer_df['SMOKING_HISTORY'].apply(lambda x: True if x in ("Current Smoker", "Ex-Smoker", "Recent Ex-Smoker") else False if x == "Never Smoked" else np.NaN)
 tracer_df['TUMOR_STAGE'] = tracer_df['TUMOR_STAGE'].map(stage_dict).fillna(tracer_df['TUMOR_STAGE'])
 tracer_df['Treatment'] = tracer_df['SAMPLE_COLLECTION_TIMEPOINT'].apply(lambda x: True if x == 'Post-treatment' else False if x == 'Pre-treatment' else np.NaN)
@@ -211,7 +209,7 @@ tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAG
 #not sure if regression free survival = progression free survival
 tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
 keep_tracer_samples = tracer_df_sampled['Sample ID']
-tracer_df_sampled.to_csv('output/unmerged_clinical/nsclc_tracerx_clinical.txt')
+tracer_df_sampled.to_csv('output/unmerged_clinical/nsclc_tracerx_2017_clinical.txt')
 
 genie_df = pd.read_csv('output/unmerged_clinical/genie_9_clinical.txt')
 genie_df['Smoker'] = np.NaN
@@ -258,7 +256,7 @@ msk2017_df = msk2017_df.drop(columns='Patient ID')
 msk2018_df = msk2018_df.drop(columns='Patient ID')
 genie_df.to_csv('output/unmerged_clinical/genie_9_clinical.txt')
 msk2017_df.to_csv("output/unmerged_clinical/lung_msk_2017_clinical.txt")
-msk2018_df.to_csv('output/unmerged_clinical/nsclc_msk_2018_clinical.txt')
+msk2018_df.to_csv('output/unmerged_clinical/nsclc_pd1_msk_2018_clinical.txt')
 
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
