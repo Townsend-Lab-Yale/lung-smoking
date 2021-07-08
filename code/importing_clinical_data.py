@@ -223,6 +223,8 @@ genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
 metastatic_sample_ids_genie = genie_df[genie_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 genie_df = genie_df.drop(genie_df.index[genie_df['SAMPLE_TYPE'] != 'Primary'])
 #TEMPORARY SOLUTION to remove multiple samples for one patient
+genie_df = genie_df.sample(frac = 1)
+genie_df = genie_df.sort_values(by = ['AGE_AT_SEQ_REPORT'])
 multi_sample_ids_genie = genie_df[genie_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
 genie_df = genie_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
 #too many other cancer types and NaN values don't matter in this column because any non-True values will be removed, so not including NaN clause
