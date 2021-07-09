@@ -155,7 +155,7 @@ result2 = result2[~result2['Sample ID'].isin(multi_sample_ids_2017)]
 #dup sample ids refers to IDs repeated between MSK 2017 and 2018 and then removed from 2017.
 result2 = result2[~result2['Sample ID'].isin(dup_sample_ids_1718)]
 
-result3 = filter_db_by_mutation(db = 'TCGA.LUAD.mutect.0458c57f-316c-4a7c-9294-ccd11c97c2f9.DR-10.0.somatic.maf', patient_id_col_name="case_id")
+result3 = filter_db_by_mutation(db = 'luad_tcga/data_mutations_extended.txt', patient_id_col_name="case_id")
 
 result4 = filter_db_by_mutation(db = "nsclc_tracerx_2017/data_mutations_extended.txt")
 result4 = result4[~result4['Sample ID'].isin(metastatic_sample_ids_tracer)]
@@ -172,7 +172,7 @@ result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
 
-result6 = filter_db_by_mutation(db = 'gdc_download_20210706_193705.961917/e23dae1d-4795-4f94-872a-76da22135a6a/FM-AD_SNV.Bronchus_And_Lung.protected.maf', patient_id_col_name='case_id')
+result6 = filter_db_by_mutation(db = 'luad_FM-AD/data_mutations_extended.txt', patient_id_col_name='case_id')
 result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
 result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
 
