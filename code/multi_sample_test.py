@@ -13,3 +13,9 @@ for i in files:
 tcga_df = pd.read_csv('data/clinical_data/luad_tcga/clinical.tsv', sep = "\t")
 if any(tcga_df[::2].duplicated(subset = ['case_submitter_id'])):
     print('tcga')
+
+fmad_df = pd.read_csv('data/luad_FM-AD/clinical.tsv', sep = '\t')
+fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
+fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
+if any(fmad_df.duplicated(subset = ['case_submitter_id'])):
+    print('fmad')

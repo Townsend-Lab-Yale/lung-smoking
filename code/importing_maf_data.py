@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie
+from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
 if '__file__' not in globals():
     __file__ = '.'
@@ -172,5 +172,9 @@ result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
 
-final = pd.concat([result1, result2, result3, result4, result5])
+result6 = filter_db_by_mutation(db = 'gdc_download_20210706_193705.961917/e23dae1d-4795-4f94-872a-76da22135a6a/FM-AD_SNV.Bronchus_And_Lung.protected.maf', patient_id_col_name='case_id')
+result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
+result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
+
+final = pd.concat([result1, result2, result3, result4, result5, result6])
 final.to_csv('output/merged_luad_maf.txt')

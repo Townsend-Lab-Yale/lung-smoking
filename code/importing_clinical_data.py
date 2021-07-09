@@ -26,8 +26,8 @@ for i in files:
 
 s_files = ["luad_tcga"]
 #files that need special merging procedure
-df1 = pd.read_csv(os.path.join(location_data,'tcga_clinical/clinical.tsv'), sep="\t")
-df2 = pd.read_csv(os.path.join(location_data,'tcga_clinical/exposure.tsv'), sep="\t")
+df1 = pd.read_csv(os.path.join(location_data,'luad_tcga/clinical.tsv'), sep="\t")
+df2 = pd.read_csv(os.path.join(location_data,'luad_tcga/exposure.tsv'), sep="\t")
 merged_df = pd.merge(df1, df2, on="case_id")
 merged_df.to_csv("output/unmerged_clinical/luad_tcga_clinical.txt")
 #merging on basis of patient ID
@@ -233,7 +233,16 @@ genie_df['is_LUAD'] = genie_df['CANCER_TYPE_DETAILED'].apply(lambda x: True if x
 genie_df['Patient ID'] = genie_df['PATIENT_ID'].str.slice(10)
 genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment','is_LUAD']]
 genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment','is_LUAD']
-genie_df.to_csv('output/unmerged_clinical/genie_9_clinical.txt')
+
+fmad_df = pd.read_csv('data/luad_FM-AD/clinical.tsv', sep = '\t')
+fmad_non_luad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
+fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
+fmad_non_primary = fmad_df[fmad_df['classification_of_tumor'] != 'primary']['case_id']
+fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
+fmad_df = fmad_df[['case_id']]
+fmad_df.columns = ['Sample ID']
+fmad_df['is_LUAD'] = True
+fmad_df.to_csv('output/unmerged_clinical/luad_FM-AD_clinical.txt')
 
 #removing repeated patients between msk 2017 and msk 2018, keeping msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
@@ -263,6 +272,6 @@ msk2018_df.to_csv('output/unmerged_clinical/nsclc_pd1_msk_2018_clinical.txt')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df])
 
 all_clinical_df.to_csv("output/luad_all_clinical.txt")
