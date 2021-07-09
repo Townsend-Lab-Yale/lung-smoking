@@ -5,6 +5,12 @@ python3.9 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
 
+## * Obtain gene coordinates
+source .venv/bin/activate
+python obtain_gene_coordinates.py
+deactivate
+
+
 ## * Download data
 cd ../data
 
