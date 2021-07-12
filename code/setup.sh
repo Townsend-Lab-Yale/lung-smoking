@@ -53,8 +53,8 @@ cd ..
 
 
 ## ** FM-AD TCGA
-mkdir 'luad_FM-AD'
-cd 'luad_FM-AD'
+mkdir 'luad_fm-ad'
+cd 'luad_fm-ad'
 ## clinical data file is available from portal.gdc.cancer.gov
 ## https://portal.gdc.cancer.gov/files/e23dae1d-4795-4f94-872a-76da22135a6a
 ## but it does not have a direct link to download (you have to "add to

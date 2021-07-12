@@ -178,7 +178,7 @@ result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
 
-result6 = filter_db_by_mutation(db = 'luad_FM-AD/data_mutations_extended.txt', sample_id_col_name='case_id')
+result6 = filter_db_by_mutation(db = 'luad_fm-ad/data_mutations_extended.txt', sample_id_col_name='case_id')
 result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
 result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
 

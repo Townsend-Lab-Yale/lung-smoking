@@ -123,7 +123,7 @@ for row in oncosg_df.itertuples():
 '''
 '''
 conditions = [
-    (oncosg_df['TKI_TREATMENT'] == 'Yes' or oncosg_df['CHEMOTHERAPY'] == 'Yes'), 
+    (oncosg_df['TKI_TREATMENT'] == 'Yes' or oncosg_df['CHEMOTHERAPY'] == 'Yes'),
     (oncosg_df['TKI_TREATMENT'] == 'No' and oncosg_df['CHEMOTHERAPY'] == 'No'),
 ]
 values = [1, 0]
@@ -168,7 +168,7 @@ for row in msk2017_df.itertuples():
 '''
 '''
 conditions = [
-    (msk2017_df['TARGET_THERAPY'] == 'YES' or msk2017_df['IMMUNE_TREATMENT'] == 'YES' or msk2017_df['TREATMENT_CHEMOTHERAPY'] == 'YES'), 
+    (msk2017_df['TARGET_THERAPY'] == 'YES' or msk2017_df['IMMUNE_TREATMENT'] == 'YES' or msk2017_df['TREATMENT_CHEMOTHERAPY'] == 'YES'),
     (msk2017_df['TARGET_THERAPY'] == 'NO' and msk2017_df['IMMUNE_TREATMENT'] == 'NO' and msk2017_df['TREATMENT_CHEMOTHERAPY'] == 'NO'),
 ]
 values = [1, 0]
@@ -239,7 +239,7 @@ genie_df['Patient ID'] = genie_df['PATIENT_ID'].str.slice(10)
 genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment','is_LUAD']]
 genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment','is_LUAD']
 
-fmad_df = pd.read_csv(os.path.join(location_data,'luad_FM-AD/clinical.tsv'), sep = '\t')
+fmad_df = pd.read_csv(os.path.join(location_data,'luad_fm-ad/clinical.tsv'), sep = '\t')
 fmad_non_luad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
 fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
 fmad_non_primary = fmad_df[fmad_df['classification_of_tumor'] != 'primary']['case_id']
@@ -247,7 +247,7 @@ fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
 fmad_df = fmad_df[['case_id']]
 fmad_df.columns = ['Sample ID']
 fmad_df['is_LUAD'] = True
-fmad_df.to_csv(os.path.join(location_output,'unmerged_clinical/luad_FM-AD_clinical.txt'))
+fmad_df.to_csv(os.path.join(location_output,'unmerged_clinical/luad_fm-ad_clinical.txt'))
 
 #removing repeated patients between msk 2017 and msk 2018, keeping msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
