@@ -96,13 +96,16 @@ def filter_db_by_mutation(db=default_db_file_name,
     """
 
     if isinstance(db, list):
-        db = [db_full_name(x) for x in db]
+        db_full = [db_full_name(x) for x in db]
         dfs = [pd.read_csv(x, sep="\t", comment="#")
-               for x in db]
+               for x in db_full]
+        dfs = [df.assign(Source=db_name)
+               for df, db_name in zip(dfs, db)]
         data = pd.concat(dfs, ignore_index=True)
     else:
-        db = db_full_name(db)
-        data = pd.read_csv(db, sep="\t", comment="#")
+        db_full = db_full_name(db)
+        data = pd.read_csv(db_full, sep="\t", comment="#")
+        data = data.assign(Source=db)
 
     if clear_silent:
         data = data[data['Variant_Classification'] != 'Silent']
@@ -137,10 +140,13 @@ def filter_db_by_mutation(db=default_db_file_name,
             x[tumor_col_name]),
         axis=1)
 
-    data = data[[patient_id_col_name, 'Chromosome', 'Start_Position', 'Mutation', 'Variant_Classification']]
-    data.columns = ['Sample ID', 'Chromosome', 'Start_Position', 'Mutation', 'Variant_Classification']
+    cols_except_id =  (['Chromosome', 'Start_Position', 'Mutation', 'Source']
+                       + (['Variant_Classification'] if not clear_silent else []))
+    data = data[[patient_id_col_name] + cols_except_id]
+    data.columns = ['Patient ID'] + cols_except_id
 
     return data
+
 
 files1 = ["luad_tsp/data_mutations_extended.txt", "luad_oncosg_2020/data_mutations_extended.txt","luad_mskcc_2015/data_mutations_extended.txt", "luad_broad/data_mutations_extended.txt", "nsclc_pd1_msk_2018/data_mutations_extended.txt"]
 result1 = filter_db_by_mutation(db = files1)
