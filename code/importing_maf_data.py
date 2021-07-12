@@ -58,9 +58,9 @@ def db_full_name(db_file):
 
 def filter_db_by_mutation(db=default_db_file_name,
                           tumor_col_name=None,
-                          patient_id_col_name=None,
+                          sample_id_col_name=None,
                           clear_silent=True):
-    """Build a data frame with patient IDs and mutations.
+    """Build a data frame with sample IDs and mutations.
 
     :type db: str or list
     :param db: Name of the MAF file (or files if a db is a list)
@@ -81,9 +81,9 @@ def filter_db_by_mutation(db=default_db_file_name,
         contains the tumor allele. If None, try to infer it from the
         data.
 
-    :type patient_id_col_name: str
-    :param patient_id_col_name: Name of the column in the data that
-        contains the patient identification. If None, try to infer it
+    :type sample_id_col_name: str
+    :param sample_id_col_name: Name of the column in the data that
+        contains the sample identification. If None, try to infer it
         from the data.
 
     :type clear_silent: bool
@@ -91,7 +91,7 @@ def filter_db_by_mutation(db=default_db_file_name,
         as True (default), to later provide ranges for a gene.
 
     :rtype: pandas.core.frame.DataFrame
-    :return: Pandas DataFrame with patient IDs and mutations.
+    :return: Pandas DataFrame with sample IDs and mutations.
 
     """
 
@@ -119,14 +119,14 @@ def filter_db_by_mutation(db=default_db_file_name,
             raise Exception("Unknown tumor allele. "
                             "Provide variable 'tumor_col_name'")
 
-    if patient_id_col_name is None:
+    if sample_id_col_name is None:
         if 'Tumor_Sample_Barcode' in data.columns:
-            patient_id_col_name = 'Tumor_Sample_Barcode'
+            sample_id_col_name = 'Tumor_Sample_Barcode'
         elif 'Unique_Patient_Identifier' in data.columns:
-            patient_id_col_name = 'Unique_Patient_Identifier'
+            sample_id_col_name = 'Unique_Patient_Identifier'
         else:
-            raise Exception("Unknown patient identifier. "
-                            "Provide variable 'patient_id_col_name'")
+            raise Exception("Unknown sample identifier. "
+                            "Provide variable 'sample_id_col_name'")
 
     # removes 'chr' when there:
     data['Chromosome'] = data.apply(
@@ -142,8 +142,8 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     cols_except_id =  (['Chromosome', 'Start_Position', 'Mutation', 'Source']
                        + (['Variant_Classification'] if not clear_silent else []))
-    data = data[[patient_id_col_name] + cols_except_id]
-    data.columns = ['Patient ID'] + cols_except_id
+    data = data[[sample_id_col_name] + cols_except_id]
+    data.columns = ['Sample ID'] + cols_except_id
 
     return data
 
@@ -161,7 +161,7 @@ result2 = result2[~result2['Sample ID'].isin(multi_sample_ids_2017)]
 #dup sample ids refers to IDs repeated between MSK 2017 and 2018 and then removed from 2017.
 result2 = result2[~result2['Sample ID'].isin(dup_sample_ids_1718)]
 
-result3 = filter_db_by_mutation(db = 'luad_tcga/data_mutations_extended.txt', patient_id_col_name="case_id")
+result3 = filter_db_by_mutation(db = 'luad_tcga/data_mutations_extended.txt', sample_id_col_name="case_id")
 
 result4 = filter_db_by_mutation(db = "nsclc_tracerx_2017/data_mutations_extended.txt")
 result4 = result4[~result4['Sample ID'].isin(metastatic_sample_ids_tracer)]
@@ -178,7 +178,7 @@ result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
 result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
 
-result6 = filter_db_by_mutation(db = 'luad_FM-AD/data_mutations_extended.txt', patient_id_col_name='case_id')
+result6 = filter_db_by_mutation(db = 'luad_FM-AD/data_mutations_extended.txt', sample_id_col_name='case_id')
 result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
 result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
 
