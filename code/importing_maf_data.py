@@ -1,4 +1,5 @@
 import os
+from typing import final
 import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
@@ -156,39 +157,42 @@ def filter_db_by_mutation(db=default_db_file_name,
     return data
 
 
-files1 = ["luad_tsp/data_mutations_extended.txt", "luad_oncosg_2020/data_mutations_extended.txt","luad_mskcc_2015/data_mutations_extended.txt", "luad_broad/data_mutations_extended.txt", "nsclc_pd1_msk_2018/data_mutations_extended.txt"]
-result1 = filter_db_by_mutation(db = files1)
-#removing metastatic sample from broad dataset
-result1 = result1[result1['Sample ID'] != 'LU-A08-43']
+files = {
+    'TSP':['luad_tsp/data_mutations_extended.txt',''],
+    'OncoSG':['luad_oncosg_2020/data_mutations_extended.txt',''],
+    'MSK2015':['luad_mskcc_2015/data_mutations_extended.txt',''],
+    'Broad':['luad_broad/data_mutations_extended.txt',''],
+    'MSK2018':['nsclc_pd1_msk_2018/data_mutations_extended.txt',''],
+    'MSK2017':['lung_msk_2017/data_mutations_extended.txt',''],
+    'TCGA':['luad_tcga/data_mutations_extended.txt','case_id'],
+    'TracerX':['nsclc_tracerx_2017/data_mutations_extended.txt',''],
+    'Genie':['genie_9/data_mutations_extended.txt',''],
+    'FM-AD':['luad_FM-AD/data_mutations_extended.txt','case_id']
+}
 
-#has to be done separately so samples from MSK 2018 with same sample IDs aren't accidentally removed
-result2 = filter_db_by_mutation(db = "lung_msk_2017/data_mutations_extended.txt")
-result2 = result2[~result2['Sample ID'].isin(metastatic_sample_ids_2017)]
-#multi sample ids refers to sample IDs that should be removed as they are extra samples from the same patient
-result2 = result2[~result2['Sample ID'].isin(multi_sample_ids_2017)]
-#dup sample ids refers to IDs repeated between MSK 2017 and 2018 and then removed from 2017.
-result2 = result2[~result2['Sample ID'].isin(dup_sample_ids_1718)]
+for key, value in files.items():
+    if value[1] == '':
+        files[key].append(filter_db_by_mutation(db = value[0]))
+    else:
+        files[key].append(filter_db_by_mutation(db = value[0], sample_id_col_name=value[1]))
 
-result3 = filter_db_by_mutation(db = 'luad_tcga/data_mutations_extended.txt', sample_id_col_name="case_id")
+files['Broad'][2] = files['Broad'][2][files['Broad'][2]['Sample ID'] != 'LU-A08-43']
 
-result4 = filter_db_by_mutation(db = "nsclc_tracerx_2017/data_mutations_extended.txt")
-result4 = result4[~result4['Sample ID'].isin(metastatic_sample_ids_tracer)]
-result4 = result4[result4['Sample ID'].isin(keep_tracer_samples)]
+files['MSK2017'][2] = files['MSK2017'][2][~files['MSK2017'][2]['Sample ID'].isin(metastatic_sample_ids_2017)]
+files['MSK2017'][2] = files['MSK2017'][2][~files['MSK2017'][2]['Sample ID'].isin(multi_sample_ids_2017)]
+files['MSK2017'][2] = files['MSK2017'][2][~files['MSK2017'][2]['Sample ID'].isin(dup_sample_ids_1718)]
 
-result5 = filter_db_by_mutation(db = 'genie_9/data_mutations_extended.txt')
-#print(len(pd.unique(result5['Sample ID'])))
-#output: 98465 sample IDs in maf file vs 110704 sample IDs in the clinical file
-result5 = result5[~result5['Sample ID'].isin(genie_non_luad_id)]
-#print(len(pd.unique(result5['Sample ID'])))
-#output: 11774 non-LUAD sample IDs in maf file vs 12926 non-LUAD sample IDs in the clinical file
-result5 = result5[~result5['Sample ID'].isin(metastatic_sample_ids_genie)]
-result5 = result5[~result5['Sample ID'].isin(multi_sample_ids_genie)]
-result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen18)]
-result5 = result5[~result5['Sample ID'].isin(dup_sample_ids_gen17)]
+files['TracerX'][2] = files['TracerX'][2][~files['TracerX'][2]['Sample ID'].isin(metastatic_sample_ids_tracer)]
+files['TracerX'][2] = files['TracerX'][2][files['TracerX'][2]['Sample ID'].isin(keep_tracer_samples)]
 
-result6 = filter_db_by_mutation(db = 'luad_fm-ad/data_mutations_extended.txt', sample_id_col_name='case_id')
-result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
-result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
+files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(genie_non_luad_id)]
+files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(metastatic_sample_ids_genie)]
+files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(multi_sample_ids_genie)]
+files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(dup_sample_ids_gen18)]
+files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(dup_sample_ids_gen17)]
 
-final = pd.concat([result1, result2, result3, result4, result5, result6])
+files['FM-AD'][2] = files['FM-AD'][2][~files['FM-AD'][2]['Sample ID'].isin(fmad_non_luad)]
+files['FM-AD'][2] = files['FM-AD'][2][~files['FM-AD'][2]['Sample ID'].isin(fmad_non_primary)]
+
+final = pd.concat([value[2] for value in files.values()])
 final.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
