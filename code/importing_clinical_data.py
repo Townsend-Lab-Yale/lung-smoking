@@ -3,6 +3,13 @@ import pandas as pd
 import numpy as np
 from pandas.core.reshape.merge import merge
 
+
+random_seed = 777
+"""Random seed to feed the random generators, to be able to replicate
+results."""
+np.random.RandomState(np.random.MT19937(np.random.SeedSequence(random_seed)))
+
+
 if '__file__' not in globals():
     __file__ = '.'
 
