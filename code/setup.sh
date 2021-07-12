@@ -8,12 +8,19 @@ python3.9 -m venv .venv
 ## * Obtain gene coordinates
 source .venv/bin/activate
 python obtain_gene_coordinates.py
-deactivate
 
 
 ## * Download data
-cd ../data
 
+## ** Genie
+
+## This will ask for a genie username and password. You have to accept
+## the terms to download the data set first. Go to
+## https://www.synapse.org/#!Synapse:syn24179660
+python synapse_API.py
+deactivate
+
+cd ../data
 
 ## ** cBioPortal data
 URL="https://cbioportal-datahub.s3.amazonaws.com/"
