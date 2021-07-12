@@ -11,6 +11,14 @@ location_data = os.path.abspath(
                  "data/"))
 """Location of directory that contains data for the model."""
 
+
+location_output = os.path.abspath(
+    os.path.join(os.path.dirname(__file__),
+                 "../"
+                 "output/"))
+"""Location of directory that contains output for the model."""
+
+
 default_db_file_name = os.path.join(location_data, "tcga.luad.maf.txt")
 """Default file name to use as data source."""
 
@@ -183,4 +191,4 @@ result6 = result6[~result6['Sample ID'].isin(fmad_non_luad)]
 result6 = result6[~result6['Sample ID'].isin(fmad_non_primary)]
 
 final = pd.concat([result1, result2, result3, result4, result5, result6])
-final.to_csv('output/merged_luad_maf.txt')
+final.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
