@@ -2,50 +2,13 @@ import os
 import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
-if '__file__' not in globals():
-    __file__ = '.'
+from locations import full_maf_file_names
+from locations import location_output
 
-location_data = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "data/"))
-"""Location of directory that contains data for the model."""
-
-
-location_output = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "output/"))
-"""Location of directory that contains output for the model."""
-
-
-data_sets_directories = {
-    'TSP':'luad_tsp',
-    'OncoSG':'luad_oncosg_2020',
-    'MSK2015':'luad_mskcc_2015',
-    'Broad':'luad_broad',
-    'MSK2018':'nsclc_pd1_msk_2018',
-    'MSK2017':'lung_msk_2017',
-    'TCGA':'luad_tcga',
-    'TracerX':'nsclc_tracerx_2017',
-    'Genie':'genie_9',
-    'FM-AD':'luad_fm-ad'}
-"""Location of the directories that contain each data set in the
-`location_data' directory.
-
-"""
 
 data_sets_sample_id_col_names ={key:'case_id' if key in ['TCGA', 'FM-AD']
                                 else None
-                                for key in data_sets_directories.keys()}
-
-
-data_sets_full_maf_file_names = {
-    db:os.path.join(location_data,
-                    directory,
-                    "data_mutations_extended.txt")
-    for db, directory in data_sets_directories.items()}
-
+                                for key in full_maf_file_names.keys()}
 
 
 
@@ -91,7 +54,7 @@ and mutations.
     """
 
     if isinstance(db, list):
-        dfs = [pd.read_csv(data_sets_full_maf_file_names[x],
+        dfs = [pd.read_csv(full_maf_file_names[x],
                            sep="\t",
                            comment="#")
                for x in db]
@@ -99,7 +62,7 @@ and mutations.
                for df, x in zip(dfs, db)]
         data = pd.concat(dfs, ignore_index=True)
     else:
-        data = pd.read_csv(data_sets_full_maf_file_names[db],
+        data = pd.read_csv(full_maf_file_names[db],
                            sep="\t",
                            comment="#")
         data = data.assign(Source=db)
@@ -149,7 +112,7 @@ dfs = {
     db:import_maf_data(
         db,
         sample_id_col_name=data_sets_sample_id_col_names[db])
-    for db in data_sets_directories.keys()}
+    for db in full_maf_file_names.keys()}
 
 
 dfs['Broad'] = dfs['Broad'][dfs['Broad']['Sample ID'] != 'LU-A08-43']
@@ -168,7 +131,7 @@ dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen18
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen17)]
 
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_luad)]
-dfs['FM-AD'] = data_sets['FM-AD'][~data_sets['FM-AD']['Sample ID'].isin(fmad_non_primary)]
+dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
 
 final_df = pd.concat([df for df in dfs.values()])
