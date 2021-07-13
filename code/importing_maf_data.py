@@ -1,5 +1,4 @@
 import os
-from typing import final
 import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
@@ -156,7 +155,6 @@ def filter_db_by_mutation(db=default_db_file_name,
 
     return data
 
-
 files = {
     'TSP':['luad_tsp/data_mutations_extended.txt',''],
     'OncoSG':['luad_oncosg_2020/data_mutations_extended.txt',''],
@@ -194,5 +192,5 @@ files['Genie'][2] = files['Genie'][2][~files['Genie'][2]['Sample ID'].isin(dup_s
 files['FM-AD'][2] = files['FM-AD'][2][~files['FM-AD'][2]['Sample ID'].isin(fmad_non_luad)]
 files['FM-AD'][2] = files['FM-AD'][2][~files['FM-AD'][2]['Sample ID'].isin(fmad_non_primary)]
 
-final = pd.concat([value[2] for value in files.values()])
-final.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
+final_file = pd.concat([value[2] for value in files.values()])
+final_file.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))

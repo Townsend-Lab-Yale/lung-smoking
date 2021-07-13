@@ -60,7 +60,7 @@ cd 'luad_fm-ad'
 ## but it does not have a direct link to download (you have to "add to
 ## cart", go to the cart, and then download Clinical TSV). So we
 ## upload it to our website to use a direct URL to download:
-curl 'https://misc.cidma.us/data/clinical.FM-AD_SNV.Bronchus_And_Lung.tar.gz' | gunzip -c | tar -xf -
+curl 'https://misc.cidma.us/data/clinical.FM-AD_SNV.Bronchus_And_Lung.tar.gz' | gunzip -dc | tar -xf -
 ## The maf file is protected and one has to gain access to obtain it
 ## https://gdc.cancer.gov/access-data/obtaining-access-controlled-data
 ## for now we make it available for ourselves in an easier way
