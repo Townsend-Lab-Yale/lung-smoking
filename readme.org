@@ -14,16 +14,17 @@ mutation of TP53 and KRAS.
 * Genes to take into account for M>4 analysis
 
 From Michael Klein's CRSO
-(https://www.embopress.org/doi/full/10.15252/msb.20209810):
+(https://www.embopress.org/doi/full/10.15252/msb.20209810), these
+pairs have interactions:
 
-CDKN2A + TP53
-RB1 + TP53
-KRAS + TP53
-CDKN2A + EGFR
-BRAF + TP53
-NF1 + TP53
+- CDKN2A + TP53
+- RB1 + TP53
+- KRAS + TP53
+- CDKN2A + EGFR
+- BRAF + TP53
+- NF1 + TP53
 
-So CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1
+So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 
 * TODO Before publishing
 
