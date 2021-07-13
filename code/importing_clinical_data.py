@@ -4,10 +4,10 @@ import numpy as np
 from pandas.core.reshape.merge import merge
 
 
-random_seed = 777
+random_seeds = [777, 778]
 """Random seed to feed the random generators, to be able to replicate
 results."""
-np.random.RandomState(np.random.MT19937(np.random.SeedSequence(random_seed)))
+
 
 
 if '__file__' not in globals():
@@ -216,7 +216,7 @@ tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
 #randomly sampling from multiple samples per patient (multi-region sampling)
 tracer_df_sampled = pd.DataFrame()
 for id in pd.unique(tracer_df['PATIENT_ID']):
-    tracer_df_sampled = tracer_df_sampled.append(tracer_df[tracer_df['PATIENT_ID'] == id].sample())
+    tracer_df_sampled = tracer_df_sampled.append(tracer_df[tracer_df['PATIENT_ID'] == id].sample(random_state=random_seeds[0]))
 tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment','is_LUAD']]
 #not sure if regression free survival = progression free survival
 tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
@@ -235,7 +235,7 @@ genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
 metastatic_sample_ids_genie = genie_df[genie_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 genie_df = genie_df.drop(genie_df.index[genie_df['SAMPLE_TYPE'] != 'Primary'])
 #TEMPORARY SOLUTION to remove multiple samples for one patient
-genie_df = genie_df.sample(frac = 1)
+genie_df = genie_df.sample(frac=1, random_state=random_seeds[1])
 genie_df = genie_df.sort_values(by = ['AGE_AT_SEQ_REPORT'])
 multi_sample_ids_genie = genie_df[genie_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
 genie_df = genie_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
