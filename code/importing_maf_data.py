@@ -2,13 +2,13 @@ import os
 import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
-from locations import full_maf_file_names
+from locations import full_maf_file_names_lifted as maf_file_names
 from locations import location_output
 
 
 data_sets_sample_id_col_names ={key:'case_id' if key in ['TCGA', 'FM-AD']
                                 else None
-                                for key in full_maf_file_names.keys()}
+                                for key in maf_file_names.keys()}
 
 
 
@@ -54,7 +54,7 @@ and mutations.
     """
 
     if isinstance(db, list):
-        dfs = [pd.read_csv(full_maf_file_names[x],
+        dfs = [pd.read_csv(maf_file_names[x],
                            sep="\t",
                            comment="#")
                for x in db]
@@ -62,7 +62,7 @@ and mutations.
                for df, x in zip(dfs, db)]
         data = pd.concat(dfs, ignore_index=True)
     else:
-        data = pd.read_csv(full_maf_file_names[db],
+        data = pd.read_csv(maf_file_names[db],
                            sep="\t",
                            comment="#")
         data = data.assign(Source=db)
@@ -112,9 +112,10 @@ dfs = {
     db:import_maf_data(
         db,
         sample_id_col_name=data_sets_sample_id_col_names[db])
-    for db in full_maf_file_names.keys()}
+    for db in maf_file_names.keys()}
 
 
+## Filter data sets
 dfs['Broad'] = dfs['Broad'][dfs['Broad']['Sample ID'] != 'LU-A08-43']
 
 dfs['MSK2017'] = dfs['MSK2017'][~dfs['MSK2017']['Sample ID'].isin(metastatic_sample_ids_2017)]
@@ -135,4 +136,4 @@ dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
 
 final_df = pd.concat([df for df in dfs.values()])
-final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
+final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'), sep="\t")

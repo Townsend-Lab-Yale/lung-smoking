@@ -4,6 +4,7 @@ from lift_coords import lift_over
 ## program. Obtain it from https://genome-store.ucsc.edu/
 
 from locations import full_maf_file_names
+from locations import full_maf_file_names_lifted
 
 destination_build = 'grch38'
 
@@ -49,4 +50,4 @@ for db, build in builds.items():
     else:
         lifted_dfs[db] = original_dfs[db]
 
-    lifted_dfs[db].to_csv(full_maf_file_names[db].replace(".txt", "_lifted.txt"))
+    lifted_dfs[db].to_csv(full_maf_file_names_lifted[db], sep="\t")

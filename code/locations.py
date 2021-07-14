@@ -39,3 +39,10 @@ full_maf_file_names = {
                     directory,
                     "data_mutations_extended.txt")
     for db, directory in data_sets_directories.items()}
+
+
+full_maf_file_names_lifted = {
+    db:os.path.join(location_data,
+                    directory,
+                    "data_mutations_extended_lifted.txt")
+    for db, directory in data_sets_directories.items()}
