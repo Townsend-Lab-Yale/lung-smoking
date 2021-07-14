@@ -1,4 +1,5 @@
 import os
+from typing import final
 import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
 
@@ -111,7 +112,8 @@ and mutations.
 dfs = {
     db:import_maf_data(
         db,
-        sample_id_col_name=data_sets_sample_id_col_names[db])
+        sample_id_col_name=data_sets_sample_id_col_names[db],
+        clear_silent=False)
     for db in maf_file_names.keys()}
 
 
@@ -136,4 +138,7 @@ dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
 
 final_df = pd.concat([df for df in dfs.values()])
-final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'), sep="\t")
+final_df.to_csv(os.path.join(location_output, 'merged_luad_maf_w_silent.txt'))
+
+final_df = final_df.drop(final_df.index[final_df['Variant_Classification'] == 'Silent'])
+final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
