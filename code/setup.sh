@@ -38,9 +38,6 @@ for DATASET in ${DATASETS[@]}; do
    curl "${URL}${DATASET}${EXTENSION}" | gunzip -dc | tar -xf -
 done
 
-## fix typo in TracerX
-sed -i 's/DEC1178035542/1178035542/' nsclc_tracerx_2017/data_mutations_extended.txt
-
 
 ## ** TCGA data
 mkdir 'luad_tcga'

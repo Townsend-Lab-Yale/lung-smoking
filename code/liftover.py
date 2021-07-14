@@ -30,9 +30,13 @@ print("...done.")
 print("")
 
 
+## Fix typo in TracerX
+original_dfs['TracerX'].End_Position = original_dfs['TracerX'].End_Position.map(
+    lambda v: 178035542 if v == 'DEC1178035542' else v)
+
+
 lifted_dfs = {}
 unlifted_dfs = {db:[] for db in builds.keys()}
-
 
 for db, build in builds.items():
     if build != destination_build:
@@ -44,3 +48,5 @@ for db, build in builds.items():
         print("")
     else:
         lifted_dfs[db] = original_dfs[db]
+
+    lifted_dfs[db].to_csv(full_maf_file_names[db].replace(".txt", "_lifted.txt"))
