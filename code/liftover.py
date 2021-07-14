@@ -31,15 +31,15 @@ print("")
 
 
 lifted_dfs = {}
-failed_indices = {db:[] for db in builds.keys()}
+unlifted_dfs = {db:[] for db in builds.keys()}
 
 
 for db, build in builds.items():
     if build != destination_build:
         print(f"Lifting coordinates of {db} from {build} to {destination_build}...")
-        lifted_dfs[db], failed_indices[db] = lift_over(original_dfs[db],
-                                                       build,
-                                                       destination_build)
+        lifted_dfs[db], unlifted_dfs[db] = lift_over(original_dfs[db],
+                                                     build,
+                                                     destination_build)
         print("...done.")
         print("")
     else:
