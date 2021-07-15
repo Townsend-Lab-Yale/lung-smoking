@@ -1,7 +1,18 @@
 import os
-from typing import final
 import pandas as pd
-from importing_clinical_data import dup_sample_ids_1718, multi_sample_ids_2017, keep_tracer_samples, genie_non_luad_id, dup_sample_ids_gen18, multi_sample_ids_genie, dup_sample_ids_gen17, metastatic_sample_ids_2017, metastatic_sample_ids_tracer, metastatic_sample_ids_genie, fmad_non_luad, fmad_non_primary
+
+from importing_clinical_data import dup_sample_ids_1718
+from importing_clinical_data import multi_sample_ids_2017
+from importing_clinical_data import keep_tracer_samples
+from importing_clinical_data import genie_non_luad_id
+from importing_clinical_data import dup_sample_ids_gen18
+from importing_clinical_data import multi_sample_ids_genie
+from importing_clinical_data import dup_sample_ids_gen17
+from importing_clinical_data import metastatic_sample_ids_2017
+from importing_clinical_data import metastatic_sample_ids_tracer
+from importing_clinical_data import metastatic_sample_ids_genie
+from importing_clinical_data import fmad_non_luad
+from importing_clinical_data import fmad_non_primary
 
 from locations import full_maf_file_names_lifted as maf_file_names
 from locations import location_output
