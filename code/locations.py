@@ -46,3 +46,5 @@ full_maf_file_names_lifted = {
                     directory,
                     "data_mutations_extended_lifted.txt")
     for db, directory in data_sets_directories.items()}
+
+gene_coordinates_file = os.path.join(location_data, "gene_coordinates.csv")

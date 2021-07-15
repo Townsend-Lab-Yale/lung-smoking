@@ -1,5 +1,41 @@
 import numpy as np
 import pandas as pd
+from itertools import product
+from locations import genes_coordinates_file
+
+genes = pd.read_csv(genes_coordinates_file)
+
+
+def build_S_with_tuples(M):
+    """Build entire space of mutations combinations S.
+
+    It will represented by a list of size 2^M with items being tuples
+    of size M with 0s and 1s.
+
+    :type M: int
+    :param M: Number of mutations.
+
+    :rtype: list
+    :return: S as an ordered list of tuples.
+
+    """
+    return [x for x in product([0, 1], repeat=M)]
+
+
+def build_S_as_array(M):
+    """Build entire space of mutations combinations S.
+
+    It will represented by a numpy array of shape (2^M, M).
+
+    :type M: int
+    :param M: Number of mutations.
+
+    :rtype: numpy.ndarray
+    :return: S as a numpy array of 0s and 1s.
+
+    """
+    return np.array(build_S_with_tuples(M))
+
 
 def compute_samples(data,
                     mutations=None,
