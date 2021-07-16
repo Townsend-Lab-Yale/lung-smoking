@@ -40,7 +40,7 @@ def build_S_as_array(M):
 def compute_samples(data,
                     mutations=None,
                     tumor_col_name=None,
-                    print_info=True,
+                    print_info=False,
                     patient_id_col_name=None):
     """Compute samples numbers for each mutation combinations in S.
 
@@ -120,4 +120,3 @@ def compute_samples(data,
             print(f"  {x} : {pts}")
 
     return pts_per_combination
-
