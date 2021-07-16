@@ -2,7 +2,6 @@ code/.venv
 /data/gene_coordinates.csv
 code/test1.py
 .DS_Store
-data/*.txt
 code/test2.py
 .Rproj.user
 code/test3.py

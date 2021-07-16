@@ -2,20 +2,11 @@ import os
 import requests, sys
 import pandas as pd
 
-if '__file__' not in globals():
-    __file__ = '.'
+from locations import gene_list_file
+from locations import gene_coordinates_file
 
-
-location_data = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "data/"))
-"""Location of directory that contains data for the model."""
-
-
-
-coordinates = pd.read_csv(os.path.join(location_data, "genes_list.csv"),
-                        names=["gene", "chromosome", "start", "end"])
+coordinates = pd.read_csv(gene_list_file,
+                          names=["gene", "chromosome", "start", "end"])
 
 coordinates = coordinates.set_index("gene")
 
@@ -45,4 +36,4 @@ if no_coordinate != set([]):
 coordinates = coordinates.dropna()
 coordinates = coordinates.astype({"chromosome":str, "start":int, "end":int})
 
-coordinates.to_csv(os.path.join(location_data, "gene_coordinates.csv"))
+coordinates.to_csv(gene_coordinates_file)
