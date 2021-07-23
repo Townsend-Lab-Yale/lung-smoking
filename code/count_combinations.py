@@ -39,7 +39,7 @@ def build_S_as_array(M):
 
 def number_mutations(data, mutations = None):
     numbers_per_mutation = {}
-    
+
     numbers_per_mutation = {mutation: len(data[
         data['Start_Position'] >= genes.loc[mutation, 'start']][
             data['Start_Position'] <= genes.loc[mutation, 'end']][
@@ -124,18 +124,18 @@ def compute_samples(data,
                                 for mutation in mutations]
 
             pts_per_combination = (
-                
+
                 [len(data['Sample ID'].unique())] #for no mutations
                 + [len(set.intersection(*[pts_per_mutation[i] #performs set intersection across all sets containing a mutation in the gene currently selected in the for loop looping across genes mutated in row Sj
                 #this is where I need to check if len = 0
                                         for i in indices]))
                 for indices in [[i for i in range(M) #for genes that are mutated in that row (Sj)
-                                    if Sj[i] == 1] 
+                                    if Sj[i] == 1]
                                 for Sj in S[1:]]])# if (len(set.intersection(*[pts_per_mutation[i] for i in indices])) > 0)]) #for row in possible combinations of mutations
-                
+
             '''
-                for indices in [[i for i in range(M) 
-                                    if Sj[i] == 1] 
+                for indices in [[i for i in range(M)
+                                    if Sj[i] == 1]
                                 for Sj in S[1:]]:
                     if len(set.intersection(*[pts_per_mutation[i] for i in indices])) > 0:
                         [len(data['Sample ID'].unique())] + len(set.intersection(*pts_per_mutation[i])))
@@ -156,7 +156,7 @@ def compute_samples(data,
                             else False
                             for i in range(len(S))])
                         '''at this point, (0,0,1,1,1) would contain a subset of patients in (0,0,0,1,1); this removes those.'''
-                        pts_per_combination[in_y_indices] = ( 
+                        pts_per_combination[in_y_indices] = (
                             pts_per_combination[in_y_indices]
                             - pts_per_combination[k])
 
@@ -179,7 +179,7 @@ def compute_samples(data,
     else:
         temp1234 = open('combinations.txt','w')
         temp1234.close()
-        
+
         M = len(mutations)
 
         S = build_S_as_array(M)
@@ -199,18 +199,18 @@ def compute_samples(data,
                             for mutation in mutations]
 
         pts_per_combination = (
-            
+
             [len(data['Sample ID'].unique())] #for no mutations
             + [len(set.intersection(*[pts_per_mutation[i] #performs set intersection across all sets containing a mutation in the gene currently selected in the for loop looping across genes mutated in row Sj
             #this is where I need to check if len = 0
                                     for i in indices]))
             for indices in [[i for i in range(M) #for genes that are mutated in that row (Sj)
-                                if Sj[i] == 1] 
+                                if Sj[i] == 1]
                             for Sj in S[1:]]])# if (len(set.intersection(*[pts_per_mutation[i] for i in indices])) > 0)]) #for row in possible combinations of mutations
-            
+
         '''
-            for indices in [[i for i in range(M) 
-                                if Sj[i] == 1] 
+            for indices in [[i for i in range(M)
+                                if Sj[i] == 1]
                             for Sj in S[1:]]:
                 if len(set.intersection(*[pts_per_mutation[i] for i in indices])) > 0:
                     [len(data['Sample ID'].unique())] + len(set.intersection(*pts_per_mutation[i])))
@@ -231,7 +231,7 @@ def compute_samples(data,
                         else False
                         for i in range(len(S))])
                     '''at this point, (0,0,1,1,1) would contain a subset of patients in (0,0,0,1,1); this removes those.'''
-                    pts_per_combination[in_y_indices] = ( 
+                    pts_per_combination[in_y_indices] = (
                         pts_per_combination[in_y_indices]
                         - pts_per_combination[k])
 
@@ -272,6 +272,7 @@ maf_file = pd.read_csv('output/merged_luad_maf.txt')
 all_pts_ordered = list(maf_file["Sample ID"].unique())
 maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
     lambda x: all_pts_ordered.index(x))
+
 
 
 #number_mutations(maf_file, mutations = genes.index)
