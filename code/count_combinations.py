@@ -191,11 +191,12 @@ def compute_samples(data,
 
         '''creates list of sets containing sample IDs in which a mutation is present, index of set corresponds to index of gene in mutation list'''
 
-        pts_per_mutation = [set(data[
-            data['Start_Position'] >= genes.loc[mutation, 'start']][
-                data['Start_Position'] <= genes.loc[mutation, 'end']][
-                    data['Chromosome'] == str(genes.loc[mutation, 'chromosome'])][
-                        'Sample ID'])
+        pts_per_mutation = [set(
+            data[
+                (data['Start_Position'] >= genes.loc[mutation, 'start']) &
+                (data['Start_Position'] <= genes.loc[mutation, 'end']) &
+                (data['Chromosome'] == genes.loc[mutation, 'chromosome'])]
+            ['Sample ID'])
                             for mutation in mutations]
 
         pts_per_combination = (
@@ -240,7 +241,6 @@ def compute_samples(data,
             print("Counts per combination")
             for x, pts in zip(S, pts_per_combination):
                 print(f"  {x} : {pts}")
-        print(pts_per_combination)
         if 0 not in pts_per_combination[:-1]:
             with open ('mut_sets.txt','a') as out_file:
                 out_file.write(str(mutations))
@@ -248,12 +248,17 @@ def compute_samples(data,
             with open ('combinations.txt','a') as out_file2:
                 out_file2.write(str(pts_per_combination))
                 out_file2.write("\n")
+        return pts_per_combination
 
-def combination_works(data, combination):
-    """Where 'works' means we can compute all fluxes (not really, required
-condition, probably works, check later the other classes).
+
+
+def are_all_fluxes_computable(data, mutations):
+    """Return True if we can compute all fluxes, that is, if there are
+    patients in `data` with every possible combination of `genes`
+    (except for the combination of all genes).
+
     """
-    M = len(combination)
+    M = len(mutations)
     S = build_S_as_array(M)
     pts_per_mutation = [set(
         data[
@@ -261,12 +266,17 @@ condition, probably works, check later the other classes).
             (data['Start_Position'] <= genes.loc[mutation, 'end']) &
             (data['Chromosome'] == str(genes.loc[mutation, 'chromosome']))]
         ['Our Sample ID'])
-                        for mutation in combination]
+                        for mutation in mutations]
     in_all = len(set.intersection(*pts_per_mutation))
     all_but_one = [len(set.intersection(
-        *(pts_per_mutation[0:i] + pts_per_mutation[i+1:]))) - in_all > 0
+        *(pts_per_mutation[0:i] + pts_per_mutation[i+1:]))) - in_all
                    for i in range(M)]
-    return np.prod(all_but_one, dtype=bool)
+    if 0 not in all_but_one:
+        return 0 not in compute_samples(data, mutations)[:-1]
+    else:
+        return False
+
+
 
 maf_file = pd.read_csv('output/merged_luad_maf.txt')
 all_pts_ordered = list(maf_file["Sample ID"].unique())
