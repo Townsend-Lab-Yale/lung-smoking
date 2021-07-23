@@ -98,10 +98,10 @@ def compute_samples(data,
         results = []
         working_mutation_sets = []
 
-        ranked_list = produce_ranked_list(set_length_=5)
+        ranked_list = produce_ranked_list(set_length_=R)
         combination_mutation_sets = []
 
-        for indices in combinations(range(10),5):
+        for indices in combinations(range(N),R):
             combination_mutation_sets.append([ranked_list[ind] for ind in indices])
 
         for mutations in combination_mutation_sets:
