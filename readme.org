@@ -28,11 +28,11 @@ So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 
 * Sources of genes in consideration
 
-- [Review Genomic alterations in lung adenocarcinoma](https://www.sciencedirect.com/science/article/pii/S1470204515000777#)
-- [The Genomics of Lung Adenocarcinoma - Genes Cancer](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3092285/)
-- [Comprehensive molecular profiling of lung adenocarcinoma](https://www.nature.com/articles/nature13385)
-- [The transcriptional landscape and mutational profile of lung adenocarcinoma](https://genome.cshlp.org/content/22/11/2109.full#ref-16)
-- [Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma](https://www.sciencedirect.com/science/article/pii/S1556086416309273)
+- [[https://www.sciencedirect.com/science/article/pii/S1470204515000777#]Genomic alterations in lung adenocarcinoma]
+- [[https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3092285/]The Genomics of Lung Adenocarcinoma - Genes Cancer]
+- [[https://www.nature.com/articles/nature13385]Comprehensive molecular profiling of lung adenocarcinoma]
+- [[https://genome.cshlp.org/content/22/11/2109.full]The transcriptional landscape and mutational profile of lung adenocarcinoma]
+- [[https://www.sciencedirect.com/science/article/pii/S1556086416309273]Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]
 
 * TODO [0/2] Before publishing
 
