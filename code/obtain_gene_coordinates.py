@@ -9,11 +9,16 @@ coordinates = pd.read_csv(gene_list_file,
                           names=["gene", "chromosome", "start", "end"])
 
 coordinates = coordinates.set_index("gene")
+total_genes = len(coordinates.index)
 
-for name in coordinates.index:
-    server = "http://rest.ensembl.org"
+server = "http://rest.ensembl.org"
+
+print("Obtaining coordinates for genes in genes_list.txt...")
+for i, name in enumerate(coordinates.index):
     ext = "/lookup/symbol/homo_sapiens/" + name + "?content-type=application/json"
-
+    if (i % 50 == 49) or (i == 0):
+        print(f"  obtaining coordinates for gene {i+1}/{total_genes} "
+              f"({round(i/total_genes*100)}% done)")
     r = requests.get(server+ext, headers={ "Content-Type" : "application/json"})
 
     if not r.ok:
@@ -22,7 +27,7 @@ for name in coordinates.index:
 
     decoded = r.json()
     coordinates.loc[name] = [decoded.get(key) for key in ('seq_region_name','start','end')]
-
+print("...done.")
 
 no_coordinate = list(coordinates[coordinates['chromosome'].isna()].index)
 no_coordinate += list(coordinates[coordinates['start'].isna()].index)
