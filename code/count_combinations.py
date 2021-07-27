@@ -41,16 +41,19 @@ def number_mutations(data, mutations = None):
     numbers_per_mutation = {}
 
     numbers_per_mutation = {mutation: len(data[
-        data['Start_Position'] >= genes.loc[mutation, 'start']][
-            data['Start_Position'] <= genes.loc[mutation, 'end']][
-                data['Chromosome'] == str(genes.loc[mutation, 'chromosome'])][
-                    'Sample ID'].unique())
+            (data['Start_Position'] >= genes.loc[mutation, 'start']) &
+                (data['Start_Position'] <= genes.loc[mutation, 'end']) &
+                (data['Chromosome'] == genes.loc[mutation, 'chromosome'])]
+            ['Sample ID'].unique())
                         for mutation in mutations}
 
     result = [(k,v) for k, v in sorted(numbers_per_mutation.items(), key=lambda item: item[1])][::-1]
-    with open('ranked_mutations.txt', 'a') as fp:
+    
+    with open('ranked_mutations.txt', 'w') as fp:
         fp.write('\n'.join('%s %s' % x for x in result))
         fp.write('\n')
+    
+    return True
 
 def compute_samples(data,
                     mutations=None,
@@ -280,13 +283,15 @@ def are_all_fluxes_computable(data, mutations):
 
 maf_file = pd.read_csv('output/merged_luad_maf.txt')
 all_pts_ordered = list(maf_file["Sample ID"].unique())
-maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
-    lambda x: all_pts_ordered.index(x))
+#maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
+#    lambda x: all_pts_ordered.index(x))
 
 
 
 #number_mutations(maf_file, mutations = genes.index)
 t3 = time()
+if number_mutations(maf_file, mutations=genes.index):
+    print('Successful')
 '''
 possible = []
 for five_genes in twenty_choose_five:
