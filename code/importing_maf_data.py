@@ -147,9 +147,5 @@ dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen17
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_luad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
-
 final_df = pd.concat([df for df in dfs.values()])
-final_df.to_csv(os.path.join(location_output, 'merged_luad_maf_w_silent.txt'))
-
-final_df = final_df.drop(final_df.index[final_df['Variant_Classification'] == 'Silent'])
 final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))

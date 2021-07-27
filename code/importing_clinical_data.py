@@ -183,7 +183,7 @@ msk2017_df['Treatment'] = np.select(conditions, values, default = np.NaN)
 '''
 #removing non-primary samples
 metastatic_sample_ids_2017 = msk2017_df[msk2017_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
-msk2017_df = msk2017_df.drop(msk2017_df.index[msk2017_df['SAMPLE_TYPE'] != 'Primary'])
+msk2017_df = msk2017_df[msk2017_df['SAMPLE_TYPE'] == 'Primary']
 #removing multiple samples from same patient in msk 2017 data, keeping most recent and then most coverage.
 msk2017_df = msk2017_df.sort_values(by = ['SAMPLE_TYPE','LINES_OF_TX_PRIOR_IMPACT','TUMOR_PURITY'], ascending=[False, True, False])
 multi_sample_ids_2017 = msk2017_df[msk2017_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
@@ -210,7 +210,7 @@ tracer_df['Treatment'] = tracer_df['SAMPLE_COLLECTION_TIMEPOINT'].apply(lambda x
 tracer_df['is_LUAD'] = tracer_df['HISTOLOGY'].apply(lambda x: True if x == 'Invasive adenocarcinoma' else False if x in ('Adenosquamous carcinoma','Carcinosarcoma','Large cell carcinoma','Large Cell Neuroendocrine','Squamous cell carcinoma') else np.NaN)
 #removing non-primary samples
 metastatic_sample_ids_tracer = tracer_df[tracer_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
-tracer_df = tracer_df.drop(tracer_df.index[tracer_df['SAMPLE_TYPE'] != 'Primary'])
+tracer_df = tracer_df[tracer_df['SAMPLE_TYPE'] == 'Primary']
 #removing cfDNA samples
 tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
 #randomly sampling from multiple samples per patient (multi-region sampling)
@@ -233,7 +233,7 @@ genie_non_luad_id = genie_df[genie_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarc
 genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
 #removing non-primary samples
 metastatic_sample_ids_genie = genie_df[genie_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
-genie_df = genie_df.drop(genie_df.index[genie_df['SAMPLE_TYPE'] != 'Primary'])
+genie_df = genie_df[genie_df['SAMPLE_TYPE'] == 'Primary']
 #TEMPORARY SOLUTION to remove multiple samples for one patient
 genie_df = genie_df.sample(frac=1, random_state=random_seeds[1])
 genie_df = genie_df.sort_values(by = ['AGE_AT_SEQ_REPORT'])
@@ -286,4 +286,4 @@ msk2018_df.to_csv(os.path.join(location_output,'unmerged_clinical/nsclc_pd1_msk_
 
 all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df])
 
-all_clinical_df.to_csv(os.path.join(location_output,"luad_all_clinical.txt"))
+all_clinical_df.to_csv(os.path.join(location_output,"merged_luad_clinical.txt"))

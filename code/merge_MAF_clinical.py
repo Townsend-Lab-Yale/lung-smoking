@@ -1,7 +1,7 @@
 import pandas as pd
 
 maf = pd.read_csv("output/merged_luad_maf.txt")
-clinical = pd.read_csv("output/luad_all_clinical.txt")
+clinical = pd.read_csv("output/merged_luad_clinical.txt")
 
 #outer merge to keep MAF data without clinical data
 maf_clinical = pd.merge(maf, clinical, on="Sample ID", how = 'outer')

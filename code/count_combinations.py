@@ -282,6 +282,7 @@ def are_all_fluxes_computable(data, mutations):
 
 
 maf_file = pd.read_csv('output/merged_luad_maf.txt')
+maf_file = maf_file[maf_file['Variant_Classification'] != 'Silent']
 all_pts_ordered = list(maf_file["Sample ID"].unique())
 #maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
 #    lambda x: all_pts_ordered.index(x))
@@ -290,8 +291,10 @@ all_pts_ordered = list(maf_file["Sample ID"].unique())
 
 #number_mutations(maf_file, mutations = genes.index)
 t3 = time()
+print(len(genes.index))
 if number_mutations(maf_file, mutations=genes.index):
     print('Successful')
+print(time() - t3)
 '''
 possible = []
 for five_genes in twenty_choose_five:
