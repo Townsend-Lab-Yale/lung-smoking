@@ -15,7 +15,7 @@ from importing_clinical_data import fmad_non_luad
 from importing_clinical_data import fmad_non_primary
 
 from locations import full_maf_file_names_lifted as maf_file_names
-from locations import location_output
+from locations import merged_maf_file_name
 
 
 data_sets_sample_id_col_names ={key:'case_id' if key in ['TCGA', 'FM-AD']
@@ -148,4 +148,4 @@ dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_luad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
 final_df = pd.concat([df for df in dfs.values()])
-final_df.to_csv(os.path.join(location_output, 'merged_luad_maf.txt'))
+final_df.to_csv(merged_maf_file_name)

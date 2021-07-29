@@ -3,25 +3,14 @@ import pandas as pd
 import numpy as np
 from pandas.core.reshape.merge import merge
 
+from locations import merged_clinical_file_name
+from locations import location_data
 
 random_seeds = [777, 778]
 """Random seed to feed the random generators, to be able to replicate
 results."""
 
 
-
-if '__file__' not in globals():
-    __file__ = '.'
-
-location_data = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "data"))
-
-location_output = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "output"))
 
 files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9"]
 #files that can be auto-merged
@@ -231,4 +220,4 @@ msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df])
 
-all_clinical_df.to_csv(os.path.join(location_output,"merged_luad_clinical.txt"))
+all_clinical_df.to_csv(merged_clinical_file_name)

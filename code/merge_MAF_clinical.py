@@ -1,7 +1,11 @@
 import pandas as pd
 
-maf = pd.read_csv("output/merged_luad_maf.txt")
-clinical = pd.read_csv("output/merged_luad_clinical.txt")
+from locations import merged_maf_file_name
+from locations import merged_clinical_file_name
+from locations import merged_maf_clinical_file_name
+
+maf = pd.read_csv(merged_maf_file_name)
+clinical = pd.read_csv(merged_clinical_file_name)
 
 #outer merge to keep MAF data without clinical data
 maf_clinical = pd.merge(maf, clinical, on="Sample ID", how = 'outer')
@@ -14,7 +18,7 @@ maf_clinical = maf_clinical[maf_clinical['is_LUAD'] == True]
 #print(maf_clinical[(maf_clinical['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))].shape)
 maf_clinical = maf_clinical[~(maf_clinical['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))]
 
-maf_clinical.to_csv("output/luad_maf_clinical.txt")
+maf_clinical.to_csv(merged_maf_clinical_file_name)
 
 '''Below are checks to ensure that the columns contain expected values.'''
 '''

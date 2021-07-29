@@ -4,7 +4,9 @@ import pandas as pd
 from itertools import product, combinations
 from time import time
 from ranked_list import produce_ranked_list
+
 from locations import gene_coordinates_file
+from locations import merged_luad_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
@@ -48,11 +50,11 @@ def number_mutations(data, mutations = None):
                         for mutation in mutations}
 
     result = [(k,v) for k, v in sorted(numbers_per_mutation.items(), key=lambda item: item[1])][::-1]
-    
+
     with open('ranked_mutations.txt', 'w') as fp:
         fp.write('\n'.join('%s %s' % x for x in result))
         fp.write('\n')
-    
+
     return True
 
 def compute_samples(data,
@@ -281,7 +283,7 @@ def are_all_fluxes_computable(data, mutations):
 
 
 
-maf_file = pd.read_csv('output/merged_luad_maf.txt')
+maf_file = pd.read_csv(merged_luad_file_name)
 maf_file = maf_file[maf_file['Variant_Classification'] != 'Silent']
 all_pts_ordered = list(maf_file["Sample ID"].unique())
 #maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
