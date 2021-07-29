@@ -71,3 +71,8 @@ cd ..
 ## * Change coordinates of data sets to GRCh 38
 source .venv/bin/activate
 python liftover.py
+
+
+## * Merge MAF and clinical files
+python importing_maf_data.py
+deactivate
