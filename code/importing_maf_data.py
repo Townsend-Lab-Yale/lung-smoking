@@ -112,7 +112,7 @@ and mutations.
             x[tumor_col_name]),
         axis=1)
 
-    cols_except_id =  (['Chromosome', 'Start_Position', 'Mutation', 'Source']
+    cols_except_id =  (['Chromosome', 'Start_Position', 'Mutation', 'Reference_Allele', tumor_col_name, 'Source']
                        + (['Variant_Classification'] if not clear_silent else []))
     data = data[[sample_id_col_name] + cols_except_id]
     data.columns = ['Sample ID'] + cols_except_id

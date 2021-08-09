@@ -71,7 +71,6 @@ broad_df['Treatment'] = False
 broad_df = broad_df.drop(broad_df.index[broad_df['Sample ID'] == 'LU-A08-43'])
 #broad_df.loc[broad_df.index[broad_df['Sample ID'] == 'LU-A08-43'],['Treatment', 'Metastatic']] = [True,True]
 broad_df['is_LUAD'] = True
-print(broad_df)
 
 
 tcga_df = clinical_files.get('luad_tcga')
@@ -107,7 +106,6 @@ oncosg_df = oncosg_df[["PATIENT_ID", "SMOKING_STATUS", "STAGE", "OS_MONTHS", "Tr
 oncosg_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)", "Treatment"]
 #no indication in paper of whether tumors were primary or metastatic
 oncosg_df['is_LUAD'] = True
-print(oncosg_df)
 
 
 msk2015_df = clinical_files.get('luad_mskcc_2015')
