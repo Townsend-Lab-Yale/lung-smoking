@@ -1,9 +1,9 @@
-
 import numpy as np
 import pandas as pd
 from itertools import product, combinations
 from time import time
 from ranked_list import produce_ranked_list
+
 from locations import gene_coordinates_file
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
@@ -22,6 +22,7 @@ def build_S_with_tuples(M):
 
     """
     return [x for x in product([0, 1], repeat=M)]
+
 
 def build_S_as_array(M):
     """Build entire space of mutations combinations S.
@@ -159,10 +160,3 @@ def are_all_fluxes_computable(data, mutations):
         return 0 not in compute_samples(data, mutations)[:-1]
     else:
         return False
-
-
-maf_file = pd.read_csv('output/merged_luad_maf.txt')
-maf_file = maf_file[maf_file['Variant_Classification'] != 'Silent']
-all_pts_ordered = list(maf_file["Sample ID"].unique())
-maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
-    lambda x: all_pts_ordered.index(x))

@@ -3,25 +3,14 @@ import pandas as pd
 import numpy as np
 from pandas.core.reshape.merge import merge
 
+from locations import merged_clinical_file_name
+from locations import location_data
 
 random_seeds = [777, 778]
 """Random seed to feed the random generators, to be able to replicate
 results."""
 
 
-
-if '__file__' not in globals():
-    __file__ = '.'
-
-location_data = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "data"))
-
-location_output = os.path.abspath(
-    os.path.join(os.path.dirname(__file__),
-                 "../"
-                 "output"))
 
 files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9"]
 #files that can be auto-merged
@@ -168,7 +157,6 @@ tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAG
 #not sure if regression free survival = progression free survival
 tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
 keep_tracer_samples = tracer_df_sampled['Sample ID']
-tracer_df_sampled.to_csv(os.path.join(location_output,'unmerged_clinical/nsclc_tracerx_2017_clinical.txt'))
 
 
 genie_df = clinical_files.get('genie_9')
@@ -224,13 +212,10 @@ genie_df = genie_df[~genie_df['Patient ID'].isin(dup_patient_ids_gen17)]
 genie_df = genie_df.drop(columns='Patient ID')
 msk2017_df = msk2017_df.drop(columns='Patient ID')
 msk2018_df = msk2018_df.drop(columns='Patient ID')
-genie_df.to_csv(os.path.join(location_output,'unmerged_clinical/genie_9_clinical.txt'))
-msk2017_df.to_csv(os.path.join(location_output,"unmerged_clinical/lung_msk_2017_clinical.txt"))
-msk2018_df.to_csv(os.path.join(location_output,'unmerged_clinical/nsclc_pd1_msk_2018_clinical.txt'))
 
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
 all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df])
 
-all_clinical_df.to_csv(os.path.join(location_output,"merged_luad_clinical.txt"))
+all_clinical_df.to_csv(merged_clinical_file_name)
