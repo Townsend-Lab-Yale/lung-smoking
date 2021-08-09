@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from itertools import product, combinations
@@ -6,7 +5,6 @@ from time import time
 from ranked_list import produce_ranked_list
 
 from locations import gene_coordinates_file
-from locations import merged_luad_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
@@ -25,6 +23,7 @@ def build_S_with_tuples(M):
     """
     return [x for x in product([0, 1], repeat=M)]
 
+
 def build_S_as_array(M):
     """Build entire space of mutations combinations S.
 
@@ -38,6 +37,7 @@ def build_S_as_array(M):
 
     """
     return np.array(build_S_with_tuples(M))
+
 
 def number_mutations(data, mutations = None):
     numbers_per_mutation = {}
@@ -56,6 +56,7 @@ def number_mutations(data, mutations = None):
         fp.write('\n')
 
     return True
+
 
 def compute_samples(data,
                     mutations=None,
@@ -256,7 +257,6 @@ def compute_samples(data,
         return pts_per_combination
 
 
-
 def are_all_fluxes_computable(data, mutations):
     """Return True if we can compute all fluxes, that is, if there are
     patients in `data` with every possible combination of `genes`
@@ -280,73 +280,3 @@ def are_all_fluxes_computable(data, mutations):
         return 0 not in compute_samples(data, mutations)[:-1]
     else:
         return False
-
-
-
-maf_file = pd.read_csv(merged_luad_file_name)
-maf_file = maf_file[maf_file['Variant_Classification'] != 'Silent']
-all_pts_ordered = list(maf_file["Sample ID"].unique())
-#maf_file["Our Sample ID"] = maf_file["Sample ID"].apply( #this apply function takes 8-9 seconds to run
-#    lambda x: all_pts_ordered.index(x))
-
-
-
-#number_mutations(maf_file, mutations = genes.index)
-t3 = time()
-print(len(genes.index))
-if number_mutations(maf_file, mutations=genes.index):
-    print('Successful')
-print(time() - t3)
-'''
-possible = []
-for five_genes in twenty_choose_five:
-    for added_gene in ranked_list_test5[35:45]:
-        if combination_works(maf_file,combination = five_genes + [added_gene]):
-            possible.append(five_genes + [added_gene])
-print(possible)
-'''
-
-'''
-possible_sets = open('possible_sets.txt','w')
-possible_sets.close()
-
-#possible = []
-N = 30
-R = 6
-
-ranked_list = produce_ranked_list(set_length_=R)
-combination_mutation_sets = []
-
-for indices in combinations(range(N),R):
-    combination_mutation_sets.append([ranked_list[ind] for ind in indices])
-for mut_set in combination_mutation_sets:
-    if combination_works(maf_file, combination = mut_set):
-        with open('possible_sets.txt','a') as possible_sets:
-            possible_sets.write(str(mut_set))
-        #possible.append(mut_set)
-#with open('possible_sets.txt','a') as possible_sets:
-#    possible_sets.write(str(possible))
-
-t4 = time()
-with open('timer.txt','w') as time_file:
-    time_file.write(str(t4-t3))
-
-possible_sets_all5 = open('possible_sets_all5.txt','w')
-possible_sets_all5.close()
-
-R_2 = 5
-ranked_list_2 = produce_ranked_list(set_length_=R_2)
-N_2 = len(ranked_list_2)
-
-combination_mutation_sets_2 = []
-for indices in combinations(range(N_2),R_2):
-    combination_mutation_sets_2.append([ranked_list_2[ind] for ind in indices])
-for mut_set in combination_mutation_sets_2:
-    if combination_works(maf_file, combination = mut_set):
-        with open('possible_sets_all5.txt','a') as possible_sets_all5:
-            possible_sets_all5.write(str(mut_set))
-
-t5 = time()
-with open('timer.txt','a') as time_file:
-    time_file.write(str(t5-t4))
-'''
