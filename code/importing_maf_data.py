@@ -4,15 +4,19 @@ import pandas as pd
 from importing_clinical_data import dup_sample_ids_1718
 from importing_clinical_data import multi_sample_ids_2017
 from importing_clinical_data import keep_tracer_samples
-from importing_clinical_data import genie_non_luad_id
 from importing_clinical_data import dup_sample_ids_gen18
 from importing_clinical_data import multi_sample_ids_genie
 from importing_clinical_data import dup_sample_ids_gen17
 from importing_clinical_data import metastatic_sample_ids_2017
 from importing_clinical_data import metastatic_sample_ids_tracer
 from importing_clinical_data import metastatic_sample_ids_genie
-from importing_clinical_data import fmad_non_luad
 from importing_clinical_data import fmad_non_primary
+from importing_clinical_data import non_luad_sample_ids_fmad
+from importing_clinical_data import non_luad_sample_ids_msk2015
+from importing_clinical_data import non_luad_sample_ids_msk2018
+from importing_clinical_data import non_luad_sample_ids_tracer
+from importing_clinical_data import non_luad_sample_ids_genie
+
 
 from locations import full_maf_file_names_lifted as maf_file_names
 from locations import merged_maf_file_name
@@ -131,20 +135,27 @@ dfs = {
 ## Filter data sets
 dfs['Broad'] = dfs['Broad'][dfs['Broad']['Sample ID'] != 'LU-A08-43']
 
+dfs['OncoSG'] = dfs['OncoSG'][~(dfs['OncoSG']['Chromosome'].isin(['GL000230.1', 'hs37d5', 'GL000211.1','MT', 'GL000192.1', 'GL000214.1', 'GL000241.1', 'GL000220.1', 'GL000212.1','GL000205.1', 'GL000195.1', 'GL000218.1', 'GL000216.1', 'GL000226.1','GL000224.1', 'GL000231.1', 'GL000221.1', 'GL000234.1', 'GL000219.1','GL000191.1', 'GL000229.1', 'GL000238.1']))]
+
+dfs['MSK2015'] = dfs['MSK2015'][~dfs['MSK2015']['Sample ID'].isin(non_luad_sample_ids_msk2015)]
+
+dfs['MSK2018'] = dfs['MSK2018'][~dfs['MSK2018']['Sample ID'].isin(non_luad_sample_ids_msk2018)]
+
 dfs['MSK2017'] = dfs['MSK2017'][~dfs['MSK2017']['Sample ID'].isin(metastatic_sample_ids_2017)]
 dfs['MSK2017'] = dfs['MSK2017'][~dfs['MSK2017']['Sample ID'].isin(multi_sample_ids_2017)]
 dfs['MSK2017'] = dfs['MSK2017'][~dfs['MSK2017']['Sample ID'].isin(dup_sample_ids_1718)]
 
 dfs['TracerX'] = dfs['TracerX'][~dfs['TracerX']['Sample ID'].isin(metastatic_sample_ids_tracer)]
+dfs['TracerX'] = dfs['TracerX'][~dfs['TracerX']['Sample ID'].isin(non_luad_sample_ids_tracer)]
 dfs['TracerX'] = dfs['TracerX'][dfs['TracerX']['Sample ID'].isin(keep_tracer_samples)]
 
-dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(genie_non_luad_id)]
+dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(non_luad_sample_ids_genie)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(metastatic_sample_ids_genie)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(multi_sample_ids_genie)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen18)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen17)]
 
-dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_luad)]
+dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(non_luad_sample_ids_fmad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
 final_df = pd.concat([df for df in dfs.values()])

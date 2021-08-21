@@ -42,7 +42,6 @@ Smoker: True if ever smoked, False if never smoked
 Stage: Tumor stage
 Survivals: self-explanatory
 Treatment: True if received targeted therapy treatment, False otherwise
-is_LUAD: True if tumor histology indicates lung adenocarcinoma, False otherwise
 '''
 
 """filtering requires individual steps because each file is too different"""
@@ -58,8 +57,6 @@ broad_df.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (mon
 broad_df['Treatment'] = False
 #removing non-primary samples
 broad_df = broad_df.drop(broad_df.index[broad_df['Sample ID'] == 'LU-A08-43'])
-#broad_df.loc[broad_df.index[broad_df['Sample ID'] == 'LU-A08-43'],['Treatment', 'Metastatic']] = [True,True]
-broad_df['is_LUAD'] = True
 
 
 tcga_df = clinical_files.get('luad_tcga')
@@ -81,7 +78,6 @@ tcga_df['Treatment'] = np.NaN #tcga_df['treatment_or_therapy'].apply(lambda x: T
 tcga_df = tcga_df[["case_id","pack_years_smoked","tumor_stage", "months_to_death", "Treatment"]]
 tcga_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)","Treatment"]
 #metastatis_at_diagnosis/metastasis_at_diagnosis_site columns are only NA values
-tcga_df['is_LUAD'] = True
 
 
 oncosg_df = clinical_files.get('luad_oncosg_2020')
@@ -94,21 +90,19 @@ oncosg_df['Treatment'] = oncosg_df['TKI_TREATMENT'].apply(lambda x: True if x ==
 oncosg_df = oncosg_df[["PATIENT_ID", "SMOKING_STATUS", "STAGE", "OS_MONTHS", "Treatment"]]
 oncosg_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)", "Treatment"]
 #no indication in paper of whether tumors were primary or metastatic
-oncosg_df['is_LUAD'] = True
 
 
 msk2015_df = clinical_files.get('luad_mskcc_2015')
-#Removing unspecified NSCLC tumor subtypes and LUSC tumors.
-#msk2015_df = msk2015_df[msk2015_df['HISTOLOGY'] == "Adenocarcinoma"]
 msk2015_df["SMOKING_HISTORY"] = msk2015_df["SMOKING_HISTORY"].apply(lambda x: True if x in ("Current", "Former") else False if x == "Never" else np.NaN)
 #msk2015 does not have stage
 msk2015_df['Stage'] = np.NaN
 #All patients treated with pembrolizumab, no indication of primary/metastasis in paper
 msk2015_df['Treatment'] = True
-msk2015_df['is_LUAD'] = msk2015_df['HISTOLOGY'].apply(lambda x: True if x == 'Adenocarcinoma' else False)
-msk2015_df = msk2015_df[["SAMPLE_ID", "Stage", "SMOKING_HISTORY", "PFS_MONTHS", "Treatment", "is_LUAD"]]
+non_luad_sample_ids_msk2015 = msk2015_df[msk2015_df['HISTOLOGY'] != 'Adenocarcinoma']['SAMPLE_ID']
+msk2015_df = msk2015_df[msk2015_df['HISTOLOGY'] == 'Adenocarcinoma']
+msk2015_df = msk2015_df[["SAMPLE_ID", "Stage", "SMOKING_HISTORY", "PFS_MONTHS", "Treatment"]]
 #using sample_id instead of patient_id because that is what matches with patient_id in the maf file
-msk2015_df.columns = ["Sample ID","Stage","Smoker","Progression Free Survival (months)","Treatment", "is_LUAD"]
+msk2015_df.columns = ["Sample ID","Stage","Smoker","Progression Free Survival (months)","Treatment"]
 
 
 msk2017_df = clinical_files.get('lung_msk_2017')
@@ -128,22 +122,23 @@ msk2017_df = msk2017_df[["PATIENT_ID","SAMPLE_ID", "SMOKING_HISTORY", "STAGE_AT_
 #using sample_id instead of patient_id because that is what matches with patient_id in the maf file
 #msk2017 only has vital status rather than PFS or OS.
 msk2017_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Vital Status","Treatment"]
-msk2017_df['is_LUAD'] = True
 
 msk2018_df = clinical_files.get('nsclc_pd1_msk_2018')
 msk2018_df['SMOKER'] = msk2018_df['SMOKER'].apply(lambda x: True if x == 'Ever' else False if x == 'Never' else np.NaN)
 msk2018_df['Stage'] = np.NaN
 #all patients treated with ICI
 msk2018_df['Treatment'] = True
-msk2018_df['is_LUAD'] = msk2018_df['CANCER_TYPE_DETAILED'].apply(lambda x: True if x == 'Lung Adenocarcinoma' else False)
-msk2018_df = msk2018_df[['PATIENT_ID','SAMPLE_ID','SMOKER','Stage','PFS_MONTHS','Treatment','is_LUAD']]
-msk2018_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
+non_luad_sample_ids_msk2018 = msk2018_df[msk2018_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarcinoma']['SAMPLE_ID']
+msk2018_df = msk2018_df[msk2018_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
+msk2018_df = msk2018_df[['PATIENT_ID','SAMPLE_ID','SMOKER','Stage','PFS_MONTHS','Treatment']]
+msk2018_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment"]
 
 tracer_df = clinical_files.get('nsclc_tracerx_2017')
 tracer_df['SMOKING_HISTORY'] = tracer_df['SMOKING_HISTORY'].apply(lambda x: True if x in ("Current Smoker", "Ex-Smoker", "Recent Ex-Smoker") else False if x == "Never Smoked" else np.NaN)
 tracer_df['TUMOR_STAGE'] = tracer_df['TUMOR_STAGE'].map(stage_dict).fillna(tracer_df['TUMOR_STAGE'])
 tracer_df['Treatment'] = tracer_df['SAMPLE_COLLECTION_TIMEPOINT'].apply(lambda x: True if x == 'Post-treatment' else False if x == 'Pre-treatment' else np.NaN)
-tracer_df['is_LUAD'] = tracer_df['HISTOLOGY'].apply(lambda x: True if x == 'Invasive adenocarcinoma' else False if x in ('Adenosquamous carcinoma','Carcinosarcoma','Large cell carcinoma','Large Cell Neuroendocrine','Squamous cell carcinoma') else np.NaN)
+non_luad_sample_ids_tracer = tracer_df[tracer_df['HISTOLOGY'] != 'Invasive adenocarcinoma']
+tracer_df = tracer_df[tracer_df['HISTOLOGY'] == 'Invasive adenocarcinoma']
 #removing non-primary samples
 metastatic_sample_ids_tracer = tracer_df[tracer_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 tracer_df = tracer_df[tracer_df['SAMPLE_TYPE'] == 'Primary']
@@ -153,9 +148,9 @@ tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
 tracer_df_sampled = pd.DataFrame()
 for id in pd.unique(tracer_df['PATIENT_ID']):
     tracer_df_sampled = tracer_df_sampled.append(tracer_df[tracer_df['PATIENT_ID'] == id].sample(random_state=random_seeds[0]))
-tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment','is_LUAD']]
+tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment']]
 #not sure if regression free survival = progression free survival
-tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment","is_LUAD"]
+tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment"]
 keep_tracer_samples = tracer_df_sampled['Sample ID']
 
 
@@ -165,7 +160,7 @@ genie_df['Stage'] = np.NaN
 genie_df['Treatment'] = np.NaN
 #survival column is also np.NaN (will automatically fill in when dfs are concatenated)
 #removing non-LUAD samples and collecting indices to remove from maf file
-genie_non_luad_id = genie_df[genie_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarcinoma']['SAMPLE_ID']
+non_luad_sample_ids_genie = genie_df[genie_df['CANCER_TYPE_DETAILED'] != 'Lung Adenocarcinoma']['SAMPLE_ID']
 genie_df = genie_df[genie_df['CANCER_TYPE_DETAILED'] == 'Lung Adenocarcinoma']
 #removing non-primary samples
 metastatic_sample_ids_genie = genie_df[genie_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
@@ -175,21 +170,18 @@ genie_df = genie_df.sample(frac=1, random_state=random_seeds[1])
 genie_df = genie_df.sort_values(by = ['AGE_AT_SEQ_REPORT'])
 multi_sample_ids_genie = genie_df[genie_df.duplicated(subset = ['PATIENT_ID'], keep = 'first')]['SAMPLE_ID']
 genie_df = genie_df.drop_duplicates(subset = ['PATIENT_ID'], keep = 'first')
-#too many other cancer types and NaN values don't matter in this column because any non-True values will be removed, so not including NaN clause
-genie_df['is_LUAD'] = genie_df['CANCER_TYPE_DETAILED'].apply(lambda x: True if x == 'Lung Adenocarcinoma' else False)
 #this is only for preserving MSK patient IDs and will likely interfere with other patient IDs, but only Sample ID matters in the end
 genie_df['Patient ID'] = genie_df['PATIENT_ID'].str.slice(10)
-genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment','is_LUAD']]
-genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment','is_LUAD']
+genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment']]
+genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment']
 
 fmad_df = pd.read_csv(os.path.join(location_data,'luad_fm-ad/clinical.tsv'), sep = '\t')
-fmad_non_luad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
+non_luad_sample_ids_fmad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
 fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
 fmad_non_primary = fmad_df[fmad_df['classification_of_tumor'] != 'primary']['case_id']
 fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
 fmad_df = fmad_df[['case_id']]
 fmad_df.columns = ['Sample ID']
-fmad_df['is_LUAD'] = True
 
 #removing repeated patients between msk 2017 and msk 2018, keeping msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
