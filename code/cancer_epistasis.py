@@ -265,14 +265,16 @@ def convert_lambdas_to_dict(results):
     """Convert a fluxes array to a dictionary.
 
     The indexes of the dictionary are the subscripts of the
-    lambdas. So lambda[x, y] represents the flux from x to y, it can
-    be obtain from the result of this function easily by using
-    results[x, y], with x and y input as tuples.
+    lambdas. So if lambda[x, y] represents the flux from x to y, it
+    can be obtain from the result of this function easily by using
+    output[x, y], with x and y written as tuples.
 
-    :type results: pymc3.backends.base.MultiTrace or dict
+    :type results: pymc3.backends.base.MultiTrace or dict or list
     :param results: Estimates of the fluxes as a MultiTrace pymc3
-        object, or a dictionary with the ordered MAP estimates. As
-        returned by :func:`estimate_lambdas`.
+        object or a dictionary with the ordered MAP estimates (both as
+        returned by :func:`estimate_lambdas`), or as a list of
+        confidence intervals for the fluxes as returned by
+        asymp_CI_lambdas.
 
     :rtype: dict
     :return: Dictionary with the fluxes, indexed by a pair of tuples
@@ -281,9 +283,19 @@ def convert_lambdas_to_dict(results):
 
     """
     if isinstance(results, dict):
+        # if results is a dictionary, it must be the return from
+        # estimate_lambdas with draws=1, that is, the MAP (and MLE)
         results = results['lambdas']
-    else:
+    elif isinstance(results, pm.backends.base.MultiTrace):
+        # if results is a pymc3.backends.base.MultiTrace, it must be
+        # the return from estimate_lambdas with draws>1, that is, the
+        # posterior estimates
         results = results.get_values('lambdas').T
+    elif not isinstance(results, list):
+        # otherwise results should be the confidence intervales and
+        # thus should be a list because that is the return of
+        # asymp_CI_lambdas
+        raise Exception("`results` type not compatible")
 
     M = numbers_positive_lambdas.index(len(results))
 
@@ -322,6 +334,7 @@ def compute_gammas(lambdas, mus):
         xy:flux/mus[tuple(np.array(xy[1])-np.array(xy[0]))]
         for xy, flux in lambdas.items()}
     return gammas
+
 
 def compute_log_lh(positive_lambdas, samples):
     """Not really the log likelihood but that plus a constant (that
