@@ -67,7 +67,7 @@ curl 'https://misc.cidma.us/data/clinical.FM-AD_SNV.Bronchus_And_Lung.tar.gz' | 
 curl 'https://misc.cidma.us/data/FM-AD_SNV.Bronchus_And_Lung.protected.maf.gz' | gunzip -c > 'data_mutations_extended.txt'
 cd ..
 
-
+cd code
 ## * Change coordinates of data sets to GRCh 38
 source .venv/bin/activate
 python liftover.py
@@ -77,3 +77,7 @@ python liftover.py
 python importing_maf_data.py
 python merge_MAF_clinical.py
 deactivate
+cd ..
+
+## * Create directory for figures
+mkdir figures

@@ -3,6 +3,13 @@ import os
 if '__file__' not in globals():
     __file__ = '.'
 
+location_figures = os.path.abspath(
+    os.path.join(os.path.dirname(__file__),
+                 "../"
+                 "figures/"))
+"""Location of directory that contains figures for the project."""
+
+
 location_data = os.path.abspath(
     os.path.join(os.path.dirname(__file__),
                  "../"
