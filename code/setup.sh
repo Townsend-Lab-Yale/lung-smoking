@@ -75,4 +75,5 @@ python liftover.py
 
 ## * Merge MAF and clinical files
 python importing_maf_data.py
+python merge_MAF_clinical.py
 deactivate
