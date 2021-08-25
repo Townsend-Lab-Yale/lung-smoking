@@ -75,36 +75,51 @@ genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c(
 #READING IN GENES INCLUDED IN EACH PANEL AND CREATING GRANGES OBJECT TO PASS INTO COVERED_REGIONS PARAMETER OF LOAD_MAF
 #once the granges are exported once, these functions don't need to be run anymore
 gene_granges <- rtracklayer::import('/Users/Krishna1/Downloads/gencode.v38lift37.basic.annotation.gtf')
-fmad_genes <- unique(fread('../gene_panels/fm-ad_genes.txt', sep = '\n', header = F))$V1
-msk_341_genes <- unique(fread('../gene_panels/msk341.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
-msk_410_genes <- unique(fread('../gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
-msk_468_genes <- unique(fread('../gene_panels/msk468.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
-tsp_genes <- unique(fread('../gene_panels/tsp.txt', sep = '\n', header = F))$V1
 
-fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
-fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
-fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
+if(!file.exists('../data/fmad_targets.bed')){
+  fmad_genes <- unique(fread('../gene_panels/fm-ad_genes.txt', sep = '\n', header = F))$V1
+  fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
+  fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
+  fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
+  export(fmad_gr_clean, '../data/fmad_targets.bed')
   
-tsp_granges <- gene_granges[gene_granges$gene_name %in% tsp_genes, ]
-tsp_granges <- tsp_granges[tsp_granges$type %in% c('CDS','stop_codon'),]
-tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = tsp_granges)
+}
 
-msk341_granges <- gene_granges[gene_granges$gene_name %in% msk_341_genes, ]
-msk341_granges <- msk341_granges[msk341_granges$type %in% c('CDS','stop_codon'),]
-msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk341_granges)
+if(!file.exists('../data/tsp_targets.bed')){
+  tsp_genes <- unique(fread('../gene_panels/tsp.txt', sep = '\n', header = F))$V1
+  tsp_granges <- gene_granges[gene_granges$gene_name %in% tsp_genes, ]
+  tsp_granges <- tsp_granges[tsp_granges$type %in% c('CDS','stop_codon'),]
+  tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = tsp_granges)
+  export(tsp_gr_clean, '../data/tsp_targets.bed')
+}
 
-msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
-msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
-msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk410_granges)
+if(!file.exists('../data/msk341_targets.bed')){
+  msk_341_genes <- unique(fread('../gene_panels/msk341.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk341_granges <- gene_granges[gene_granges$gene_name %in% msk_341_genes, ]
+  msk341_granges <- msk341_granges[msk341_granges$type %in% c('CDS','stop_codon'),]
+  msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk341_granges)
+  export(msk341_gr_clean, '../data/msk341_targets.bed')
+}
 
-msk468_granges <- gene_granges[gene_granges$gene_name %in% msk_468_genes, ]
-msk468_granges <- msk468_granges[msk468_granges$type %in% c('CDS','stop_codon'),]
-msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk468_granges)
+if(!file.exists('../data/msk410_targets.bed')){
+  msk_410_genes <- unique(fread('../gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
+  msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
+  msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk410_granges)
+  export(msk410_gr_clean, '../data/msk410_targets.bed')
+}
+
+if(!file.exists('../data/msk468_targets.bed')){
+  msk_468_genes <- unique(fread('../gene_panels/msk468.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk468_granges <- gene_granges[gene_granges$gene_name %in% msk_468_genes, ]
+  msk468_granges <- msk468_granges[msk468_granges$type %in% c('CDS','stop_codon'),]
+  msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk468_granges)
+  export(msk468_gr_clean, '../data/msk468_targets.bed')
+}
 
 #this should be run everytime so that we don't have to save a bunch of grange files
 genie_panel_genes <- fread('../data/genie_9/genomic_information.txt')[,c('Chromosome', 'Start_Position', 'End_Position', 'Hugo_Symbol', 'Feature_Type', 'SEQ_ASSAY_ID')]
 genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
-genie_granges_list[[1]]
 
 
 #GENES INCLUDED IN EVERY PANEL (NOT TRUE FOR ALL THE PANELS IN GENIE THOUGH, SEE MESSAGES WITH JORGE)
@@ -235,19 +250,14 @@ nonsmoking_mus <- cesa_nonsmoking$gene_rates
 smoking_mus[, ratio := rate / nonsmoking_mus[,rate]]
 summary(smoking_mus$ratio)
 
+plot <- ggplot(smoking_mus, aes(x = 1:nrow(smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
 
 subsetted_smoking_mus <- cesa_smoking$gene_rates[gene %in% genes_in_intersection]
 subsetted_nonsmoking_mus <- cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection]
 subsetted_smoking_mus[, ratio := rate / subsetted_nonsmoking_mus[,rate]]
 summary(subsetted_smoking_mus$ratio)
 
-plot <- ggplot(smoking_mus, aes(x = 1:nrow(smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-
 subsetted_ratios_plot <- ggplot(subsetted_smoking_mus, aes(x = 1:nrow(subsetted_smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-
-
-cesa_total$gene_rates[gene %in% genes_in_intersection ,pan_v_exome_ratios := rate / cesa_exome$gene_rates[gene %in% genes_in_intersection]$rate]
-cesa_total$gene_rates[gene %in% genes_in_intersection, ratios]
 
 pan_v_exome_ratios <- cesa_total$gene_rates$rate / cesa_exome$gene_rates$rate
 summary(pan_v_exome_ratios)
