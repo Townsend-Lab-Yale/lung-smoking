@@ -4,6 +4,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(rtracklayer)
+library(stringr)
 # All files not available in repo but still used here:
 # Gencode basic annotation,
 # Genie genomic information
@@ -82,7 +83,6 @@ if(!file.exists('../data/fmad_targets.bed')){
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
   fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
   export(fmad_gr_clean, '../data/fmad_targets.bed')
-  
 }
 
 if(!file.exists('../data/tsp_targets.bed')){
@@ -120,6 +120,7 @@ if(!file.exists('../data/msk468_targets.bed')){
 #this should be run everytime so that we don't have to save a bunch of grange files
 genie_panel_genes <- fread('../data/genie_9/genomic_information.txt')[,c('Chromosome', 'Start_Position', 'End_Position', 'Hugo_Symbol', 'Feature_Type', 'SEQ_ASSAY_ID')]
 genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
+seqlevels(genie_granges_list, pruning.mode = "fine") <- c(1:22,'X','Y')
 
 
 #GENES INCLUDED IN EVERY PANEL (NOT TRUE FOR ALL THE PANELS IN GENIE THOUGH, SEE MESSAGES WITH JORGE)
@@ -142,7 +143,6 @@ Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID`)
 #CREATING PAN-DATASET CESA OBJECT FOR GENERAL MUTATION RATES
 cesa_total <- CESAnalysis()
 #consider using covered regions padding when variants are outside the intervals
-cesa_total <- load_maf(cesa_total, maf = Broad_maf$WGS, coverage = 'genome')
 cesa_total <- load_maf(cesa_total, maf = Broad_maf$WES)
 cesa_total <- load_maf(cesa_total, maf = MSK2015_maf)
 cesa_total <- load_maf(cesa_total, maf = OncoSG_maf)
@@ -150,7 +150,7 @@ cesa_total <- load_maf(cesa_total, maf = TCGA_maf)
 cesa_total <- load_maf(cesa_total, maf = TracerX_maf)
 cesa_total <- load_maf(cesa_total, maf = FMAD_maf, coverage = 'targeted', covered_regions = '../data/fmad_targets.bed', covered_regions_name = 'fmad_regions', covered_regions_padding = 100) #padding based on 23 variants having distance from interval between 10 and 100.
 
-for(i in 1:length(Genie_maf)){
+for(i in 12:length(Genie_maf)){
   cesa_total <- load_maf(cesa_total, maf = Genie_maf[i][[1]], coverage = 'targeted', covered_regions = genie_granges_list[names(Genie_maf)[i]][[1]], covered_regions_name = paste0(names(Genie_maf)[i], '_regions'), covered_regions_padding = 100)
 }
 
@@ -160,6 +160,7 @@ cesa_total <- load_maf(cesa_total, maf = MSK2018_maf$IMPACT341, coverage = 'targ
 cesa_total <- load_maf(cesa_total, maf = MSK2018_maf$IMPACT410, coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
 cesa_total <- load_maf(cesa_total, maf = MSK2018_maf$IMPACT468, coverage = 'targeted', covered_regions = '../data/msk468_targets.bed', covered_regions_name = 'msk468_regions', covered_regions_padding = 100)
 cesa_total <- load_maf(cesa_total, maf = TSP_maf, coverage = 'targeted', covered_regions = '../data/tsp_targets.bed', covered_regions_name = 'tsp_regions', covered_regions_padding = 100)
+cesa_total <- load_maf(cesa_total, maf = Broad_maf$WGS, coverage = 'genome')
 
 
 #CALCULATING MUTATION RATES
@@ -169,7 +170,7 @@ cesa_total <- trinuc_mutation_rates(cesa_total,
 )
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
-save_cesa(cesa_total, 'pan-dataset_samples_cesa.rds')
+save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
 fwrite(cesa_total$gene_rates[gene %in% genes_in_intersection], '../data/pan-data_mutation_rates.txt')
 
 
@@ -190,7 +191,7 @@ cesa_exome <- trinuc_mutation_rates(cesa_exome,
 
 #CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
 cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
-save_cesa(cesa_exome, 'exome_samples_cesa.rds')
+save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
 fwrite(cesa_exome$gene_rates[gene %in% genes_in_intersection], '../data/exome_mutation_rates.txt')
 
 
@@ -207,13 +208,12 @@ nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
 #SMOKING GROUP
 cesa_smoking <- CESAnalysis()
-#there are no Broad WGS samples in the smoking samples group
-#cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% smoking_samples], coverage = 'genome')
 cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = TCGA_maf[TCGA_maf$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = TracerX_maf[TracerX_maf$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% smoking_samples], coverage = 'genome')
 
 cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
                                     signature_set = "COSMIC_v3.2",
@@ -222,27 +222,25 @@ cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
 
 cesa_smoking <- gene_mutation_rates(cesa_smoking, covariates = "lung")
 
-save_cesa(cesa_smoking, 'smoking_samples_cesa.rds')
+save_cesa(cesa_smoking, '../data/smoking_samples_cesa.rds')
 fwrite(cesa_smoking$gene_rates[gene %in% genes_in_intersection], '../data/smoking_mutation_rates.txt')
 
 
 #NONSMOKING GROUP
 cesa_nonsmoking <- CESAnalysis()
-#somehow there aren't any Broad WGS samples in the nonsmoking group either?
-#cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% nonsmoking_samples], coverage = 'genome')
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = TCGA_maf[TCGA_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = TracerX_maf[TracerX_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% nonsmoking_samples], coverage = 'genome')
 
 cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
                                       signature_set = "COSMIC_v3.2",
                                       signatures_to_remove = signatures_to_remove
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
-
-save_cesa(cesa_nonsmoking, 'nonsmoking_samples_cesa.rds')
+save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
 fwrite(cesa_smoking$gene_rates[gene %in% genes_in_intersection], '../data/nonsmoking_mutation_rates.txt')
 
 smoking_mus <- cesa_smoking$gene_rates
@@ -261,3 +259,10 @@ subsetted_ratios_plot <- ggplot(subsetted_smoking_mus, aes(x = 1:nrow(subsetted_
 
 pan_v_exome_ratios <- cesa_total$gene_rates$rate / cesa_exome$gene_rates$rate
 summary(pan_v_exome_ratios)
+
+genie_panel_frequency <-as.data.table(table(genie_panels_used$`Sequence Assay ID`))
+names(genie_panel_frequency) <- c('SEQ_ASSAY_ID','Num_Patients')
+#genie_panel_numgenes <- as.data.table(table(genie_panel_genes[!duplicated(genie_panel_genes, by = 'Hugo_Symbol')]$SEQ_ASSAY_ID))
+#names(genie_panel_numgenes) <- c('SEQ_ASSAY_ID','Num_Genes')
+#genie_panel_info <- merge(genie_panel_frequency, genie_panel_numgenes, by = 'SEQ_ASSAY_ID')
+#genie_panel_info[order(-Num_Genes, -Num_Patients)]
