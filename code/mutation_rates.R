@@ -163,7 +163,7 @@ cesa_total <- load_maf(cesa_total, maf = Broad_maf$WGS, coverage = 'genome')
 
 #CALCULATING MUTATION RATES
 cesa_total <- trinuc_mutation_rates(cesa_total,
-                                    signature_set = "COSMIC_v3.2",
+                                    signature_set = "COSMIC_v3.1",
                                     signatures_to_remove = signatures_to_remove
 )
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
@@ -182,8 +182,8 @@ cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
 cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
 
 cesa_exome <- trinuc_mutation_rates(cesa_exome,
-                              signature_set = "COSMIC_v3.2",
-                              signatures_to_remove = signatures_to_remove
+                                    signature_set = "COSMIC_v3.1",
+                                    signatures_to_remove = signatures_to_remove
 )
 
 
@@ -214,8 +214,8 @@ cesa_smoking <- load_maf(cesa_smoking, maf = TracerX_maf[TracerX_maf$Unique_Pati
 cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% smoking_samples], coverage = 'genome')
 
 cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
-                                    signature_set = "COSMIC_v3.2",
-                                    signatures_to_remove = signatures_to_remove
+                                      signature_set = "COSMIC_v3.1",
+                                      signatures_to_remove = signatures_to_remove
 )
 
 cesa_smoking <- gene_mutation_rates(cesa_smoking, covariates = "lung")
@@ -234,7 +234,7 @@ cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = TracerX_maf[TracerX_maf$Uniqu
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% nonsmoking_samples], coverage = 'genome')
 
 cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
-                                      signature_set = "COSMIC_v3.2",
+                                      signature_set = "COSMIC_v3.1",
                                       signatures_to_remove = signatures_to_remove
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
