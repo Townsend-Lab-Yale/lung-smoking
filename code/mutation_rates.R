@@ -241,28 +241,33 @@ cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
 save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
-fwrite(cesa_smoking$gene_rates[gene %in% genes_in_intersection], '../data/nonsmoking_mutation_rates.txt')
+fwrite(cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection], '../data/nonsmoking_mutation_rates.txt')
 
-smoking_mus <- cesa_smoking$gene_rates
-nonsmoking_mus <- cesa_nonsmoking$gene_rates
-smoking_mus[, ratio := rate / nonsmoking_mus[,rate]]
-summary(smoking_mus$ratio)
-
-plot <- ggplot(smoking_mus, aes(x = 1:nrow(smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-
-subsetted_smoking_mus <- cesa_smoking$gene_rates[gene %in% genes_in_intersection]
-subsetted_nonsmoking_mus <- cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection]
-subsetted_smoking_mus[, ratio := rate / subsetted_nonsmoking_mus[,rate]]
-summary(subsetted_smoking_mus$ratio)
-
-subsetted_ratios_plot <- ggplot(subsetted_smoking_mus, aes(x = 1:nrow(subsetted_smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-
-pan_v_exome_ratios <- cesa_total$gene_rates$rate / cesa_exome$gene_rates$rate
-summary(pan_v_exome_ratios)
-
-genie_panel_frequency <-as.data.table(table(genie_panels_used$`Sequence Assay ID`))
-names(genie_panel_frequency) <- c('SEQ_ASSAY_ID','Num_Patients')
-#genie_panel_numgenes <- as.data.table(table(genie_panel_genes[!duplicated(genie_panel_genes, by = 'Hugo_Symbol')]$SEQ_ASSAY_ID))
-#names(genie_panel_numgenes) <- c('SEQ_ASSAY_ID','Num_Genes')
-#genie_panel_info <- merge(genie_panel_frequency, genie_panel_numgenes, by = 'SEQ_ASSAY_ID')
-#genie_panel_info[order(-Num_Genes, -Num_Patients)]
+# smoking_mus <- cesa_smoking$gene_rates
+# nonsmoking_mus <- cesa_nonsmoking$gene_rates
+# smoking_mus[, ratio := rate / nonsmoking_mus[,rate]]
+# summary(smoking_mus$ratio)
+# 
+# plot <- ggplot(smoking_mus, aes(x = 1:nrow(smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
+# 
+# subsetted_smoking_mus <- cesa_smoking$gene_rates[gene %in% genes_in_intersection]
+# subsetted_nonsmoking_mus <- cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection]
+# subsetted_smoking_mus[, ratio := rate / subsetted_nonsmoking_mus[,rate]]
+# summary(subsetted_smoking_mus$ratio)
+# 
+# subsetted_ratios_plot <- ggplot(subsetted_smoking_mus, aes(x = 1:nrow(subsetted_smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
+# 
+# pan_v_exome_ratios <- cesa_total$gene_rates$rate / cesa_exome$gene_rates$rate
+# summary(pan_v_exome_ratios)
+# 
+# genie_panel_frequency <-as.data.table(table(genie_panels_used$`Sequence Assay ID`))
+# names(genie_panel_frequency) <- c('SEQ_ASSAY_ID','Num_Patients')
+# #genie_panel_numgenes <- as.data.table(table(genie_panel_genes[!duplicated(genie_panel_genes, by = 'Hugo_Symbol')]$SEQ_ASSAY_ID))
+# #names(genie_panel_numgenes) <- c('SEQ_ASSAY_ID','Num_Genes')
+# #genie_panel_info <- merge(genie_panel_frequency, genie_panel_numgenes, by = 'SEQ_ASSAY_ID')
+# #genie_panel_info[order(-Num_Genes, -Num_Patients)]
+# 
+# rate_comps <- merge(cesa_smoking$gene_rates, cesa_nonsmoking$gene_rates, by = 'gene')
+# names(rate_comps) <- c('gene', 'smoking_rate', 'nonsmoking_rate')
+# rate_comps[, ratio := smoking_rate / nonsmoking_rate]
+# rate_comps[gene == 'ATM']
