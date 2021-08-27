@@ -5,9 +5,6 @@ library(dplyr)
 library(ggplot2)
 library(rtracklayer)
 library(stringr)
-# All files not available in repo but still used here:
-# Gencode basic annotation,
-# Genie genomic information
 
 #READ IN ALL MAF FILES
 maf_file <- read.csv("../output/merged_luad_maf.txt")
@@ -25,40 +22,40 @@ FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, refset = ces.
 FMAD_maf <- FMAD_maf[is.na(problem)]
 FMAD_maf <- FMAD_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 Genie_maf <- Genie_maf[is.na(problem)]
 Genie_maf <- Genie_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 MSK2015_maf <- MSK2015_maf[is.na(problem)]
 MSK2015_maf <- MSK2015_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2017_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2017, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+MSK2017_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2017, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 MSK2017_maf <- MSK2017_maf[is.na(problem)]
 MSK2017_maf <- MSK2017_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2018_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2018, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+MSK2018_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2018, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 MSK2018_maf <- MSK2018_maf[is.na(problem)]
 MSK2018_maf <- MSK2018_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-OncoSG_maf <- cancereffectsizeR::preload_maf(maf = maf_list$OncoSG, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+OncoSG_maf <- cancereffectsizeR::preload_maf(maf = maf_list$OncoSG, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 OncoSG_maf <- OncoSG_maf[is.na(problem)]
 OncoSG_maf <- OncoSG_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TCGA_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TCGA, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+TCGA_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TCGA, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 TCGA_maf <- TCGA_maf[is.na(problem)]
 TCGA_maf <- TCGA_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TracerX_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TracerX, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+TracerX_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TracerX, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 TracerX_maf <- TracerX_maf[is.na(problem)]
 TracerX_maf <- TracerX_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")
+TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 TSP_maf <- TSP_maf[is.na(problem)]
 TSP_maf <- TSP_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 TSP_maf <- TSP_maf[!Unique_Patient_Identifier %in% c("luad_tsp_16929", "luad_tsp_16901", "luad_tsp_16875","luad_tsp_16915")]
 
-#maf_list <- sapply(maf_list, function(x){preload_maf(maf = x, refset = ces.refset.hg19, chain_file = "/Users/Krishna1/Desktop/Research/hg38ToHg19.over.chain")})
+#maf_list <- sapply(maf_list, function(x){preload_maf(maf = x, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")})
 
 
 #SIGNATURES NOT RELEVANT TO LUAD
@@ -75,7 +72,8 @@ genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c(
 
 #READING IN GENES INCLUDED IN EACH PANEL AND CREATING GRANGES OBJECT TO PASS INTO COVERED_REGIONS PARAMETER OF LOAD_MAF
 #once the granges are exported once, these functions don't need to be run anymore
-gene_granges <- rtracklayer::import('/Users/Krishna1/Downloads/gencode.v38lift37.basic.annotation.gtf')
+
+gene_granges <- rtracklayer::import('../data/gencode.v38lift37.basic.annotation.gtf')
 
 if(!file.exists('../data/fmad_targets.bed')){
   fmad_genes <- unique(fread('../gene_panels/fm-ad_genes.txt', sep = '\n', header = F))$V1
@@ -165,7 +163,7 @@ cesa_total <- load_maf(cesa_total, maf = Broad_maf$WGS, coverage = 'genome')
 
 #CALCULATING MUTATION RATES
 cesa_total <- trinuc_mutation_rates(cesa_total,
-                                    signature_set = "COSMIC_v3.2",
+                                    signature_set = "COSMIC_v3.1",
                                     signatures_to_remove = signatures_to_remove
 )
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
@@ -184,8 +182,8 @@ cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
 cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
 
 cesa_exome <- trinuc_mutation_rates(cesa_exome,
-                              signature_set = "COSMIC_v3.2",
-                              signatures_to_remove = signatures_to_remove
+                                    signature_set = "COSMIC_v3.1",
+                                    signatures_to_remove = signatures_to_remove
 )
 
 
@@ -216,8 +214,8 @@ cesa_smoking <- load_maf(cesa_smoking, maf = TracerX_maf[TracerX_maf$Unique_Pati
 cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% smoking_samples], coverage = 'genome')
 
 cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
-                                    signature_set = "COSMIC_v3.2",
-                                    signatures_to_remove = signatures_to_remove
+                                      signature_set = "COSMIC_v3.1",
+                                      signatures_to_remove = signatures_to_remove
 )
 
 cesa_smoking <- gene_mutation_rates(cesa_smoking, covariates = "lung")
@@ -236,7 +234,7 @@ cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = TracerX_maf[TracerX_maf$Uniqu
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% nonsmoking_samples], coverage = 'genome')
 
 cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
-                                      signature_set = "COSMIC_v3.2",
+                                      signature_set = "COSMIC_v3.1",
                                       signatures_to_remove = signatures_to_remove
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
