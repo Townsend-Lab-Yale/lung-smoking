@@ -22,6 +22,13 @@ mut_rates = {key:pd.read_csv(os.path.join(location_data,
 
 
 def compute_gammas_mles(key):
+    """We assume that selection coefficients do not change with exposure
+    to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
+    `pan-data`.
+
+    """
+    if key in ["smoking", "nonsmoking"]:
+        key = "pan-data"
     gammas_mles = {gene:{x_y:mle/float(mut_rates[key].loc[gene])
                          for x_y, mle in lambdas.items()}
                    for gene, lambdas in selection_mles.items()}
@@ -29,6 +36,13 @@ def compute_gammas_mles(key):
 
 
 def compute_gammas_cis(key):
+    """We assume that selection coefficients do not change with exposure
+    to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
+    `pan-data`.
+
+    """
+    if key in ["smoking", "nonsmoking"]:
+        key = "pan-data"
     gammas_cis = {gene:{x_y:[ci[0]/float(mut_rates[key].loc[gene]),
                              ci[1]/float(mut_rates[key].loc[gene])]
                         for x_y, ci in lambdas.items()}
