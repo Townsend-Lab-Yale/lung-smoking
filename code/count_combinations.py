@@ -5,6 +5,7 @@ from time import time
 from ranked_list import produce_ranked_list
 
 from locations import gene_coordinates_file
+from locations import merged_maf_clinical_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
@@ -41,7 +42,7 @@ def build_S_as_array(M):
 def compute_samples(data,
                     mutations=None,
                     print_info=False,
-                    save_info=True):
+                    save_info=False):
     """Compute samples numbers for each mutation combinations in S.
 
     :type data: pandas.core.frame.DataFrame
@@ -100,11 +101,10 @@ def compute_samples(data,
 
         [len(data['Sample ID'].unique())] #for no mutations
         + [len(set.intersection(*[pts_per_mutation[i] #performs set intersection across all sets containing a mutation in the gene currently selected in the for loop looping across genes mutated in row Sj
-        #this is where I need to check if len = 0
                                 for i in indices]))
         for indices in [[i for i in range(M) #for genes that are mutated in that row (Sj)
                             if Sj[i] == 1]
-                        for Sj in S[1:]]])# if (len(set.intersection(*[pts_per_mutation[i] for i in indices])) > 0)]) #for row in possible combinations of mutations
+                        for Sj in S[1:]]])#for row in possible combinations of mutations
 
     pts_per_combination = np.array(pts_per_combination)
 
@@ -150,7 +150,7 @@ def are_all_fluxes_computable(data, mutations):
             (data['Start_Position'] >= genes.loc[mutation, 'start']) &
             (data['Start_Position'] <= genes.loc[mutation, 'end']) &
             (data['Chromosome'] == str(genes.loc[mutation, 'chromosome']))]
-        ['Our Sample ID'])
+        ['Sample ID'])
                         for mutation in mutations]
     in_all = len(set.intersection(*pts_per_mutation))
     all_but_one = [len(set.intersection(
