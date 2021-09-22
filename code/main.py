@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from pandas._libs.missing import NA
 from count_combinations import compute_samples
 from count_combinations import are_all_fluxes_computable
 from cancer_epistasis import numbers_positive_lambdas
@@ -13,6 +12,13 @@ from locations import mutation_rates_file
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
 from locations import merged_maf_file_name
+from locations import location_output
+
+import os
+
+#CHOOSE A DATASET FOR LAMBDA CALCULATIONS, BY DEFAULT IT IS PAN-DATA
+possible_sample_options = ['pan_data','smoking','nonsmoking']
+samples_used = possible_sample_options[0]
 
 ## We fix M=3 so
 numbers_positive_lambdas = numbers_positive_lambdas[3]
@@ -43,12 +49,11 @@ db = db[~db['Panel'].isin(panels_to_remove_for_tp53_kras)]
 smoking_sample_ids = pd.read_csv('../data/smoking_sample_ids.txt', header=None).iloc[:,0].tolist()
 nonsmoking_sample_ids = pd.read_csv('../data/nonsmoking_sample_ids.txt', header=None).iloc[:,0].tolist()
 
-#DATA ONLY CONTAINING EXOME/GENOME SEQUENCED AND DETERMINED TO HAVE NO SMOKING SIGNATURE SAMPLES
-#db = db[db['Sample ID'].isin(nonsmoking_sample_ids)]
-#print(db.shape)
+if samples_used == 'smoking':
+    db = db[db['Sample ID'].isin(smoking_sample_ids)]
+elif samples_used == 'nonsmoking':
+    db = db[db['Sample ID'].isin(nonsmoking_sample_ids)]
 
-#ranked_gene_list = ['TP53', 'KRAS', 'EGFR', 'STK11', 'ATM', 'NF1', 'BRAF', 'PIK3CA', 'CDKN2A', 'ERBB4', 'APC', 'NTRK3', 'EPHA3', 'MET', 'EPHA5', 'RB1', 'ERBB2', 'KDR', 'ALK', 'SMAD4', 'GNAS', 'PDGFRA', 'PTEN', 'FLT1', 'CTNNB1', 'BRCA2', 'NOTCH1', 'NTRK1', 'ATR', 'NOTCH2', 'FLT4', 'RET', 'PIK3CG', 'NOTCH4', 'BRCA1', 'KIT', 'TSC2', 'SMO', 'NOTCH3', 'PIK3C2G', 'FLT3', 'JAK3', 'DDR2', 'EPHB1', 'PDGFRB', 'JAK2', 'NTRK2', 'BARD1', 'MAP3K1', 'FBXW7', 'WT1', 'TSHR', 'CSF1R', 'ABL1', 'FGFR4', 'ERBB3', 'CBL', 'IGF1R', 'IRS2', 'MSH6', 'FGFR1', 'RICTOR', 'FGFR2', 'NRAS', 'TSC1', 'PIK3R1', 'MSH2', 'CHEK2', 'BTK', 'PIK3C3', 'RUNX1', 'PTPN11', 'CDH1', 'BAP1', 'AKT3', 'ARAF', 'FGFR3', 'BCL6', 'AXL', 'ERG', 'RAF1', 'JAK1', 'NF2', 'SMAD2', 'TGFBR2', 'MPL', 'MLH1', 'MAP2K1', 'MAP3K13', 'MYCN', 'MDM4', 'MAP2K4', 'MEN1', 'CCNE1', 'IKBKE', 'AKT1', 'FGF3', 'CCND2', 'PIK3R2', 'ETV6', 'SYK', 'CHEK1', 'SRC', 'AKT2', 'MYC', 'GATA1', 'MDM2', 'REL', 'VHL', 'HRAS', 'MAP2K2', 'CDKN1B', 'CDK8', 'CDK6', 'PRKAR1A', 'GSK3B', 'SUFU', 'CCND1', 'FGF4', 'AURKB', 'JUN', 'CCND3', 'CDKN2C', 'CDK4', 'BCL2', 'CRKL', 'CDKN2B']
-#ranked_gene_list = ['TP53', 'KRAS','EGFR', 'STK11', 'ATM', 'NF1', 'BRAF', 'PIK3CA', 'ERBB4', 'APC', 'NTRK3', 'EPHA3', 'MET', 'EPHA5', 'RB1', 'ERBB2', 'KDR', 'ALK', 'SMAD4', 'GNAS', 'PDGFRA', 'PTEN', 'FLT1', 'CTNNB1', 'BRCA2', 'NOTCH1', 'NTRK1', 'ATR', 'NOTCH2', 'FLT4', 'RET', 'PIK3CG', 'NOTCH4', 'BRCA1', 'KIT', 'TSC2', 'SMO', 'NOTCH3', 'PIK3C2G', 'FLT3', 'JAK3', 'DDR2', 'EPHB1', 'PDGFRB', 'JAK2', 'NTRK2', 'BARD1', 'MAP3K1', 'FBXW7', 'WT1', 'TSHR', 'CSF1R', 'ABL1', 'FGFR4', 'ERBB3', 'CBL', 'IGF1R', 'IRS2', 'MSH6', 'FGFR1', 'RICTOR', 'FGFR2', 'NRAS', 'TSC1', 'PIK3R1', 'MSH2', 'CHEK2', 'BTK', 'PIK3C3', 'RUNX1', 'PTPN11', 'CDH1', 'BAP1', 'AKT3', 'ARAF', 'FGFR3', 'BCL6', 'AXL', 'ERG', 'RAF1', 'JAK1', 'NF2', 'SMAD2', 'TGFBR2', 'MPL', 'MLH1', 'MAP2K1', 'MAP3K13', 'MYCN', 'MDM4', 'MAP2K4', 'MEN1', 'CCNE1', 'IKBKE', 'AKT1', 'FGF3', 'CCND2', 'PIK3R2', 'ETV6', 'SYK', 'CHEK1', 'SRC', 'AKT2', 'MYC', 'GATA1', 'MDM2', 'REL', 'VHL', 'HRAS', 'MAP2K2', 'CDKN1B', 'CDK8', 'CDK6', 'PRKAR1A', 'GSK3B', 'SUFU', 'CCND1', 'FGF4', 'AURKB', 'JUN', 'CCND3', 'CDKN2C', 'CDK4', 'BCL2', 'CRKL', 'CDKN2B']
 with open('../data/genes_list.txt','r') as gene_list_input:
     gene_list = gene_list_input.read().split('\n')
 
@@ -121,12 +126,12 @@ def main():
         print("Estimating fluxes...")
         mle = lambdas_from_samples(samples)
         lambdas_mles[gene] = convert_lambdas_to_dict(mle)
-        np.save(fluxes_mles_file_name, lambdas_mles)
+        np.save(os.path.join(location_output, str(samples_used + '_fluxes_mles.npy')), lambdas_mles)
 
         print("Estimating asymptotic confidence intervals...")
         cis = asymp_CI_lambdas(mle['lambdas'], samples)
         lambdas_cis[gene] = convert_lambdas_to_dict(cis)
-        np.save(fluxes_cis_file_name, lambdas_cis)
+        np.save(os.path.join(location_output, str(samples_used + '_fluxes_cis.npy')), lambdas_cis)
 
         print("")
 

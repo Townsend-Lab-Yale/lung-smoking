@@ -21,16 +21,16 @@ nonsmoking_genes_by_fluxes = dict(zip(nonsmoking_genes_by_fluxes, [nonsmoking_fl
 
 #print(nonsmoking_genes_by_fluxes)
 
-ranked_genes_by_fluxes = pd.DataFrame.from_dict(ranked_genes_by_fluxes, orient = 'index', columns = ['flux'])
+ranked_genes_by_fluxes = pd.DataFrame.from_dict(ranked_genes_by_fluxes, orient = 'index', columns = ['pan_data_flux'])
 ranked_genes_by_fluxes['gene'] = ranked_genes_by_fluxes.index
-smoking_genes_by_fluxes = pd.DataFrame.from_dict(smoking_genes_by_fluxes, orient = 'index', columns = ['flux'])
+smoking_genes_by_fluxes = pd.DataFrame.from_dict(smoking_genes_by_fluxes, orient = 'index', columns = ['smoking_flux'])
 smoking_genes_by_fluxes['gene'] = smoking_genes_by_fluxes.index
-nonsmoking_genes_by_fluxes = pd.DataFrame.from_dict(nonsmoking_genes_by_fluxes, orient = 'index', columns = ['flux'])
+nonsmoking_genes_by_fluxes = pd.DataFrame.from_dict(nonsmoking_genes_by_fluxes, orient = 'index', columns = ['nonsmoking_flux'])
 nonsmoking_genes_by_fluxes['gene'] = nonsmoking_genes_by_fluxes.index
 
 #print(pd.merge(smoking_genes_by_fluxes, nonsmoking_genes_by_fluxes, how = 'outer', on = 'gene'))
 comparison_genes_by_fluxes = pd.merge(ranked_genes_by_fluxes, pd.merge(smoking_genes_by_fluxes, nonsmoking_genes_by_fluxes, how = 'outer',on = 'gene'), how = 'outer', on = 'gene')
-comparison_genes_by_fluxes = comparison_genes_by_fluxes.rename(columns = {'flux':'pan_data_flux', 'flux_x':'smoking_flux', 'flux_y': 'nonsmoking_flux'}).set_index('gene')
+comparison_genes_by_fluxes = comparison_genes_by_fluxes.set_index('gene')
 
 comparison_genes_by_fluxes.to_csv('../data/genes_by_fluxes.csv')
 

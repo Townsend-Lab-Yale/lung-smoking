@@ -69,6 +69,13 @@ msk2017_panels_used <- fread('../data/lung_msk_2017/data_clinical_sample.txt')[-
 msk2018_panels_used <- fread('../data/nsclc_pd1_msk_2018/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Gene Panel')]
 genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Sequence Assay ID')]
 
+tsp_genes <- fread('../data/gene_panels/tsp.txt')
+foundation_one_genes <- fread('../data/gene_panels/foundation_one.txt')
+msk341_genes <- fread('../data/gene_panels/msk341.txt')
+msk410_genes <- fread('../data/gene_panels/msk410.txt')
+msk468_genes <- fread('../data/gene_panels/msk468.txt')
+genie_genes <- fread('../data/gene_panels/genie_panel_genes.txt')
+
 
 #READING IN GENES INCLUDED IN EACH PANEL AND CREATING GRANGES OBJECT TO PASS INTO COVERED_REGIONS PARAMETER OF LOAD_MAF
 #once the granges are exported once, these functions don't need to be run anymore
@@ -81,7 +88,7 @@ if(!file.exists('../data/fmad_targets.bed')){
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
   fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
   export(fmad_gr_clean, '../data/fmad_targets.bed')
-}
+} 
 
 if(!file.exists('../data/tsp_targets.bed')){
   tsp_genes <- unique(fread('../gene_panels/tsp.txt', sep = '\n', header = F))$V1
@@ -120,9 +127,25 @@ genie_panel_genes <- fread('../data/genie_9/genomic_information.txt')[,c('Chromo
 genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
 seqlevels(genie_granges_list, pruning.mode = "fine") <- c(1:22,'X','Y')
 
+#SOME PANELS IN GENIE DON'T COVER TP53 OR KRAS SO THEY MUST BE REMOVED
 
-#GENES INCLUDED IN EVERY PANEL (NOT TRUE FOR ALL THE PANELS IN GENIE THOUGH, SEE MESSAGES WITH JORGE)
-genes_in_intersection <- c('BRAF', 'ERBB4', 'NF2', 'ETV6', 'BRCA1', 'TSHR', 'MPL', 'MSH2', 'PIK3R2', 'JUN', 'PDGFRA', 'MAP2K1', 'ABL1', 'CCND3', 'FGFR4', 'ATM', 'PTEN', 'SUFU', 'GNAS', 'NTRK1', 'KIT', 'BCL2', 'FLT1', 'STK11', 'CDKN1B', 'NRAS', 'DDR2', 'CCND1', 'JAK1', 'ERG', 'JAK2', 'MYC', 'AKT2', 'PIK3C2G', 'MSH6', 'CHEK1', 'NTRK3', 'ALK', 'NOTCH4', 'GSK3B', 'RAF1', 'EPHA5', 'TP53', 'NTRK2', 'FLT4', 'NOTCH3', 'PIK3C3', 'CDK8', 'PIK3R1', 'MEN1', 'EGFR', 'IGF1R', 'FGFR2', 'CTNNB1', 'IKBKE', 'CSF1R', 'BAP1', 'CDH1', 'CDKN2B', 'KRAS', 'AKT1', 'FGF3', 'HRAS', 'PTPN11', 'MAP2K2', 'BTK', 'MDM2', 'BCL6', 'CHEK2', 'NF1', 'FGF4', 'CDKN2C', 'CCNE1', 'KDR', 'RUNX1', 'CRKL', 'EPHB1', 'BARD1', 'BRCA2', 'MDM4', 'RB1', 'SRC', 'FBXW7', 'FGFR1', 'TSC2', 'FGFR3', 'ERBB3', 'CDKN2A', 'MAP3K1', 'PRKAR1A', 'REL', 'PIK3CA', 'MLH1', 'SMAD4', 'AXL', 'CDK6', 'MAP3K13', 'ATR', 'TSC1', 'VHL', 'RET', 'AURKB', 'APC', 'MAP2K4', 'CDK4', 'CCND2', 'MYCN', 'PIK3CG', 'SMAD2', 'MET', 'WT1', 'NOTCH1', 'JAK3', 'NOTCH2', 'TGFBR2', 'ARAF', 'EPHA3', 'CBL', 'IRS2', 'ERBB2', 'PDGFRB', 'SMO', 'GATA1', 'AKT3', 'FLT3', 'SYK', 'RICTOR')
+genie_panel_genes_2 <- genie_panel_genes[,c('Hugo_Symbol','SEQ_ASSAY_ID')]
+genie_panel_genes_2 <- genie_panel_genes_2[!duplicated(genie_panel_genes_2)]
+genie_panel_genes_list <- split(genie_panel_genes_2$Hugo_Symbol, genie_panel_genes_2$SEQ_ASSAY_ID)
+
+Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+
+panels_to_remove <- c()
+for(panel in names(genie_panel_genes_list)){
+  if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
+    panels_to_remove <- c(panels_to_remove, panel)
+  }
+}
+
+Genie_maf <- Genie_maf[!`Sequence Assay ID` %in% panels_to_remove]
+
+#LIST OF ALL GENES INCLUDED IN ANALYSIS
+genes_list <- fread('../data/genes_list.txt', header = F)$V1
 
 
 #SPLITTING MAF FILES WHEN DIFFERENT SEQUENCING METHODS ARE USED
@@ -169,28 +192,28 @@ cesa_total <- trinuc_mutation_rates(cesa_total,
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
 save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
-fwrite(cesa_total$gene_rates[gene %in% genes_in_intersection], '../data/pan-data_mutation_rates.txt')
+fwrite(cesa_total$gene_rates, '../data/pan-data_mutation_rates.txt')
 
 
 #WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
-cesa_exome <- CESAnalysis()
-cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
-cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
-cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
-cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
-cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
-cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
+#cesa_exome <- CESAnalysis()
+#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
+#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
+#cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
+#cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
+#cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
+#cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
 
-cesa_exome <- trinuc_mutation_rates(cesa_exome,
-                                    signature_set = "COSMIC_v3.1",
-                                    signatures_to_remove = signatures_to_remove
-)
+#cesa_exome <- trinuc_mutation_rates(cesa_exome,
+#                                    signature_set = "COSMIC_v3.1",
+#                                    signatures_to_remove = signatures_to_remove
+#)
 
 
 #CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
-cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
-save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
-fwrite(cesa_exome$gene_rates[gene %in% genes_in_intersection], '../data/exome_mutation_rates.txt')
+#cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
+#save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
+#fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
 
 
 #SUBSETTING TO SAMPLES WITH UNBLENDED SIGNATURE WEIGHTS (SEE MESSAGES WITH JEFF MANDELL) AND WITH GREATER THAN 50 SNVS
@@ -199,7 +222,7 @@ bio_weights_unblended <- bio_weights[bio_weights$group_avg_blended == F]
 snv_counts <- cesa_exome$maf[variant_type == 'snv', .N, by = "Unique_Patient_Identifier"]
 good_samples <- snv_counts[N > 50, Unique_Patient_Identifier]
 good_sample_weights <- bio_weights_unblended[Unique_Patient_Identifier %in% good_samples,]
-#SMOKING SAMPLES ARE ANY SAMPLES WITH >0 SIGNATURE WEIGHTS, A HEURISTIC.
+#SMOKING SAMPLES ARE ANY SAMPLES WITH >0 SIGNATURE WEIGHTS.
 smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
@@ -221,7 +244,7 @@ cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
 cesa_smoking <- gene_mutation_rates(cesa_smoking, covariates = "lung")
 
 save_cesa(cesa_smoking, '../data/smoking_samples_cesa.rds')
-fwrite(cesa_smoking$gene_rates[gene %in% genes_in_intersection], '../data/smoking_mutation_rates.txt')
+fwrite(cesa_smoking$gene_rates, '../data/smoking_mutation_rates.txt')
 
 
 #NONSMOKING GROUP
@@ -239,33 +262,4 @@ cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
 save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
-fwrite(cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection], '../data/nonsmoking_mutation_rates.txt')
-
-# smoking_mus <- cesa_smoking$gene_rates
-# nonsmoking_mus <- cesa_nonsmoking$gene_rates
-# smoking_mus[, ratio := rate / nonsmoking_mus[,rate]]
-# summary(smoking_mus$ratio)
-# 
-# plot <- ggplot(smoking_mus, aes(x = 1:nrow(smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-# 
-# subsetted_smoking_mus <- cesa_smoking$gene_rates[gene %in% genes_in_intersection]
-# subsetted_nonsmoking_mus <- cesa_nonsmoking$gene_rates[gene %in% genes_in_intersection]
-# subsetted_smoking_mus[, ratio := rate / subsetted_nonsmoking_mus[,rate]]
-# summary(subsetted_smoking_mus$ratio)
-# 
-# subsetted_ratios_plot <- ggplot(subsetted_smoking_mus, aes(x = 1:nrow(subsetted_smoking_mus), y = ratio)) + geom_violin() + labs(x = '', y = 'Mutation Rate Ratio\n(Smoking signature mu / Nonsmoking signature mu)', title = 'Comparison of Gene Mutation Rates Among Smokers\nand Nonsmokers in Lung Adenocarcinoma') + theme(axis.text.x = element_blank(),  axis.ticks.x = element_blank(), axis.title.y = element_text(size = 8),plot.title = element_text(size = 10, hjust = 0.5), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
-# 
-# pan_v_exome_ratios <- cesa_total$gene_rates$rate / cesa_exome$gene_rates$rate
-# summary(pan_v_exome_ratios)
-# 
-# genie_panel_frequency <-as.data.table(table(genie_panels_used$`Sequence Assay ID`))
-# names(genie_panel_frequency) <- c('SEQ_ASSAY_ID','Num_Patients')
-# #genie_panel_numgenes <- as.data.table(table(genie_panel_genes[!duplicated(genie_panel_genes, by = 'Hugo_Symbol')]$SEQ_ASSAY_ID))
-# #names(genie_panel_numgenes) <- c('SEQ_ASSAY_ID','Num_Genes')
-# #genie_panel_info <- merge(genie_panel_frequency, genie_panel_numgenes, by = 'SEQ_ASSAY_ID')
-# #genie_panel_info[order(-Num_Genes, -Num_Patients)]
-# 
-# rate_comps <- merge(cesa_smoking$gene_rates, cesa_nonsmoking$gene_rates, by = 'gene')
-# names(rate_comps) <- c('gene', 'smoking_rate', 'nonsmoking_rate')
-# rate_comps[, ratio := smoking_rate / nonsmoking_rate]
-# rate_comps[gene == 'ATM']
+fwrite(cesa_nonsmoking$gene_rates, '../data/nonsmoking_mutation_rates.txt')
