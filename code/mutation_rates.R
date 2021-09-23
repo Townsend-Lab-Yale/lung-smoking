@@ -142,7 +142,7 @@ for(panel in names(genie_panel_genes_list)){
   }
 }
 
-Genie_maf <- Genie_maf[!`Sequence Assay ID` %in% panels_to_remove]
+Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
 
 #LIST OF ALL GENES INCLUDED IN ANALYSIS
 genes_list <- fread('../data/genes_list.txt', header = F)$V1
