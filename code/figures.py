@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
-from locations import location_data
+from locations import location_output
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
 from locations import location_figures
@@ -15,7 +15,7 @@ selection_cis = np.load(fluxes_cis_file_name, allow_pickle=True).item()
 
 
 mut_rates_keys = ["pan-data", "exome", "smoking", "nonsmoking"]
-mut_rates = {key:pd.read_csv(os.path.join(location_data,
+mut_rates = {key:pd.read_csv(os.path.join(location_output,
                                           f'{key}_mutation_rates.txt'),
                         index_col=0)
              for key in mut_rates_keys}

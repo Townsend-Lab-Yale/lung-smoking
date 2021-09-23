@@ -192,7 +192,7 @@ cesa_total <- trinuc_mutation_rates(cesa_total,
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
 save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
-fwrite(cesa_total$gene_rates, '../data/pan-data_mutation_rates.txt')
+fwrite(cesa_total$gene_rates, '../output/pan-data_mutation_rates.txt')
 
 
 # WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
@@ -213,7 +213,7 @@ cesa_exome <- trinuc_mutation_rates(cesa_exome,
 # CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
 cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
 save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
-fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
+fwrite(cesa_exome$gene_rates, '../output/exome_mutation_rates.txt')
 
 
 #SUBSETTING TO SAMPLES WITH UNBLENDED SIGNATURE WEIGHTS (SEE MESSAGES WITH JEFF MANDELL) AND WITH GREATER THAN 50 SNVS
@@ -244,7 +244,7 @@ cesa_smoking <- trinuc_mutation_rates(cesa_smoking,
 cesa_smoking <- gene_mutation_rates(cesa_smoking, covariates = "lung")
 
 save_cesa(cesa_smoking, '../data/smoking_samples_cesa.rds')
-fwrite(cesa_smoking$gene_rates, '../data/smoking_mutation_rates.txt')
+fwrite(cesa_smoking$gene_rates, '../output/smoking_mutation_rates.txt')
 
 
 #NONSMOKING GROUP
@@ -263,4 +263,4 @@ cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
 
 save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
-fwrite(cesa_nonsmoking$gene_rates, '../data/nonsmoking_mutation_rates.txt')
+fwrite(cesa_nonsmoking$gene_rates, '../output/nonsmoking_mutation_rates.txt')
