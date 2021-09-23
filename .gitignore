@@ -6,7 +6,6 @@ code/test2.py
 .Rproj.user
 code/test3.py
 code/test4.py
-/data/*/*
 code/test6.py
 code/test7.py
 code/test8.py
@@ -15,5 +14,15 @@ code/testX.py
 code/testXI.py
 code/six_all_but_one.py
 code/__pycache__
+data/genie_9/
+data/luad_broad/
+data/luad_fm-ad/
+data/luad_mskcc_2015/
+data/luad_oncosg_2020/
+data/luad_tcga/
+data/luad_tsp/
+data/lung_msk_2017/
+data/nsclc_pd1_msk_2018/
+data/nsclc_tracerx_2017/
 /data/gencode.v38lift37.basic.annotation.gtf
 /code/.Rhistory

@@ -83,15 +83,15 @@ genie_genes <- fread('../data/gene_panels/genie_panel_genes.txt')
 gene_granges <- rtracklayer::import('../data/gencode.v38lift37.basic.annotation.gtf')
 
 if(!file.exists('../data/fmad_targets.bed')){
-  fmad_genes <- unique(fread('../gene_panels/fm-ad_genes.txt', sep = '\n', header = F))$V1
+  fmad_genes <- unique(fread('../data/gene_panels/foundation_one.txt', sep = '\n', header = F))$V1
   fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
   fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
   export(fmad_gr_clean, '../data/fmad_targets.bed')
-} 
+}
 
 if(!file.exists('../data/tsp_targets.bed')){
-  tsp_genes <- unique(fread('../gene_panels/tsp.txt', sep = '\n', header = F))$V1
+  tsp_genes <- unique(fread('../data/gene_panels/tsp.txt', sep = '\n', header = F))$V1
   tsp_granges <- gene_granges[gene_granges$gene_name %in% tsp_genes, ]
   tsp_granges <- tsp_granges[tsp_granges$type %in% c('CDS','stop_codon'),]
   tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = tsp_granges)
@@ -99,7 +99,7 @@ if(!file.exists('../data/tsp_targets.bed')){
 }
 
 if(!file.exists('../data/msk341_targets.bed')){
-  msk_341_genes <- unique(fread('../gene_panels/msk341.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_341_genes <- unique(fread('../data/gene_panels/msk341.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
   msk341_granges <- gene_granges[gene_granges$gene_name %in% msk_341_genes, ]
   msk341_granges <- msk341_granges[msk341_granges$type %in% c('CDS','stop_codon'),]
   msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk341_granges)
@@ -107,7 +107,7 @@ if(!file.exists('../data/msk341_targets.bed')){
 }
 
 if(!file.exists('../data/msk410_targets.bed')){
-  msk_410_genes <- unique(fread('../gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_410_genes <- unique(fread('../data/gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
   msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
   msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
   msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk410_granges)
@@ -115,7 +115,7 @@ if(!file.exists('../data/msk410_targets.bed')){
 }
 
 if(!file.exists('../data/msk468_targets.bed')){
-  msk_468_genes <- unique(fread('../gene_panels/msk468.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_468_genes <- unique(fread('../data/gene_panels/msk468.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
   msk468_granges <- gene_granges[gene_granges$gene_name %in% msk_468_genes, ]
   msk468_granges <- msk468_granges[msk468_granges$type %in% c('CDS','stop_codon'),]
   msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk468_granges)
