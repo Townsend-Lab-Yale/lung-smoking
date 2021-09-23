@@ -195,25 +195,25 @@ save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
 fwrite(cesa_total$gene_rates, '../data/pan-data_mutation_rates.txt')
 
 
-#WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
-#cesa_exome <- CESAnalysis()
-#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
-#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
-#cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
+# WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
+cesa_exome <- CESAnalysis()
+cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
+cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
+cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
+cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
+cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
+cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
 
-#cesa_exome <- trinuc_mutation_rates(cesa_exome,
-#                                    signature_set = "COSMIC_v3.1",
-#                                    signatures_to_remove = signatures_to_remove
-#)
+cesa_exome <- trinuc_mutation_rates(cesa_exome,
+                                   signature_set = "COSMIC_v3.1",
+                                   signatures_to_remove = signatures_to_remove
+)
 
 
-#CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
-#cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
-#save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
-#fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
+# CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
+cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
+save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
+fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
 
 
 #SUBSETTING TO SAMPLES WITH UNBLENDED SIGNATURE WEIGHTS (SEE MESSAGES WITH JEFF MANDELL) AND WITH GREATER THAN 50 SNVS
@@ -261,5 +261,6 @@ cesa_nonsmoking <- trinuc_mutation_rates(cesa_nonsmoking,
                                       signatures_to_remove = signatures_to_remove
 )
 cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
+
 save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
 fwrite(cesa_nonsmoking$gene_rates, '../data/nonsmoking_mutation_rates.txt')
