@@ -7,11 +7,10 @@ from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
 
+from locations import merged_maf_file_name
 from locations import merged_maf_clinical_file_name
-from locations import mutation_rates_file
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
-from locations import merged_maf_file_name
 from locations import location_output
 
 import os

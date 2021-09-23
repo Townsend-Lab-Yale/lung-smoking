@@ -57,7 +57,6 @@ full_maf_file_names_lifted = {
 
 gene_list_file = os.path.join(location_data, "genes_list.txt")
 gene_coordinates_file = os.path.join(location_data, "gene_coordinates.csv")
-mutation_rates_file = os.path.join(location_data, "mutation_rates.txt")
 
 
 merged_maf_file_name = os.path.join(location_output, 'merged_luad_maf.txt')
