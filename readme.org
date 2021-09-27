@@ -1,3 +1,5 @@
+#+CATEGORY: luad
+
 * Objective
 
 To perform a multi-gene epistasis analysis of as big of a LUAD dataset
@@ -33,6 +35,70 @@ So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 - [[https://www.nature.com/articles/nature13385][Comprehensive molecular profiling of lung adenocarcinoma]]
 - [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
 - [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
+
+
+* Genes for which the 1 bound did not work and we had to modify it
+
+Pan-cancer:
+
+HRAS
+VHL
+TRAF2
+BBC3
+BCL2L1
+CARM1
+CBFB
+CD276
+CDKN2B
+EIF4E
+FOXO1
+GNA11
+GNAQ
+GPS2
+GSK3B
+JUN
+MEF2B
+MSI2
+MST1
+PIM1
+SDHB
+SDHC
+SDHD
+SMAD3
+SUZ12
+
+
+Smoking:
+
+AXL
+LRATD2
+RYK
+MAF1
+DDX47
+TCF7
+NAA60
+CDK19
+EXOSC9
+CCNI
+TMEM65
+DHRS9
+TCIRG1
+TXNRD3
+MAP1S
+WWTR1
+BBC3
+CDK8
+HLA
+PDPK1
+RAB35
+RAC1
+RHOA
+SESN3
+ELOC
+TMPRSS2
+VEGFA
+
+Non-smoking: None
 
 * TODO [0/2] Before publishing
 
