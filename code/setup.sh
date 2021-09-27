@@ -70,13 +70,9 @@ cd ..
 ## ** Download gencode basic annotation
 wget 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_38/GRCh37_mapping/gencode.v38lift37.basic.annotation.gtf.gz'
 gunzip -d gencode.v38lift37.basic.annotation.gtf.gz
-cd ..
-
-## * Create output directory
-mkdir output
 
 ## * Change coordinates of data sets to GRCh 38
-cd code
+cd ../code
 source .venv/bin/activate
 python liftover.py
 
