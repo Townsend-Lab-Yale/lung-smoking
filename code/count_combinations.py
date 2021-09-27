@@ -4,40 +4,14 @@ from itertools import product, combinations
 from time import time
 from ranked_list import produce_ranked_list
 
+from theory import build_S_with_tuples
+from theory import build_S_as_array
+
 from locations import gene_coordinates_file
 from locations import merged_maf_clinical_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
-def build_S_with_tuples(M):
-    """Build entire space of mutations combinations S.
-
-    It will represented by a list of size 2^M with items being tuples
-    of size M with 0s and 1s.
-
-    :type M: int
-    :param M: Number of mutations.
-
-    :rtype: list
-    :return: S as an ordered list of tuples.
-
-    """
-    return [x for x in product([0, 1], repeat=M)]
-
-
-def build_S_as_array(M):
-    """Build entire space of mutations combinations S.
-
-    It will represented by a numpy array of shape (2^M, M).
-
-    :type M: int
-    :param M: Number of mutations.
-
-    :rtype: numpy.ndarray
-    :return: S as a numpy array of 0s and 1s.
-
-    """
-    return np.array(build_S_with_tuples(M))
 
 def compute_samples(data,
                     mutations=None,
@@ -136,6 +110,7 @@ def compute_samples(data,
                 out_file2.write(str(pts_per_combination))
                 out_file2.write("\n")
     return pts_per_combination
+
 
 def are_all_fluxes_computable(data, mutations):
     """Return True if we can compute all fluxes, that is, if there are
