@@ -2,7 +2,6 @@ library(cancereffectsizeR)
 library(ces.refset.hg19)
 library(data.table)
 library(dplyr)
-library(ggplot2)
 library(rtracklayer)
 library(stringr)
 
@@ -69,21 +68,13 @@ msk2017_panels_used <- fread('../data/lung_msk_2017/data_clinical_sample.txt')[-
 msk2018_panels_used <- fread('../data/nsclc_pd1_msk_2018/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Gene Panel')]
 genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Sequence Assay ID')]
 
-tsp_genes <- fread('../data/gene_panels/tsp.txt')
-foundation_one_genes <- fread('../data/gene_panels/foundation_one.txt')
-msk341_genes <- fread('../data/gene_panels/msk341.txt')
-msk410_genes <- fread('../data/gene_panels/msk410.txt')
-msk468_genes <- fread('../data/gene_panels/msk468.txt')
-genie_genes <- fread('../data/gene_panels/genie_panel_genes.txt')
-
-
 #READING IN GENES INCLUDED IN EACH PANEL AND CREATING GRANGES OBJECT TO PASS INTO COVERED_REGIONS PARAMETER OF LOAD_MAF
 #once the granges are exported once, these functions don't need to be run anymore
 
 gene_granges <- rtracklayer::import('../data/gencode.v38lift37.basic.annotation.gtf')
 
 if(!file.exists('../data/fmad_targets.bed')){
-  fmad_genes <- unique(fread('../gene_panels/fm-ad_genes.txt', sep = '\n', header = F))$V1
+  fmad_genes <- unique(fread('../gene_panels/foundation_one.txt', sep = '\n', header = F))$V1
   fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
   fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
@@ -107,7 +98,7 @@ if(!file.exists('../data/msk341_targets.bed')){
 }
 
 if(!file.exists('../data/msk410_targets.bed')){
-  msk_410_genes <- unique(fread('../gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk410_genes <- unique(fread('../gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
   msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
   msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
   msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk410_granges)
@@ -196,24 +187,23 @@ fwrite(cesa_total$gene_rates, '../data/pan-data_mutation_rates.txt')
 
 
 #WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
-#cesa_exome <- CESAnalysis()
-#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
-#cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
-#cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
-#cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
+cesa_exome <- CESAnalysis()
+cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
+cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
+cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
+cesa_exome <- load_maf(cesa_exome, maf = OncoSG_maf)
+cesa_exome <- load_maf(cesa_exome, maf = TCGA_maf)
+cesa_exome <- load_maf(cesa_exome, maf = TracerX_maf)
 
-#cesa_exome <- trinuc_mutation_rates(cesa_exome,
-#                                    signature_set = "COSMIC_v3.1",
-#                                    signatures_to_remove = signatures_to_remove
-#)
-
+cesa_exome <- trinuc_mutation_rates(cesa_exome,
+                                    signature_set = "COSMIC_v3.1",
+                                    signatures_to_remove = signatures_to_remove
+)
 
 #CALCULATING MUTATION RATES FOR COMPARISON PURPOSES WITH THE PAN-DATASET MUTATION RATES
-#cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
-#save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
-#fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
+cesa_exome <- gene_mutation_rates(cesa_exome, covariates = "lung")
+save_cesa(cesa_exome, '../data/exome_samples_cesa.rds')
+fwrite(cesa_exome$gene_rates, '../data/exome_mutation_rates.txt')
 
 
 #SUBSETTING TO SAMPLES WITH UNBLENDED SIGNATURE WEIGHTS (SEE MESSAGES WITH JEFF MANDELL) AND WITH GREATER THAN 50 SNVS
