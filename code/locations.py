@@ -41,6 +41,14 @@ data_sets_directories = {
 """
 
 
+location_gene_panels = os.path.join(location_data,
+                                    "gene_panels")
+"""Location of directory that contains the gene panels."""
+
+all_panel_genes_file_name = os.path.join(location_gene_panels,
+                                         'all_panel_genes.txt')
+
+
 full_maf_file_names = {
     db:os.path.join(location_data,
                     directory,
@@ -57,7 +65,6 @@ full_maf_file_names_lifted = {
 
 gene_list_file = os.path.join(location_data, "genes_list.txt")
 gene_coordinates_file = os.path.join(location_data, "gene_coordinates.csv")
-mutation_rates_file = os.path.join(location_data, "mutation_rates.txt")
 
 
 merged_maf_file_name = os.path.join(location_output, 'merged_luad_maf.txt')

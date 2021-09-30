@@ -71,7 +71,6 @@ cd ..
 wget 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_38/GRCh37_mapping/gencode.v38lift37.basic.annotation.gtf.gz'
 gunzip -d gencode.v38lift37.basic.annotation.gtf.gz
 
-
 ## * Change coordinates of data sets to GRCh 38
 cd ../code
 source .venv/bin/activate

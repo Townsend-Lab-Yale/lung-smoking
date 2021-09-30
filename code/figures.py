@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
-from locations import location_data
+from locations import location_output
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
 from locations import location_figures
@@ -15,13 +15,20 @@ selection_cis = np.load(fluxes_cis_file_name, allow_pickle=True).item()
 
 
 mut_rates_keys = ["pan-data", "exome", "smoking", "nonsmoking"]
-mut_rates = {key:pd.read_csv(os.path.join(location_data,
+mut_rates = {key:pd.read_csv(os.path.join(location_output,
                                           f'{key}_mutation_rates.txt'),
                         index_col=0)
              for key in mut_rates_keys}
 
 
 def compute_gammas_mles(key):
+    """We assume that selection coefficients do not change with exposure
+    to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
+    `pan-data`.
+
+    """
+    if key in ["smoking", "nonsmoking"]:
+        key = "pan-data"
     gammas_mles = {gene:{x_y:mle/float(mut_rates[key].loc[gene])
                          for x_y, mle in lambdas.items()}
                    for gene, lambdas in selection_mles.items()}
@@ -29,6 +36,13 @@ def compute_gammas_mles(key):
 
 
 def compute_gammas_cis(key):
+    """We assume that selection coefficients do not change with exposure
+    to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
+    `pan-data`.
+
+    """
+    if key in ["smoking", "nonsmoking"]:
+        key = "pan-data"
     gammas_cis = {gene:{x_y:[ci[0]/float(mut_rates[key].loc[gene]),
                              ci[1]/float(mut_rates[key].loc[gene])]
                         for x_y, ci in lambdas.items()}
@@ -166,6 +180,64 @@ def plot_estimates_ordered(all_mles, all_cis, xaxis_args=None,
     return fig
 
 
+def plot_estimates_comparison(plot_name=None):
+    """
+
+    """
+
+    genes_ordered = list(
+        dict(sorted(filter_110_to_111(
+            compute_lambdas_mles('pan-data')).items(),
+        key=lambda item: item[1])).keys())
+
+    lambdas_mles = {
+        key:filter_110_to_111(compute_lambdas_mles(key))
+        for key in ['smoking', 'nonsmoking']}
+    lambdas_cis = {
+        key:filter_110_to_111(compute_lambdas_cis(key))
+        for key in ['smoking', 'nonsmoking']}
+
+    fig = plt.figure(figsize=[5.5, 20])
+    ax = fig.add_subplot(111)
+
+    for y_pos, gene in enumerate(genes_ordered):
+        ax.scatter(lambdas_mles['smoking'][gene], y_pos, color='Red')
+        ax.plot(lambdas_cis['smoking'][gene],
+                [y_pos, y_pos],
+                color='Red',
+                lw=0.5,
+                alpha=0.5)
+        ax.scatter(lambdas_mles['nonsmoking'][gene], y_pos, color='Blue')
+        ax.plot(lambdas_cis['nonsmoking'][gene],
+                [y_pos, y_pos],
+                color='Blue',
+                lw=0.5,
+                alpha=0.5)
+
+    ax.set_yticks(range(len(genes_ordered)))
+    ax.set_yticklabels(genes_ordered)
+    ax.set_ylim(-0.5, len(genes_ordered)-0.5)
+    ax.set_ylabel("gene")
+
+
+    axis_args = axis_args_lambdas.copy()
+
+    axis_args['lim'] = 0.43
+    axis_args['tick_labels'] = axis_args['tick_labels'] + ["0.4"]
+
+    ax = prettify_axis(ax, 'x', axis_args)
+
+    plt.tight_layout()
+
+    if plot_name is None:
+        plot_name = "fluxes_comparison.png"
+    fig.savefig(os.path.join(location_figures,
+                             plot_name))
+    plt.close('all')
+    return fig
+
+
+
 def interesting_genes(lambdas,
                       gammas,
                       high_lambda=0.15,
@@ -282,6 +354,10 @@ def plot_all():
             compute_gammas_cis(key),
             plot_name=f"selection_coeffs_ordered_{key}.png",
             xaxis_args=axis_args_gammas)
+
+    for key in mut_rates_keys:
+        plot_lambdas_gammas(key)
+
 
 
 if __name__ == "__figures__":

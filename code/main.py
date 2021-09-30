@@ -7,11 +7,14 @@ from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
 
+from locations import location_data
+from locations import location_gene_panels
+from locations import all_panel_genes_file_name
+from locations import gene_list_file
+from locations import merged_maf_file_name
 from locations import merged_maf_clinical_file_name
-from locations import mutation_rates_file
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
-from locations import merged_maf_file_name
 from locations import location_output
 
 import os
@@ -23,46 +26,64 @@ samples_used = possible_sample_options[0]
 ## We fix M=3 so
 numbers_positive_lambdas = numbers_positive_lambdas[3]
 
-genie_panels_used = pd.read_csv('../gene_panels/genie_panels_used.txt').set_index('Sample Identifier').to_dict()
-msk2017_panels_used = pd.read_csv('../gene_panels/msk2017_panels_used.txt').set_index('Sample Identifier').to_dict()
-msk2018_panels_used = pd.read_csv('../gene_panels/msk2018_panels_used.txt').set_index('Sample Identifier').to_dict()
 
 db = pd.read_csv(merged_maf_file_name)
-db = db[db['Variant_Classification'] != 'Silent']
-db = db[~pd.isnull(db['Mutation'])]
-#for now in here, but can be cut and pasted into the importing_maf_data file
-db.loc[db['Source'] == 'Genie','Panel'] = db['Sample ID'].map(genie_panels_used['Sequence Assay ID'])
-db.loc[db['Source'] == 'MSK2017','Panel'] = db['Sample ID'].map(msk2017_panels_used['Gene Panel'])
-db.loc[db['Source'] == 'MSK2018','Panel'] = db['Sample ID'].map(msk2018_panels_used['Gene Panel'])
+
+## Add panel information (should be in the importing_maf_data module)
+panels_used = {key:pd.read_csv(
+    os.path.join(location_gene_panels,
+                 f"{key.lower()}_panels_used.txt")).set_index(
+                     "Sample Identifier").to_dict()
+    for key in ['Genie', 'MSK2017', 'MSK2018']}
+
+for key in ['Genie', 'MSK2017', 'MSK2018']:
+    db.loc[db['Source'] == key, 'Panel'] = db['Sample ID'].map(
+        panels_used[key]['Sequence Assay ID' if key == 'Genie'
+                         else 'Gene Panel'])
+
 db.loc[db['Source'] == 'TSP', 'Panel'] = 'TSP'
 db.loc[db['Source'] == 'FM-AD', 'Panel'] = 'FoundationOne'
 
-all_panel_genes = pd.read_csv('../gene_panels/all_panel_genes.txt')
+
+## Filter data base
+
+db = db[db['Variant_Classification'] != 'Silent']
+db = db[~pd.isnull(db['Mutation'])]
+
+
+all_panel_genes = pd.read_csv(all_panel_genes_file_name)
 included_panels = pd.unique(all_panel_genes['SEQ_ASSAY_ID'])
 
 panels_to_remove_for_tp53_kras = []
 for panel in included_panels:
-    if 'TP53' not in all_panel_genes[all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist() or 'KRAS' not in all_panel_genes[all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
+    if ('TP53' not in all_panel_genes[
+            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()
+        or 'KRAS' not in all_panel_genes[
+            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()):
         panels_to_remove_for_tp53_kras.append(panel)
 db = db[~db['Panel'].isin(panels_to_remove_for_tp53_kras)]
 
-smoking_sample_ids = pd.read_csv('../data/smoking_sample_ids.txt', header=None).iloc[:,0].tolist()
-nonsmoking_sample_ids = pd.read_csv('../data/nonsmoking_sample_ids.txt', header=None).iloc[:,0].tolist()
+smoking_sample_ids = pd.read_csv(
+    os.path.join(location_data, 'smoking_sample_ids.txt'),
+    header=None).iloc[:,0].tolist()
+nonsmoking_sample_ids = pd.read_csv(
+    os.path.join(location_data, 'nonsmoking_sample_ids.txt'),
+    header=None).iloc[:,0].tolist()
 
 if samples_used == 'smoking':
     db = db[db['Sample ID'].isin(smoking_sample_ids)]
 elif samples_used == 'nonsmoking':
     db = db[db['Sample ID'].isin(nonsmoking_sample_ids)]
 
-with open('../data/genes_list.txt','r') as gene_list_input:
-    gene_list = gene_list_input.read().split('\n')
+gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 
 genes_with_uncomputable_fluxes = []
 for i, gene in enumerate(gene_list[2:]):
     print(f"(gene number {i}/{len(gene_list[2:])})")
     panels_to_remove = []
     for panel in included_panels:
-        if gene not in all_panel_genes[all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
+        if gene not in all_panel_genes[
+                all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
             panels_to_remove.append(panel)
     subsetted_db = db[~db['Panel'].isin(panels_to_remove)]
 
@@ -99,8 +120,8 @@ def lambdas_from_samples(samples):
              1/(2**bound_changes)]) # (1, 1, 0) -> (1, 1, 1)
         print(f"Proposed bounds: {bounds}")
         MLE = estimate_lambdas(samples, draws=1,
-                                    upper_bound_prior=bounds,
-                                    kwargs={'return_raw':True})
+                               upper_bound_prior=bounds,
+                               kwargs={'return_raw':True})
         print(f"MLE: {MLE[0]['lambdas']}")
 
     return MLE[0]
@@ -117,10 +138,12 @@ def main():
 
         panels_to_remove = []
         for panel in included_panels:
-            if gene not in all_panel_genes[all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
+            if gene not in all_panel_genes[
+                    all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
                 panels_to_remove.append(panel)
         subsetted_db = db[~db['Panel'].isin(panels_to_remove)]
-        print('Panels excluded because they did not sequence ' + gene + ':' + str(panels_to_remove)[1:-1])
+        print('Panels excluded because they did not sequence '
+              + gene + ':' + str(panels_to_remove)[1:-1])
         samples = compute_samples(subsetted_db, mutations=genes)
 
         print("Estimating fluxes...")
