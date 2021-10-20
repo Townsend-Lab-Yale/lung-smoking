@@ -6,6 +6,7 @@ from cancer_epistasis import numbers_positive_lambdas
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
+from figures import plot_lambdas_gammas
 
 from locations import location_data
 from locations import location_gene_panels
@@ -163,3 +164,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+plot_lambdas_gammas(key='smoking', gene_list=['CTNNB1','BRAF','RYR2','ZFHX4','EGFR'], from_WT=False)

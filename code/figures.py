@@ -4,73 +4,106 @@ import pandas as pd
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
+from cancer_epistasis import compute_gammas
+
 from locations import location_output
 from locations import fluxes_mles_file_name
 from locations import fluxes_cis_file_name
 from locations import location_figures
 
+dataset_to_use = input("Dataset: ")
+temp_fluxes_mles_file_name = location_output + '/' + dataset_to_use + '_fluxes_mles.npy'
+temp_fluxes_cis_file_name = location_output + '/' + dataset_to_use + '_fluxes_cis.npy'
+selection_mles = np.load(temp_fluxes_mles_file_name, allow_pickle=True).item()
+selection_cis = np.load(temp_fluxes_cis_file_name, allow_pickle=True).item()
 
-selection_mles = np.load(fluxes_mles_file_name, allow_pickle=True).item()
-selection_cis = np.load(fluxes_cis_file_name, allow_pickle=True).item()
-
-
-mut_rates_keys = ["pan-data", "exome", "smoking", "nonsmoking"]
+mut_rates_keys = ["pan_data", "exome", "smoking", "nonsmoking"]
 mut_rates = {key:pd.read_csv(os.path.join(location_output,
                                           f'{key}_mutation_rates.txt'),
                         index_col=0)
              for key in mut_rates_keys}
 
-
-def compute_gammas_mles(key):
+def compute_gammas_mles(key, gene_list=None):
     """We assume that selection coefficients do not change with exposure
     to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
-    `pan-data`.
+    `pan_data`.
 
     """
-    if key in ["smoking", "nonsmoking"]:
-        key = "pan-data"
-    gammas_mles = {gene:{x_y:mle/float(mut_rates[key].loc[gene])
+    #if key in ["smoking", "nonsmoking"]:
+    #    key = "pan_data"
+    if gene_list:
+        gammas_mles = {gene:{x_y:mle/float(mut_rates[key].loc[gene.upper()])
                          for x_y, mle in lambdas.items()}
-                   for gene, lambdas in selection_mles.items()}
-    return gammas_mles
+                   for gene, lambdas in selection_mles.items() if gene in gene_list}
+        return gammas_mles    
+    else:
+        gammas_mles = {gene:{x_y:mle/float(mut_rates[key].loc[gene.upper()])
+                            for x_y, mle in lambdas.items()}
+                    for gene, lambdas in selection_mles.items()}
+        return gammas_mles
 
 
-def compute_gammas_cis(key):
+def compute_gammas_cis(key, gene_list=None):
     """We assume that selection coefficients do not change with exposure
     to smoking. So if `key` is `smoking` or `nonsmoking` we reset to
-    `pan-data`.
+    `pan_data`.
 
     """
-    if key in ["smoking", "nonsmoking"]:
-        key = "pan-data"
-    gammas_cis = {gene:{x_y:[ci[0]/float(mut_rates[key].loc[gene]),
-                             ci[1]/float(mut_rates[key].loc[gene])]
-                        for x_y, ci in lambdas.items()}
-                  for gene, lambdas in selection_cis.items()}
-    return gammas_cis
-
-
-def compute_lambdas_mles(key):
-    if key in ["pan-data", "exome"]:
-        return selection_mles
+    #if key in ["smoking", "nonsmoking"]:
+    #    key = "pan_data"
+    if gene_list:
+        gammas_cis = {gene:{x_y:[ci[0]/float(mut_rates[key].loc[gene.upper()]),
+                                ci[1]/float(mut_rates[key].loc[gene.upper()])]
+                            for x_y, ci in lambdas.items()}
+                    for gene, lambdas in selection_cis.items() if gene in gene_list}
+        return gammas_cis    
     else:
-        return {gene:{x_y:mle*float(mut_rates[key].loc[gene])
-                      for x_y, mle in gammas.items()}
-                for gene, gammas in compute_gammas_mles(key).items()}
+        gammas_cis = {gene:{x_y:[ci[0]/float(mut_rates[key].loc[gene.upper()]),
+                                ci[1]/float(mut_rates[key].loc[gene.upper()])]
+                            for x_y, ci in lambdas.items()}
+                    for gene, lambdas in selection_cis.items()}
+        return gammas_cis
 
 
-def compute_lambdas_cis(key):
-    if key in ["pan-data", "exome"]:
-        return selection_cis
+
+def compute_lambdas_mles(key, gene_list=None):
+    if gene_list:
+        return {gene:{x_y:mle*float(mut_rates[key].loc[gene.upper()])
+                        for x_y, mle in gammas.items()}
+                    for gene, gammas in compute_gammas_mles(key=key, gene_list=gene_list).items()}
     else:
-        return {gene:{x_y:[ci[0]*float(mut_rates[key].loc[gene]),
-                           ci[1]*float(mut_rates[key].loc[gene])]
-                      for x_y, ci in gammas.items()}
-                for gene, gammas in compute_gammas_cis(key).items()}
+        if key in ["pan_data", "exome"]:
+            return selection_mles
+        else:
+            return {gene:{x_y:mle*float(mut_rates[key].loc[gene.upper()])
+                        for x_y, mle in gammas.items()}
+                    for gene, gammas in compute_gammas_mles(key).items()}
+
+
+
+def compute_lambdas_cis(key, gene_list=None):
+    if gene_list:
+        return {gene:{x_y:[ci[0]*float(mut_rates[key].loc[gene.upper()]),
+                            ci[1]*float(mut_rates[key].loc[gene.upper()])]
+                        for x_y, ci in gammas.items()}
+                    for gene, gammas in compute_gammas_cis(key=key, gene_list=gene_list).items()}
+    else:
+        if key in ["pan_data", "exome"]:
+            return selection_cis
+        else:
+            return {gene:{x_y:[ci[0]*float(mut_rates[key].loc[gene.upper()]),
+                            ci[1]*float(mut_rates[key].loc[gene.upper()])]
+                        for x_y, ci in gammas.items()}
+                    for gene, gammas in compute_gammas_cis(key).items()}
+
 
 
 def filter_110_to_111(all_estimates):
     return {gene:estimates[((1, 1, 0), (1, 1, 1))]
+            for gene, estimates in all_estimates.items()}
+
+def filter_000_to_001(all_estimates):
+    return {gene:estimates[((0, 0, 0), (0, 0, 1))]
             for gene, estimates in all_estimates.items()}
 
 
@@ -187,7 +220,7 @@ def plot_estimates_comparison(plot_name=None):
 
     genes_ordered = list(
         dict(sorted(filter_110_to_111(
-            compute_lambdas_mles('pan-data')).items(),
+            compute_lambdas_mles('pan_data')).items(),
         key=lambda item: item[1])).keys())
 
     lambdas_mles = {
@@ -258,10 +291,31 @@ def interesting_genes(lambdas,
 
 
 
-def plot_lambdas_gammas(key, with_cis=True, plot_name=None):
+def plot_lambdas_gammas(key, gene_list=None, from_WT = False, with_cis=True, plot_name=None):
 
-    lambdas_mles = filter_110_to_111(compute_lambdas_mles(key))
-    gammas_mles = filter_110_to_111(compute_gammas_mles(key))
+    if from_WT:
+        def filtering_function(all_estimates):
+            return filter_000_to_001(all_estimates)
+        axis_args_gammas['label'] = ("Selection from "
+             "WT to 'gene' "
+             "(thousands)")
+        axis_args_lambdas['label'] = "Flux from WT to 'gene'"
+    else:
+        def filtering_function(all_estimates):
+            return filter_110_to_111(all_estimates)
+    if gene_list:
+        lambdas_mles = filtering_function(compute_lambdas_mles(key=key, gene_list=gene_list))
+        gammas_mles = filtering_function(compute_gammas_mles(key=key, gene_list=gene_list))
+        if with_cis:
+            lambdas_cis = filtering_function(compute_lambdas_cis(key=key, gene_list=gene_list))
+            gammas_cis = filtering_function(compute_gammas_cis(key=key, gene_list=gene_list))    
+    else:
+        lambdas_mles = filtering_function(compute_lambdas_mles(key))
+        gammas_mles = filtering_function(compute_gammas_mles(key))
+        if with_cis:
+            lambdas_cis = filtering_function(compute_lambdas_cis(key))
+            gammas_cis = filtering_function(compute_gammas_cis(key))
+
 
     ## sanity check to make sure keys are in the same order
     if list(lambdas_mles.keys()) != list(gammas_mles.keys()):
@@ -270,10 +324,6 @@ def plot_lambdas_gammas(key, with_cis=True, plot_name=None):
     slope = curve_fit(lambda x, s: s*x,
                       list(lambdas_mles.values()),
                       list(gammas_mles.values()))[0][0]
-
-    if with_cis:
-        lambdas_cis = filter_110_to_111(compute_lambdas_cis(key))
-        gammas_cis = filter_110_to_111(compute_gammas_cis(key))
 
     bottom_genes = {'EPHA5', 'NTRK3', 'EPHB1', 'NTRK2', 'PIK3CG', 'NOTCH2', 'SMAD4', 'FLT1', 'PDGFRA'}
     left_top_genes = {'RAF1', 'CTNNB1', 'CHEK2', 'NOTCH3', 'FGFR2', 'PTEN', 'PIK3C2G', 'NTRK1'}
@@ -284,6 +334,8 @@ def plot_lambdas_gammas(key, with_cis=True, plot_name=None):
         high_lambda=0.125,
         high_gamma=70*10**3,
         for_sure_include=set.union(bottom_genes, left_top_genes, left_bottom_genes))
+    if gene_list:
+        genes_to_annotate = set.union(genes_to_annotate, set(gene_list))
 
 
     fig = plt.figure()
