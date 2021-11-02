@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from locations import location_output
-
+from locations import pts_by_mutation_file
 
 results_keys = ["pan_data", "smoking", "nonsmoking"]
 
@@ -121,3 +121,8 @@ def filter_110_to_111(all_estimates, genes=None):
     return filter_estimates(all_estimates,
                             ((1, 1, 0), (1, 1, 1)),
                             genes)
+
+
+## * Number of patients with mutation per gene
+
+pts_per_mutation = pd.read_csv(pts_by_mutation_file, index_col=0)
