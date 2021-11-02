@@ -70,7 +70,3 @@ gene_coordinates_file = os.path.join(location_data, "gene_coordinates.csv")
 merged_maf_file_name = os.path.join(location_output, 'merged_luad_maf.txt')
 merged_clinical_file_name = os.path.join(location_output, 'merged_luad_clinical.txt')
 merged_maf_clinical_file_name = os.path.join(location_output, 'merged_final.txt')
-
-
-fluxes_mles_file_name = os.path.join(location_output, 'fluxes_mles.npy')
-fluxes_cis_file_name = os.path.join(location_output, 'fluxes_cis.npy')
