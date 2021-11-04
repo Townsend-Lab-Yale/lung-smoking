@@ -112,3 +112,10 @@ Non-smoking: None
 * Future analyses
 
 - See effect of smoking person years
+
+* Introduction
+
+"If our aim is to understand cancer evolution, we cannot ignore the
+environment in which a cancer cell evolves." Genetic and non-genetic
+clonal diversity in cancer evolution by James R. M. Black and Nicholas
+McGranahan
