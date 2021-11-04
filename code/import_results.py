@@ -123,6 +123,60 @@ def filter_110_to_111(all_estimates, genes=None):
                             genes)
 
 
+
+def provide_all_relevant_lambdas_and_gammas():
+    """Construct a dictionary with all relevant results for fluxes and
+    selection coefficients.
+
+    Keys of the dictionary are tuples of the form:
+
+         (result_key, es, what)
+
+    result_key can be any of:
+        - pan_data
+        - smoking
+        - nonsmoking
+
+    es is the epistasis status:
+        - 'no_epi': for no epistasis considered
+        - 'epi': if epistasis is considered (in this case we consider
+          fluxes and selections from KRAS+TP53 to KRAS+TP53+ the third
+          gene in the model)
+
+    what refers to the estimation:
+        - 'mles': for the maximum likehood estimator
+        - 'cis': for the 95% confidence interval (given as a two item list)
+
+    This function returns a tuple with the lambdas and the
+    gammas. Each value of lambdas and gammas is another dictionary
+    with the third gene as key and respective estimate as value.
+
+    """
+
+    lambdas = {(key, 'no_epi', 'mles'):fluxes_ne_mles[key]
+               for key in results_keys}
+    lambdas.update({(key, 'no_epi', 'cis'):fluxes_ne_cis[key]
+               for key in results_keys})
+
+    lambdas.update({(key, 'epi', 'mles'):filter_110_to_111(fluxes_mles[key])
+                    for key in results_keys})
+    lambdas.update({(key, 'epi', 'cis'):filter_110_to_111(fluxes_cis[key])
+                    for key in results_keys})
+
+    gammas = {(key, 'no_epi', 'mles'):selection_ne_mles[key]
+              for key in results_keys}
+    gammas.update({(key, 'no_epi', 'cis'):selection_ne_cis[key]
+               for key in results_keys})
+
+    gammas.update({(key, 'epi', 'mles'):filter_110_to_111(selection_mles[key])
+                    for key in results_keys})
+    gammas.update({(key, 'epi', 'cis'):filter_110_to_111(selection_cis[key])
+                    for key in results_keys})
+
+    return lambdas, gammas
+
+
+
 ## * Number of patients with mutation per gene
 
 pts_per_mutation = pd.read_csv(pts_by_mutation_file, index_col=0)
