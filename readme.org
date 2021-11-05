@@ -100,7 +100,7 @@ VEGFA
 
 Non-smoking: None
 
-* TODO [0/2] Before publishing
+* TODO [0/2] Before publishing                                      :waiting:
 
 - [ ] Remove access to the files at misc.cidma.us/data and provide
   instructions on how to download each file that are is not accessible
@@ -113,9 +113,66 @@ Non-smoking: None
 
 - See effect of smoking person years
 
+
 * Introduction
 
 "If our aim is to understand cancer evolution, we cannot ignore the
 environment in which a cancer cell evolves." Genetic and non-genetic
 clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
+
+
+* TODO [1/2] TODO list
+SCHEDULED: <2021-11-09 Tue>
+
+- [X] Track theory.py and check for duplicate code in
+  count_combinations.py
+
+- [ ] Check differences between cancer_epistasis theory.py and
+  cancer_epistasis.py
+
+- [ ] Presentation
+
+  + pan-data wildtype for the three most common genes
+
+  + flux vs selection difference
+
+One slide, in wild-type three most common genes
+
+Top three means: selections and fluxes (could be 6?)
+
+  + section: smoking vs wild-type
+
+Flux vs selection in smoking
+another in nonsmoking
+in wild-type
+
+  + what happens next TP53+KRAS vs wildtype
+
+flux TP53+KRAS compared to wildtype
+selection TP53+KRAS compared to wildtype
+smoking and nonsmoking
+
+
+* Notes for presentation
+
+No epistasis
+- Top 3 genes pan: 'EGFR', 'STK11', 'KEAP1'       (last two not in nonsmoking)
+-         smoking: 'EGFR', 'STK11',        'RYR2'
+-      nonsmoking: 'EGFR',                        'BRAF', 'SPATA3'
+
+Epistasis from 110:
+- All top 3 only 'RYR2' in 'no epistasis'
+- All top 3 = 8 genes only 'COL11A1' in both smoking and pan_data
+- All top 3, none of them are included in nonsmoking for no epistasis
+
+Epistasis from normal:
+- All top 3 only 'RYR2' and 'EGFR' in 'no epistasis'
+- All top 3 = 5 genes only 'COL11A1' in both smoking and pan_data
+- All top 3, none of them are included in nonsmoking for no epistasis
+- 'EGFR' not in nonsmoking (have to investigate why)
+
+Two genes I removed because I do not trust the flux estimate:
+- CSMD3
+- TTN
+I'll rerun the epistasis analysis for those
