@@ -122,6 +122,11 @@ def filter_110_to_111(all_estimates, genes=None):
                             ((1, 1, 0), (1, 1, 1)),
                             genes)
 
+def filter_000_to_001(all_estimates, genes=None):
+    return filter_estimates(all_estimates,
+                            ((0, 0, 0), (0, 0, 1)),
+                            genes)
+
 
 
 def provide_all_relevant_lambdas_and_gammas():
@@ -158,9 +163,13 @@ def provide_all_relevant_lambdas_and_gammas():
     lambdas.update({(key, 'no_epi', 'cis'):fluxes_ne_cis[key]
                for key in results_keys})
 
-    lambdas.update({(key, 'epi', 'mles'):filter_110_to_111(fluxes_mles[key])
+    lambdas.update({(key, 'from_110', 'mles'):filter_110_to_111(fluxes_mles[key])
                     for key in results_keys})
-    lambdas.update({(key, 'epi', 'cis'):filter_110_to_111(fluxes_cis[key])
+    lambdas.update({(key, 'from_110', 'cis'):filter_110_to_111(fluxes_cis[key])
+                    for key in results_keys})
+    lambdas.update({(key, 'from_normal', 'mles'):filter_000_to_001(fluxes_mles[key])
+                    for key in results_keys})
+    lambdas.update({(key, 'from_normal', 'cis'):filter_000_to_001(fluxes_cis[key])
                     for key in results_keys})
 
     gammas = {(key, 'no_epi', 'mles'):selection_ne_mles[key]
@@ -168,9 +177,13 @@ def provide_all_relevant_lambdas_and_gammas():
     gammas.update({(key, 'no_epi', 'cis'):selection_ne_cis[key]
                for key in results_keys})
 
-    gammas.update({(key, 'epi', 'mles'):filter_110_to_111(selection_mles[key])
+    gammas.update({(key, 'from_110', 'mles'):filter_110_to_111(selection_mles[key])
                     for key in results_keys})
-    gammas.update({(key, 'epi', 'cis'):filter_110_to_111(selection_cis[key])
+    gammas.update({(key, 'from_110', 'cis'):filter_110_to_111(selection_cis[key])
+                    for key in results_keys})
+    gammas.update({(key, 'from_normal', 'mles'):filter_000_to_001(selection_mles[key])
+                    for key in results_keys})
+    gammas.update({(key, 'from_normal', 'cis'):filter_000_to_001(selection_cis[key])
                     for key in results_keys})
 
     return lambdas, gammas
