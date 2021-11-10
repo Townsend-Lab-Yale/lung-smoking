@@ -71,3 +71,9 @@ pts_by_mutation_file = os.path.join(location_output, "pts_by_mutation.csv")
 merged_maf_file_name = os.path.join(location_output, 'merged_luad_maf.txt')
 merged_clinical_file_name = os.path.join(location_output, 'merged_luad_clinical.txt')
 merged_maf_clinical_file_name = os.path.join(location_output, 'merged_final.txt')
+
+
+results_keys = ["pan_data", "smoking", "nonsmoking"]
+"""List with possible keys to classify the data.
+
+"""

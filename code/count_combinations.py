@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from itertools import product, combinations
 from time import time
-from ranked_list import produce_ranked_list
 
 from theory import build_S_with_tuples
 from theory import build_S_as_array

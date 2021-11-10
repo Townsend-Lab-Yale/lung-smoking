@@ -1,50 +1,26 @@
+import os
 import pandas as pd
 import numpy as np
 from count_combinations import compute_samples
 from count_combinations import are_all_fluxes_computable
-from cancer_epistasis import numbers_positive_lambdas
+
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
-from figures import plot_lambdas_gammas
+# from figures import plot_lambdas_gammas
 
 from locations import location_data
 from locations import location_gene_panels
 from locations import all_panel_genes_file_name
 from locations import gene_list_file
 from locations import merged_maf_file_name
-from locations import merged_maf_clinical_file_name
-from locations import fluxes_mles_file_name
-from locations import fluxes_cis_file_name
 from locations import location_output
-
-import os
+from locations import results_keys
 
 #CHOOSE A DATASET FOR LAMBDA CALCULATIONS, BY DEFAULT IT IS PAN-DATA
-possible_sample_options = ['pan_data','smoking','nonsmoking']
-samples_used = possible_sample_options[0]
+samples_used = results_keys[0]
 
-## We fix M=3 so
-numbers_positive_lambdas = numbers_positive_lambdas[3]
-
-
-db = pd.read_csv(merged_maf_file_name)
-
-## Add panel information (should be in the importing_maf_data module)
-panels_used = {key:pd.read_csv(
-    os.path.join(location_gene_panels,
-                 f"{key.lower()}_panels_used.txt")).set_index(
-                     "Sample Identifier").to_dict()
-    for key in ['Genie', 'MSK2017', 'MSK2018']}
-
-for key in ['Genie', 'MSK2017', 'MSK2018']:
-    db.loc[db['Source'] == key, 'Panel'] = db['Sample ID'].map(
-        panels_used[key]['Sequence Assay ID' if key == 'Genie'
-                         else 'Gene Panel'])
-
-db.loc[db['Source'] == 'TSP', 'Panel'] = 'TSP'
-db.loc[db['Source'] == 'FM-AD', 'Panel'] = 'FoundationOne'
-
+db = pd.read_csv(merged_maf_file_name, index_col=0)
 
 ## Filter data base
 
@@ -164,5 +140,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-plot_lambdas_gammas(key='smoking', gene_list=['CTNNB1','BRAF','RYR2','ZFHX4','EGFR'], from_WT=False)
