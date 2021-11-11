@@ -17,40 +17,13 @@ from locations import merged_maf_file_name
 from locations import location_output
 from locations import results_keys
 
+from filter_data import prefiltered_dbs
+from filter_data import filter_db_for_gene
+
 #CHOOSE A DATASET FOR LAMBDA CALCULATIONS, BY DEFAULT IT IS PAN-DATA
 samples_used = results_keys[0]
 
-db = pd.read_csv(merged_maf_file_name, index_col=0)
-
-## Filter data base
-
-db = db[db['Variant_Classification'] != 'Silent']
-db = db[~pd.isnull(db['Mutation'])]
-
-
-all_panel_genes = pd.read_csv(all_panel_genes_file_name)
-included_panels = pd.unique(all_panel_genes['SEQ_ASSAY_ID'])
-
-panels_to_remove_for_tp53_kras = []
-for panel in included_panels:
-    if ('TP53' not in all_panel_genes[
-            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()
-        or 'KRAS' not in all_panel_genes[
-            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()):
-        panels_to_remove_for_tp53_kras.append(panel)
-db = db[~db['Panel'].isin(panels_to_remove_for_tp53_kras)]
-
-smoking_sample_ids = pd.read_csv(
-    os.path.join(location_data, 'smoking_sample_ids.txt'),
-    header=None).iloc[:,0].tolist()
-nonsmoking_sample_ids = pd.read_csv(
-    os.path.join(location_data, 'nonsmoking_sample_ids.txt'),
-    header=None).iloc[:,0].tolist()
-
-if samples_used == 'smoking':
-    db = db[db['Sample ID'].isin(smoking_sample_ids)]
-elif samples_used == 'nonsmoking':
-    db = db[db['Sample ID'].isin(nonsmoking_sample_ids)]
+db = prefiltered_dbs[samples_used]
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 
@@ -69,6 +42,7 @@ for i, gene in enumerate(gene_list[2:]):
 
 for gene in genes_with_uncomputable_fluxes:
     gene_list.remove(gene)
+
 
 def lambdas_from_samples(samples):
     bounds = 1
@@ -104,34 +78,33 @@ def lambdas_from_samples(samples):
     return MLE[0]
 
 
-def main():
+counts = {key:{} for key in results_keys}
+
+def main(save_results=True):
     lambdas_mles = {}
     lambdas_cis = {}
 
     for i, gene in enumerate(gene_list[2:]):
         print(f"Running model with third gene {gene} "
               f"(gene number {i}/{len(gene_list[2:])})")
-        genes = ['TP53', 'KRAS', gene]
 
-        panels_to_remove = []
-        for panel in included_panels:
-            if gene not in all_panel_genes[
-                    all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist():
-                panels_to_remove.append(panel)
-        subsetted_db = db[~db['Panel'].isin(panels_to_remove)]
-        print('Panels excluded because they did not sequence '
-              + gene + ':' + str(panels_to_remove)[1:-1])
-        samples = compute_samples(subsetted_db, mutations=genes)
+        subsetted_db = filter_db_for_gene(gene, db, print_info=True)
+
+        samples = compute_samples(subsetted_db, mutations=['TP53', 'KRAS', gene])
 
         print("Estimating fluxes...")
         mle = lambdas_from_samples(samples)
         lambdas_mles[gene] = convert_lambdas_to_dict(mle)
-        np.save(os.path.join(location_output, str(samples_used + '_fluxes_mles.npy')), lambdas_mles)
+        if save_results:
+            np.save(os.path.join(location_output, str(samples_used + '_fluxes_mles.npy')),
+                    lambdas_mles)
 
         print("Estimating asymptotic confidence intervals...")
         cis = asymp_CI_lambdas(mle['lambdas'], samples)
         lambdas_cis[gene] = convert_lambdas_to_dict(cis)
-        np.save(os.path.join(location_output, str(samples_used + '_fluxes_cis.npy')), lambdas_cis)
+        if save_results:
+            np.save(os.path.join(location_output, str(samples_used + '_fluxes_cis.npy')),
+                    lambdas_cis)
 
         print("")
 

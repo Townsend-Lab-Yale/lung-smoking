@@ -77,3 +77,8 @@ results_keys = ["pan_data", "smoking", "nonsmoking"]
 """List with possible keys to classify the data.
 
 """
+
+smoking_sample_ids_file = os.path.join(location_data,
+                                       'smoking_sample_ids.txt')
+nonsmoking_sample_ids_file = os.path.join(location_data,
+                                          'nonsmoking_sample_ids.txt')
