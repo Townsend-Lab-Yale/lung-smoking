@@ -36,7 +36,6 @@ So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 - [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
 - [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
 
-
 * Genes for which the 1 bound did not work and we had to modify it
 
 Pan-cancer:
@@ -123,7 +122,7 @@ environment in which a cancer cell evolves." Genetic and non-genetic
 clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
-* TODO [2/8] TODO list
+* TODO [2/9] TODO list
 SCHEDULED: <2021-11-12 Fri>
 
 - [X] Track theory.py and check for duplicate code in
@@ -164,6 +163,9 @@ smoking and nonsmoking
   110->111 cannot be computed)
 
 - [ ] Fix discrepancy with gene names, for example mTOR
+
+- [ ] See how many patients would be added to the analysis if we
+  consider the panel data that has smoking annotations.
 
 - [ ] Think about how to introduce smoking/age
 
