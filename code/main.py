@@ -35,7 +35,12 @@ def compute_samples_for_all_genes(key=None, save_results=True):
         - nonsmoking
 
     :type save_results: bool
-    :param save_results: If True (default) save results.
+    :param save_results: If True (default) save results as a csv file.
+
+    :rtype: dict
+    :return: Dictionary with keys being the genes, and values being
+        arrays with number of samples per mutation combination as
+        return by :func:`compute_samples`.
 
     """
 
@@ -74,14 +79,35 @@ def are_all_fluxes_computable(samples):
     (except for the combination of all genes)
 
     There is a version of this function in the
-    mod:`count_combinations` module, but it this one is way faster if
+    :mod:`count_combinations` module, but it this one is way faster if
     the samples per combination have already been computed.
+
+    :type samples: numpy.ndarray
+    :param samples: One dimensional array with the samples. It should
+        be of the same size as S, and have in each entry the number of
+        individuals that have the respective mutation combination.
+
+    :rtype: bool
+    :return: True if all fluxes are computable.
 
     """
     return np.all(samples[:-1] > 0)
 
 
 def lambdas_from_samples(samples):
+    """Estimate the fluxes from the samples, varying the bounds if
+    necessary.
+
+    :type samples: numpy.ndarray
+    :param samples: One dimensional array with the samples. It should
+        be of the same size as S, and have in each entry the number of
+        individuals that have the respective mutation combination.
+
+    :rtype: dict
+    :return: Estimates of the fluxes as a dictionary with the MAP
+        (also MLE, because the priors are uniform) estimates.
+    """
+
     bounds = 1
     print(f"Bounds for fluxes: {bounds}")
     MLE = estimate_lambdas(samples, draws=bounds,
@@ -116,7 +142,27 @@ def lambdas_from_samples(samples):
 
 
 def compute_all_lambdas(key, all_counts, save_results=True):
-    """Compute all estimates of the fluxes for the data set `key`.
+    """Compute all estimates of the fluxes for the data set `key`
+    iterating over all genes in :const:`gene_list`.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+
+    :type all_counts: dict
+    :param all_counts: Dictionary with keys being the results keys,
+        and values being dictionaries that contain the samples per
+        mutation combination as return by :func:`compute_samples` for
+        each of genes in :const:`gene_list`.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with the maximum likelihood estimations and the
+        95% asymptomatic confidence intervals for the fluxes.
 
     """
     lambdas_mles = {}
@@ -155,6 +201,23 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
 
 def main(recompute_samples_per_combination=False, save_results=True):
+    """Main method for the estimation of the all the fluxes.
+
+    :type recompute_samples_per_combination: bool
+    :param recompute_samples_per_combination: If True force
+        recomputing the samples per combination of each
+        gene. Otherwise (default) try load the respective file if
+        available.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with two dictionaries that contain all the
+        samples per combination and all the fluxes estimated. The keys
+        of the dictionaries are the keys in :const:`results_keys`.
+
+    """
     all_counts = {}
     all_lambdas = {}
     for key in results_keys:
