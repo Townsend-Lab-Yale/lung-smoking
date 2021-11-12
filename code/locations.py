@@ -82,3 +82,7 @@ smoking_sample_ids_file = os.path.join(location_data,
                                        'smoking_sample_ids.txt')
 nonsmoking_sample_ids_file = os.path.join(location_data,
                                           'nonsmoking_sample_ids.txt')
+
+samples_per_combination_files = {key: os.path.join(location_output,
+                                                   f"samples_per_combination_{key}.csv")
+                                 for key in results_keys}
