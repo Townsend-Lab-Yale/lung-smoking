@@ -122,8 +122,8 @@ environment in which a cancer cell evolves." Genetic and non-genetic
 clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
-* TODO [2/9] TODO list
-SCHEDULED: <2021-11-12 Fri>
+* TODO [3/9] TODO list
+SCHEDULED: <2021-11-16 Tue>
 
 - [X] Track theory.py and check for duplicate code in
   count_combinations.py
@@ -164,8 +164,13 @@ smoking and nonsmoking
 
 - [ ] Fix discrepancy with gene names, for example mTOR
 
-- [ ] See how many patients would be added to the analysis if we
-  consider the panel data that has smoking annotations.
+- [X] See how many patients would be added to the analysis if we
+  consider the panel data that has smoking annotations: MSK 2015, 2017
+  and 2018 have smoking annotations. It would add 586 samples, nearly
+  doubling our current data set for smoking/nonsmoking.
+
+- [ ] Run analysis including MSK 2015, 2017 and 2018 to
+  smoking/nonsmoking.
 
 - [ ] Think about how to introduce smoking/age
 
