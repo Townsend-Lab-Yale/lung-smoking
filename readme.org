@@ -36,7 +36,6 @@ So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 - [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
 - [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
 
-
 * Genes for which the 1 bound did not work and we had to modify it
 
 Pan-cancer:
@@ -100,7 +99,10 @@ VEGFA
 
 Non-smoking: None
 
-* TODO [0/2] Before publishing                                      :waiting:
+* TODO [0/3] Before publishing                                      :waiting:
+
+- [ ] Check differences between cancer_epistasis theory.py and
+  cancer_epistasis.py
 
 - [ ] Remove access to the files at misc.cidma.us/data and provide
   instructions on how to download each file that are is not accessible
@@ -113,7 +115,6 @@ Non-smoking: None
 
 - See effect of smoking person years
 
-
 * Introduction
 
 "If our aim is to understand cancer evolution, we cannot ignore the
@@ -121,17 +122,13 @@ environment in which a cancer cell evolves." Genetic and non-genetic
 clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
-
-* TODO [1/2] TODO list
-SCHEDULED: <2021-11-09 Tue>
+* TODO [2/9] TODO list
+SCHEDULED: <2021-11-12 Fri>
 
 - [X] Track theory.py and check for duplicate code in
   count_combinations.py
 
-- [ ] Check differences between cancer_epistasis theory.py and
-  cancer_epistasis.py
-
-- [ ] Presentation
+- [X] Presentation
 
   + pan-data wildtype for the three most common genes
 
@@ -153,6 +150,40 @@ flux TP53+KRAS compared to wildtype
 selection TP53+KRAS compared to wildtype
 smoking and nonsmoking
 
+- [ ] Calculate the highest number with 111 out of all genes and do
+  the figures with those to see if estimates of 110->110 for
+  nonsmoking have less uncertainty
+
+- [ ] Add KRAS and TP53 in the normal to 001 graph
+
+- [ ] Include graph of paths in top right corner to distinguish
+  000->001 from 110->110
+
+- [ ] Obtain estimate of EGFR from 000->001 for nonsmoking (even when
+  110->111 cannot be computed)
+
+- [ ] Fix discrepancy with gene names, for example mTOR
+
+- [ ] See how many patients would be added to the analysis if we
+  consider the panel data that has smoking annotations.
+
+- [ ] Think about how to introduce smoking/age
+
+Regarding age these references could help (and be cited for "there is
+a linear relationship between age and cancer"):
+
+- Salk, J.J.; Schmitt, M.W.; Loeb, L.A. Enhancing the accuracy of
+  next-generation sequencing for detecting rare and subclonal
+  mutations. Nat. Rev. Genet. 2018, 19, 269–285.
+- Risques, R.A.; Kennedy, S.R. Aging and the rise of somatic
+  cancer-associated mutations in normal tissues. PLoS Genet. 2018, 14,
+  e1007108.
+- Forsberg, L.A.; Gisselsson, D.; Dumanski, L.A.F.J.P. Mosaicism in
+  health and disease—Clones picking up speed. Nat. Rev. Genet. 2017,
+  18, 128–142.
+- Krimmel, J.D.; Salk, J.J.; Risques, R.A. Cancer-like mutations in
+  non-cancer tissue: Towards a better understanding of multistep
+  carcinogenesis. Transl. Cancer Res. 2016, 5, S1302–S1304.
 
 * Notes for presentation
 

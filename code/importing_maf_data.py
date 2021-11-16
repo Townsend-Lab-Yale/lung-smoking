@@ -19,6 +19,7 @@ from importing_clinical_data import non_luad_sample_ids_genie
 
 
 from locations import full_maf_file_names_lifted as maf_file_names
+from locations import location_gene_panels
 from locations import merged_maf_file_name
 
 
@@ -158,5 +159,29 @@ dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen17
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(non_luad_sample_ids_fmad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
+
+## Merge data
+
 final_df = pd.concat([df for df in dfs.values()])
+final_df = final_df.reset_index(drop=True)
+
+
+# ## Add panel information
+
+panels_used = {key:pd.read_csv(
+    os.path.join(location_gene_panels,
+                 f"{key.lower()}_panels_used.txt")).set_index(
+                     "Sample Identifier").to_dict()
+    for key in ['Genie', 'MSK2017', 'MSK2018']}
+
+for key in ['Genie', 'MSK2017', 'MSK2018']:
+    final_df.loc[final_df['Source'] == key, 'Panel'] = final_df['Sample ID'].map(
+        panels_used[key]['Sequence Assay ID' if key == 'Genie'
+                         else 'Gene Panel'])
+
+final_df.loc[final_df['Source'] == 'TSP', 'Panel'] = 'TSP'
+final_df.loc[final_df['Source'] == 'FM-AD', 'Panel'] = 'FoundationOne'
+
+
+## Save merged data to file
 final_df.to_csv(merged_maf_file_name)

@@ -4,9 +4,7 @@ import pandas as pd
 
 from locations import location_output
 from locations import pts_by_mutation_file
-
-results_keys = ["pan_data", "smoking", "nonsmoking"]
-
+from locations import results_keys
 
 ## * Load mutation rates
 

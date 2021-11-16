@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from itertools import product, combinations
 from time import time
-from ranked_list import produce_ranked_list
 
 from theory import build_S_with_tuples
 from theory import build_S_as_array
@@ -42,10 +41,11 @@ def compute_samples(data,
         contains the patient identification. If None, try to infer it
         from the data.
 
-    :rtype: tuple
-    :return: A tuple with a one dimensional array of size 2^M with the
-        computed sample numbers per mutation combination (ordered as
-        items in S), M as in integer and S as a numpy array.
+    :rtype: numpy.ndarray
+    :return: A one dimensional array of size 2^M with the computed
+        sample numbers per mutation combination (ordered as items in
+        an S given as the result of function func:`build_S_as_array`),
+        where M is the number of `mutations`.
 
     """
     if save_info:
