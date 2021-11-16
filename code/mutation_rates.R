@@ -11,13 +11,12 @@ colnames(maf_file)[2] <- 'Tumor_Sample_Barcode'
 colnames(maf_file)[7] <- 'Tumor_Allele'
 maf_list <- split(maf_file, maf_file$Source)
 
-#couldn't make this into a loop or an sapply type function so for now here's a code wall
 Broad_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Broad, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 Broad_maf <- Broad_maf[is.na(problem)]
 Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
 
-FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
 FMAD_maf <- FMAD_maf[is.na(problem)]
 FMAD_maf <- FMAD_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
@@ -74,42 +73,42 @@ genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c(
 gene_granges <- rtracklayer::import('../data/gencode.v38lift37.basic.annotation.gtf')
 
 if(!file.exists('../data/fmad_targets.bed')){
-  fmad_genes <- unique(fread('../data/gene_panels/foundation_one.txt', sep = '\n', header = F))$V1
+  fmad_genes <- unique(fread('../data/gene_panels/foundation_one.txt')$Hugo_Symbol)
   fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
-  fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = fmad_granges)
+  fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = fmad_granges)
   export(fmad_gr_clean, '../data/fmad_targets.bed')
 }
 
 if(!file.exists('../data/tsp_targets.bed')){
-  tsp_genes <- unique(fread('../data/gene_panels/tsp.txt', sep = '\n', header = F))$V1
+  tsp_genes <- unique(fread('../data/gene_panels/tsp.txt')$Hugo_Symbol)
   tsp_granges <- gene_granges[gene_granges$gene_name %in% tsp_genes, ]
   tsp_granges <- tsp_granges[tsp_granges$type %in% c('CDS','stop_codon'),]
-  tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = tsp_granges)
+  tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = tsp_granges)
   export(tsp_gr_clean, '../data/tsp_targets.bed')
 }
 
 if(!file.exists('../data/msk341_targets.bed')){
-  msk_341_genes <- unique(fread('../data/gene_panels/msk341.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_341_genes <- unique(fread('../data/gene_panels/msk341.txt')$Hugo_Symbol)
   msk341_granges <- gene_granges[gene_granges$gene_name %in% msk_341_genes, ]
   msk341_granges <- msk341_granges[msk341_granges$type %in% c('CDS','stop_codon'),]
-  msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk341_granges)
+  msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk341_granges)
   export(msk341_gr_clean, '../data/msk341_targets.bed')
 }
 
 if(!file.exists('../data/msk410_targets.bed')){
-  msk_410_genes <- unique(fread('../data/gene_panels/msk410.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_410_genes <- unique(fread('../data/gene_panels/msk410.txt')$Hugo_Symbol)
   msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
   msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
-  msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk410_granges)
+  msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk410_granges)
   export(msk410_gr_clean, '../data/msk410_targets.bed')
 }
 
 if(!file.exists('../data/msk468_targets.bed')){
-  msk_468_genes <- unique(fread('../data/gene_panels/msk468.txt', sep = '\n', header = F)[V1 != 'nan'])$V1
+  msk_468_genes <- unique(fread('../data/gene_panels/msk468.txt')$Hugo_Symbol)
   msk468_granges <- gene_granges[gene_granges$gene_name %in% msk_468_genes, ]
   msk468_granges <- msk468_granges[msk468_granges$type %in% c('CDS','stop_codon'),]
-  msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(), gr = msk468_granges)
+  msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk468_granges)
   export(msk468_gr_clean, '../data/msk468_targets.bed')
 }
 
@@ -150,10 +149,10 @@ MSK2018_maf <- merge(MSK2018_maf, msk2018_panels_used, by.x = 'Unique_Patient_Id
 MSK2018_maf <- split(MSK2018_maf, MSK2018_maf$`Gene Panel`)
 
 Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
-Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID`)
+Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID.x`)
 
 #CREATING PAN-DATASET CESA OBJECT FOR GENERAL MUTATION RATES
-cesa_total <- CESAnalysis()
+cesa_total <- CESAnalysis(ces.refset.hg19)
 #consider using covered regions padding when variants are outside the intervals
 cesa_total <- load_maf(cesa_total, maf = Broad_maf$WES)
 cesa_total <- load_maf(cesa_total, maf = MSK2015_maf)
@@ -183,11 +182,11 @@ cesa_total <- trinuc_mutation_rates(cesa_total,
 cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
 save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
-fwrite(cesa_total$gene_rates, '../output/pan-data_mutation_rates.txt')
+fwrite(cesa_total$gene_rates, '../output/pan_data_mutation_rates.txt')
 
 
 # WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
-cesa_exome <- CESAnalysis()
+cesa_exome <- CESAnalysis(ces.refset.hg19)
 cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
 cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WES)
 cesa_exome <- load_maf(cesa_exome, maf = MSK2015_maf)
@@ -219,7 +218,7 @@ nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
 
 #SMOKING GROUP
-cesa_smoking <- CESAnalysis()
+cesa_smoking <- CESAnalysis(ces.refset.hg19)
 cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% smoking_samples])
 cesa_smoking <- load_maf(cesa_smoking, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% smoking_samples])
@@ -239,7 +238,7 @@ fwrite(cesa_smoking$gene_rates, '../output/smoking_mutation_rates.txt')
 
 
 #NONSMOKING GROUP
-cesa_nonsmoking <- CESAnalysis()
+cesa_nonsmoking <- CESAnalysis(ces.refset.hg19)
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
 cesa_nonsmoking <- load_maf(cesa_nonsmoking, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
