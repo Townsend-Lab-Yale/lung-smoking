@@ -441,6 +441,72 @@ def plot_lambdas_gammas(key=None,
     ax = prettify_axis(ax, 'y',
                        axis_args_gammas)
 
+    if epi_key != 'no_epi':
+        ## Add axes with epi model and emphasis
+
+        def isemphasis(origin, destiny):
+            if epi_key == "from_normal":
+                test = (origin == (0, 0, 0) and
+                        destiny == (0, 0, 1))
+
+            elif epi_key == "from_110":
+                test = (origin == (1, 1, 0) and
+                        destiny == (1, 1, 1))
+
+            return test
+
+        axins = fig.add_axes([0.61, 0.59, 0.28, 0.28])
+        h_dist = 3
+        v_dist = 3
+        circle_radius = 1.3
+        nodes_locs = {(0, 0, 0):[0, 0],
+                      (1, 0, 0):[h_dist, v_dist],
+                      (0, 1, 0):[h_dist, 0],
+                      (0, 0, 1):[h_dist, -v_dist],
+                      (1, 1, 0):[2*h_dist, v_dist],
+                      (1, 0, 1):[2*h_dist, 0],
+                      (0, 1, 1):[2*h_dist, -v_dist],
+                      (1, 1, 1):[3*h_dist, 0]}
+        nodes_names = {(0, 0, 0):"normal",
+                       (1, 0, 0):"TP53",
+                       (0, 1, 0):"KRAS",
+                       (0, 0, 1):"gene",
+                       (1, 1, 0):"TP53\nKRAS",
+                       (1, 0, 1):"TP53\ngene",
+                       (0, 1, 1):"KRAS\ngene",
+                       (1, 1, 1):"all"}
+
+        for node_origin, loc_origin in nodes_locs.items():
+            ## Draw arrows
+            for node_destin, loc_destin in nodes_locs.items():
+                if (np.sum(np.array(node_destin) - np.array(node_origin)) == 1
+                    and np.all(np.array(node_destin) >= np.array(node_origin))):
+                    dxy = np.array(loc_destin) - np.array(loc_origin)
+                    dxy_norm = dxy/np.sqrt(np.sum(dxy**2))
+                    origin = np.array(loc_origin) + dxy_norm*circle_radius
+                    d_destin = dxy - 2*dxy_norm*circle_radius
+                    emphasis = isemphasis(node_origin, node_destin)
+                    axins.arrow(*list(origin),
+                                *list(d_destin),
+                                width=0.002 if emphasis else 0.001,
+                                head_length=0.3,
+                                head_width=0.2,
+                                length_includes_head=True,
+                                alpha=0.8,
+                                color="Red" if emphasis else "Gray")
+
+            ## Draw circles
+            axins.add_patch(plt.Circle(loc_origin, circle_radius,
+                                       color="LightGray", alpha=0.3))
+            ## Add names
+            axins.text(loc_origin[0], loc_origin[1],
+                       nodes_names[node_origin], va='center', ha='center',
+                       fontsize=8)
+
+        axins.axes.xaxis.set_visible(False)
+        axins.axes.yaxis.set_visible(False)
+
+
     if plot_name is None:
         plot_name = f"fluxes_and_selections_{key}_{epi_key}.png"
     fig.savefig(os.path.join(location_figures,
@@ -476,7 +542,7 @@ def plot_all():
     ## ** Pan data
 
     key, epi_key = ('pan_data', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     axis_args_lambdas= {
         'lim':1.7,
@@ -504,12 +570,15 @@ def plot_all():
         bottom_genes={'RYR2'},
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
+    print("...done.")
+    print("")
+
 
     ## * No epistasis include TP53 and KRAS
     ## ** Smoking
 
     key, epi_key = ('smoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -524,12 +593,15 @@ def plot_all():
         title="Smoking",
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
+    print("...done.")
+    print("")
+
 
     ## * No epistasis include TP53 and KRAS but not EGFR
     ## ** Non-smoking
 
     key, epi_key = ('nonsmoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -541,6 +613,9 @@ def plot_all():
         bottom_genes={'RYR2', 'KRAS', 'BRAF'},
         title="Non-smoking",
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53_no_EGRF.png")
+
+    print("...done.")
+    print("")
 
 
     ## * No epistasis include TP53 and KRAS with EGFR
@@ -573,12 +648,15 @@ def plot_all():
         title="Non-smoking",
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
+    print("...done.")
+    print("")
+
 
     ## * No epistasis zoom in
     ## ** Pan data
 
     key, epi_key = ('pan_data', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     axis_args_lambdas= {
         'lim':0.44,
@@ -605,12 +683,15 @@ def plot_all():
         axis_args_gammas=axis_args_gammas,
         left_top_genes={'KEAP1', 'SPATA3'})
 
+    print("...done.")
+    print("")
+
 
     ## * No epistasis zoom in
     ## ** Smoking
 
     key, epi_key = ('smoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -624,12 +705,15 @@ def plot_all():
         title="Smoking",
         bottom_genes={'STK11'})
 
+    print("...done.")
+    print("")
+
 
     ## * No epistasis zoom in
     ## ** Non-smoking
 
     key, epi_key = ('nonsmoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -641,12 +725,15 @@ def plot_all():
         axis_args_gammas=axis_args_gammas,
         title="Non-smoking")
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from normal
     ## ** Pan data
 
     key, epi_key = ('pan_data', 'from_normal')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     axis_args_lambdas= {
         'lim':0.6,
@@ -675,12 +762,15 @@ def plot_all():
         left_top_genes={'KEAP1'},
         left_bottom_genes={'LRP1B'})
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from normal
     ## ** Smoking
 
     key, epi_key = ('smoking', 'from_normal')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -695,12 +785,15 @@ def plot_all():
         left_bottom_genes={'RYR2'},
         title="Smoking",)
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from normal
     ## ** Non-smoking
 
     key, epi_key = ('nonsmoking', 'from_normal')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -715,12 +808,15 @@ def plot_all():
         left_bottom_genes=None,
         title="Non-smoking")
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from TP53+KRAS not annotated
     ## ** Pan data
 
     key, epi_key = ('pan_data', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     axis_args_lambdas= {
         'lim':2.7,
@@ -749,12 +845,15 @@ def plot_all():
         left_bottom_genes={'LRP1B'},
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_not_annotated.png")
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from TP53+KRAS not annotated
     ## ** Smoking
 
     key, epi_key = ('smoking', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -769,12 +868,15 @@ def plot_all():
         title="Smoking",
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_not_annotated.png")
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from TP53+KRAS not annotated
     ## ** Non-smoking
 
     key, epi_key = ('nonsmoking', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -788,6 +890,9 @@ def plot_all():
         left_bottom_genes=None,
         title="Non-smoking",
         plot_name = f"fluxes_and_selections_{key}_{epi_key}_not_annotated.png")
+
+    print("...done.")
+    print("")
 
 
     ## * Epistasis from TP53+KRAS
@@ -809,7 +914,7 @@ def plot_all():
         'scale':10**3}
 
     key, epi_key = ('pan_data', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -823,11 +928,15 @@ def plot_all():
         left_top_genes={'RYR1', 'USH2A'},
         left_bottom_genes={'PAPPA2', 'CSMD1'})
 
+    print("...done.")
+    print("")
+
+
     ## * Epistasis from TP53+KRAS
     ## ** Smoking
 
     key, epi_key = ('smoking', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -842,12 +951,15 @@ def plot_all():
         left_bottom_genes={'USH2A', 'RYR2'},
         title="Smoking")
 
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from TP53+KRAS
     ## ** Non-smoking
 
     key, epi_key = ('nonsmoking', 'from_110')
-    print(f"Plotting {key}, {epi_key}")
+    print(f"Plotting {key}, {epi_key}...")
 
     scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
         key,
@@ -861,6 +973,10 @@ def plot_all():
         left_top_genes=None,
         left_bottom_genes={'RYR2', 'LRP1B'},
         title="Non-smoking")
+
+    print("...done.")
+    print("")
+
 
     return scatter_plots
 
