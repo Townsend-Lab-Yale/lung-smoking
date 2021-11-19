@@ -5,6 +5,7 @@ import pandas as pd
 from locations import location_output
 from locations import pts_by_mutation_file
 from locations import results_keys
+from locations import samples_per_combination_files
 
 ## * Load mutation rates
 
@@ -191,3 +192,11 @@ def provide_all_relevant_lambdas_and_gammas():
 ## * Number of patients with mutation per gene
 
 pts_per_mutation = pd.read_csv(pts_by_mutation_file, index_col=0)
+
+
+## * Patients per mutation combination for all TP53, KRAS, and third gene models
+
+samples_per_combination = {
+    key:pd.read_csv(samples_per_combination_files[key],
+                    index_col='third gene')
+    for key in results_keys}
