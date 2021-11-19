@@ -8,6 +8,7 @@ from locations import location_figures
 from import_results import provide_all_relevant_lambdas_and_gammas
 from import_results import results_keys
 from import_results import pts_per_mutation
+from import_results import samples_per_combination
 
 all_lambdas, all_gammas = provide_all_relevant_lambdas_and_gammas()
 
@@ -103,7 +104,6 @@ def prettify_axis(ax, which, axis_args):
         set_label(axis_args['label'])
 
     return ax
-
 
 
 # def plot_estimates_ordered(all_mles, all_cis, xaxis_args=None,
@@ -229,7 +229,6 @@ def top_genes(rates, top=3):
                         key=lambda item: item[1],
                         reverse=True)[:top])
 
-
 top_genes_no_epi = set.union(*[set(top_genes(lambdas, top=5).keys())
                                for lambdas in [all_lambdas[key, 'no_epi', 'mles']
                                                          for key in results_keys]])
@@ -255,7 +254,13 @@ top_genes_from_normal = set.union(
                   top=5).keys()).difference(
                    {'CSMD3', 'TTN'}))
 
+
+top_genes_no_epi = set()
+top_genes_from_110 = set()
+top_genes_from_normal = set(pts_per_mutation[:10].index)
+
 top_genes_epi = set.union(top_genes_from_110, top_genes_from_normal)
+
 
 # for multi_key, lambdas in all_lambdas.items():
 #     if multi_key[2] == 'mles':
@@ -744,7 +749,7 @@ def plot_all():
 
     axis_args_gammas= {
         'lim':135,
-        'label':("Selection from normal genotype of gene "
+        'label':("Selection of gene from normal genotype "
                  "(thousands)"),
         'tick_each':25,
         'tick_minor_each':5,
@@ -827,7 +832,7 @@ def plot_all():
 
     axis_args_gammas= {
         'lim':2.4,
-        'label':("Selection from TP53+KRAS genotype of gene "
+        'label':("Selection of gene from TP53+KRAS genotype "
                  "(millions)"),
         'tick_each':0.5,
         'tick_minor_each':0.1,
@@ -907,7 +912,7 @@ def plot_all():
 
     axis_args_gammas= {
         'lim':550,
-        'label':("Selection from TP53+KRAS genotype of gene "
+        'label':("Selection of gene from TP53+KRAS genotype "
                  "(thousands)"),
         'tick_each':100,
         'tick_minor_each':50,
