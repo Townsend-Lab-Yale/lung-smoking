@@ -17,6 +17,8 @@ from locations import results_keys
 from locations import all_panel_genes_file_name
 from locations import nonsmoking_sample_ids_file
 from locations import smoking_sample_ids_file
+from locations import panel_nonsmoking_sample_ids_file
+from locations import panel_smoking_sample_ids_file
 from locations import merged_maf_file_name
 
 all_panel_genes = pd.read_csv(all_panel_genes_file_name)
@@ -26,6 +28,10 @@ all_panels = pd.unique(all_panel_genes['SEQ_ASSAY_ID'])
 smoking_sample_ids = pd.read_csv(smoking_sample_ids_file,
                                  header=None)[0].to_list()
 nonsmoking_sample_ids = pd.read_csv(nonsmoking_sample_ids_file,
+                                    header=None)[0].to_list()
+panel_smoking_sample_ids = pd.read_csv(panel_smoking_sample_ids_file,
+                                 header=None)[0].to_list()
+panel_nonsmoking_sample_ids = pd.read_csv(panel_nonsmoking_sample_ids_file,
                                     header=None)[0].to_list()
 
 
@@ -59,9 +65,9 @@ def filter_db_for_key(key, db):
     if key == 'pan_data':
         return db
     elif key == 'smoking':
-        return db[db['Sample ID'].isin(smoking_sample_ids)]
+        return db[db['Sample ID'].isin(smoking_sample_ids + panel_smoking_sample_ids)]
     elif key == 'nonsmoking':
-        return db[db['Sample ID'].isin(nonsmoking_sample_ids)]
+        return db[db['Sample ID'].isin(nonsmoking_sample_ids + panel_nonsmoking_sample_ids)]
 
 
 main_db = pd.read_csv(merged_maf_file_name, index_col=0)
