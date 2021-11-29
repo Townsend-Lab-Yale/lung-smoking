@@ -39,6 +39,8 @@ save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
 # comp_df_nonsmoking_sis[selection_intensity.y > ci_high_95.x | selection_intensity.y < ci_low_95.x]
 fwrite(nonsmoking_si, '../output/nonsmoking_selections_no_epistasis.txt')
 
+cesa_smoking_w_panel = ces_variant(cesa_smoking_w_panel)
+cesa_nonsmoking_w_panel = ces_variant(cesa_nonsmoking_w_panel)
 
 
 

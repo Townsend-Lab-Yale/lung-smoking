@@ -217,6 +217,7 @@ smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
 
+
 #SMOKING GROUP
 cesa_smoking <- CESAnalysis(ces.refset.hg19)
 cesa_smoking <- load_maf(cesa_smoking, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% smoking_samples])
@@ -254,3 +255,62 @@ cesa_nonsmoking <- gene_mutation_rates(cesa_nonsmoking, covariates = "lung")
 
 save_cesa(cesa_nonsmoking, '../data/nonsmoking_samples_cesa.rds')
 fwrite(cesa_nonsmoking$gene_rates, '../output/nonsmoking_mutation_rates.txt')
+
+
+
+#INCLUDING PANEL DATA
+maf_clinical = fread('../output/merged_final.txt')
+panel_smoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == T, `Sample ID`])
+panel_nonsmoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == F, `Sample ID`])
+fwrite(list(panel_smoking_samples), '../data/panel_smoking_sample_ids.txt')
+fwrite(list(panel_nonsmoking_samples), '../data/panel_nonsmoking_sample_ids.txt')
+
+
+cesa_smoking_w_panel <- CESAnalysis(ces.refset.hg19)
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = TCGA_maf[TCGA_maf$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = TracerX_maf[TracerX_maf$Unique_Patient_Identifier %in% smoking_samples])
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% smoking_samples], coverage = 'genome')
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2017_maf$IMPACT341[Unique_Patient_Identifier %in% panel_smoking_samples], coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2017_maf$IMPACT410[Unique_Patient_Identifier %in% panel_smoking_samples], coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2018_maf$IMPACT341[Unique_Patient_Identifier %in% panel_smoking_samples], coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2018_maf$IMPACT410[Unique_Patient_Identifier %in% panel_smoking_samples], coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa_smoking_w_panel <- load_maf(cesa_smoking_w_panel, maf = MSK2018_maf$IMPACT468[Unique_Patient_Identifier %in% panel_smoking_samples], coverage = 'targeted', covered_regions = '../data/msk468_targets.bed', covered_regions_name = 'msk468_regions', covered_regions_padding = 100)
+
+cesa_smoking_w_panel <- trinuc_mutation_rates(cesa_smoking_w_panel,
+                                      signature_set = "COSMIC_v3.1",
+                                      signatures_to_remove = signatures_to_remove
+)
+
+cesa_smoking_w_panel <- gene_mutation_rates(cesa_smoking_w_panel, covariates = "lung")
+
+save_cesa(cesa_smoking_w_panel, '../data/smoking_samples_w_panel_cesa.rds')
+fwrite(cesa_smoking_w_panel$gene_rates, '../output/smoking_w_panel_mutation_rates.txt')
+
+
+cesa_nonsmoking_w_panel <- CESAnalysis(ces.refset.hg19)
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = Broad_maf$WES[Broad_maf$WES$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2015_maf[MSK2015_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = OncoSG_maf[OncoSG_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = TCGA_maf[TCGA_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = TracerX_maf[TracerX_maf$Unique_Patient_Identifier %in% nonsmoking_samples])
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = Broad_maf$WGS[Broad_maf$WGS$Unique_Patient_Identifier %in% nonsmoking_samples], coverage = 'genome')
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2017_maf$IMPACT341[Unique_Patient_Identifier %in% panel_nonsmoking_samples], coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2017_maf$IMPACT410[Unique_Patient_Identifier %in% panel_nonsmoking_samples], coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2018_maf$IMPACT341[Unique_Patient_Identifier %in% panel_nonsmoking_samples], coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2018_maf$IMPACT410[Unique_Patient_Identifier %in% panel_nonsmoking_samples], coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa_nonsmoking_w_panel <- load_maf(cesa_nonsmoking_w_panel, maf = MSK2018_maf$IMPACT468[Unique_Patient_Identifier %in% panel_nonsmoking_samples], coverage = 'targeted', covered_regions = '../data/msk468_targets.bed', covered_regions_name = 'msk468_regions', covered_regions_padding = 100)
+
+cesa_nonsmoking_w_panel <- trinuc_mutation_rates(cesa_nonsmoking_w_panel,
+                                              signature_set = "COSMIC_v3.1",
+                                              signatures_to_remove = signatures_to_remove
+)
+
+cesa_nonsmoking_w_panel <- gene_mutation_rates(cesa_nonsmoking_w_panel, covariates = "lung")
+
+save_cesa(cesa_nonsmoking_w_panel, '../data/nonsmoking_samples_w_panel_cesa.rds')
+fwrite(cesa_nonsmoking_w_panel$gene_rates, '../output/nonsmoking_w_panel_mutation_rates.txt')
+
+
