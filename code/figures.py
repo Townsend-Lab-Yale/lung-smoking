@@ -899,6 +899,51 @@ def plot_all():
     print("...done.")
     print("")
 
+    ## * Epistasis from TP53+KRAS not annotated
+    ## ** Smoking Plus Panel Data
+
+    key, epi_key = ('smoking_plus', 'from_110')
+    print(f"Plotting {key}, {epi_key}...")
+
+    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+        key,
+        epi_key,
+        genes=set.union(top_genes_no_epi, top_genes_epi),
+        genes_to_annotate=None,
+        axis_args_lambdas=axis_args_lambdas,
+        axis_args_gammas=axis_args_gammas,
+        bottom_genes={'ZFHX4'},
+        left_top_genes={'RYR2'},
+        left_bottom_genes=None,
+        title="Smoking with Panel Data",
+        plot_name = f"fluxes_and_selections_{key}_{epi_key}_not_annotated.png")
+
+    print("...done.")
+    print("")
+
+
+    ## * Epistasis from TP53+KRAS not annotated
+    ## ** Non-smoking Plus Panel Data
+
+    key, epi_key = ('nonsmoking_plus', 'from_110')
+    print(f"Plotting {key}, {epi_key}...")
+
+    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+        key,
+        epi_key,
+        genes=set.union(top_genes_no_epi, top_genes_epi),
+        genes_to_annotate=None,
+        axis_args_lambdas=axis_args_lambdas,
+        axis_args_gammas=axis_args_gammas,
+        bottom_genes={'STK11'},
+        left_top_genes={'KEAP1'},
+        left_bottom_genes=None,
+        title="Non-smoking with Panel Data",
+        plot_name = f"fluxes_and_selections_{key}_{epi_key}_not_annotated.png")
+
+    print("...done.")
+    print("")
+
 
     ## * Epistasis from TP53+KRAS
     ## ** Pan data

@@ -13,7 +13,16 @@ mutation_rates = {
     key:pd.read_csv(os.path.join(location_output,
                                  f'{key}_mutation_rates.txt'),
                     index_col=0)['rate'].to_dict()
-    for key in results_keys}
+    for key in results_keys if 'plus' not in key}
+
+mutation_rates['smoking_plus'] = pd.read_csv(os.path.join(location_output,
+                                 'smoking_mutation_rates.txt'),
+                                 index_col=0)['rate'].to_dict()
+                                 
+mutation_rates['nonsmoking_plus'] = pd.read_csv(os.path.join(location_output,
+                                 'nonsmoking_mutation_rates.txt'),
+                                 index_col=0)['rate'].to_dict()
+
 
 
 ## * Load selection rates, without epistasis
@@ -23,8 +32,17 @@ selection_ne_mles = {
         os.path.join(location_output,
                      f'{key}_selections_no_epistasis.txt'),
         index_col=0)['selection_intensity'].to_dict()
-    for key in results_keys}
+    for key in results_keys if 'plus' not in key}
 
+selection_ne_mles['smoking_plus'] = pd.read_csv(
+                                    os.path.join(location_output,
+                                    'smoking_selections_no_epistasis.txt'),
+                                    index_col=0)['selection_intensity'].to_dict()
+
+selection_ne_mles['nonsmoking_plus'] = pd.read_csv(
+                                    os.path.join(location_output,
+                                    'nonsmoking_selections_no_epistasis.txt'),
+                                    index_col=0)['selection_intensity'].to_dict()
 
 selection_ne_cis = {
     key:pd.read_csv(
@@ -32,7 +50,19 @@ selection_ne_cis = {
                      f'{key}_selections_no_epistasis.txt'),
         index_col=0)[['ci_low_95', "ci_high_95"]].apply(
             lambda x: [x[0], x[1]], axis=1).to_dict()
-    for key in results_keys}
+    for key in results_keys if 'plus' not in key}
+
+selection_ne_cis['smoking_plus'] = pd.read_csv(
+                                    os.path.join(location_output,
+                                    'smoking_selections_no_epistasis.txt'),
+                                    index_col=0)[['ci_low_95', "ci_high_95"]].apply(
+                                    lambda x: [x[0], x[1]], axis=1).to_dict()
+
+selection_ne_cis['nonsmoking_plus'] = pd.read_csv(
+                                    os.path.join(location_output,
+                                    'nonsmoking_selections_no_epistasis.txt'),
+                                    index_col=0)[['ci_low_95', "ci_high_95"]].apply(
+                                    lambda x: [x[0], x[1]], axis=1).to_dict()
 
 
 ## * Compute fluxes, without epistasis

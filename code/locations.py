@@ -73,7 +73,7 @@ merged_clinical_file_name = os.path.join(location_output, 'merged_luad_clinical.
 merged_maf_clinical_file_name = os.path.join(location_output, 'merged_final.txt')
 
 
-results_keys = ["pan_data", "smoking", "nonsmoking"]
+results_keys = ["pan_data", "smoking", "nonsmoking", "smoking_plus", "nonsmoking_plus"]
 """List with possible keys to classify the data.
 
 """
