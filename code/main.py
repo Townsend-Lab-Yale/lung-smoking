@@ -72,7 +72,6 @@ def compute_samples_for_all_genes(key=None, save_results=True):
 
     return counts
 
-
 def are_all_fluxes_computable(samples):
     """Return True if we can compute all fluxes, that is, if there are
     patients in `data` with every possible combination of `genes`
@@ -199,6 +198,13 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
     return lambdas_mles, lambdas_cis
 
+def compute_TP53_KRAS_lambdas(samples):
+    bounds = [0.55, 0.7, 0.6, 0.35]
+    #bounds selected based on repeated runs convergent on certain values with low log likelihood
+    MLE = estimate_lambdas(samples, draws=1,
+                           upper_bound_prior=bounds,
+                           kwargs={'return_raw':True})
+    return MLE[0]
 
 def main(recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of the all the fluxes.
@@ -243,7 +249,11 @@ def main(recompute_samples_per_combination=False, save_results=True):
         print("")
         print("")
 
-    return all_counts, all_lambdas
+        TP53_KRAS_samples = compute_samples(prefiltered_dbs[key], mutations=['TP53','KRAS'])
+        TP53_KRAS_lambdas_mles = compute_TP53_KRAS_lambdas(TP53_KRAS_samples)
+        TP53_KRAS_lambdas_cis = asymp_CI_lambdas(TP53_KRAS_lambdas_mles['lambdas'], TP53_KRAS_samples)
+
+    return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
 
 if __name__ == "__main__":
     main()
