@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+
 from count_combinations import compute_samples
 
 from cancer_epistasis import estimate_lambdas
@@ -8,6 +9,8 @@ from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
 
 from theory import build_S_with_tuples
+from theory import build_S_as_array
+from theory import order_pos_lambdas
 
 from locations import gene_list_file
 from locations import location_output
@@ -92,6 +95,10 @@ def are_all_fluxes_computable(samples):
     """
     return np.all(samples[:-1] > 0)
 
+def at_least_000_to_001_and_110_to_111(samples):
+    """Return True if the flux from wildtype to only the third gene and 
+    the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
+    return np.all(samples[[0,-2]] > 0)
 
 def lambdas_from_samples(samples):
     """Estimate the fluxes from the samples, varying the bounds if
@@ -169,21 +176,20 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
     counts = all_counts[key]
 
+    S_3 = build_S_as_array(3)
+
     for i, gene in enumerate(gene_list[2:]):
         samples = counts[gene]
-        if not are_all_fluxes_computable(samples):
-            print(f"Skipping estimation for gene {gene} "
-                  "because not all fluxes are computable for that model.")
-        else:
+        if are_all_fluxes_computable(samples):
             print(f"Running model with third gene {gene} "
-                  f"(gene number {i+1}/{len(gene_list[2:])})")
+                    f"(gene number {i+1}/{len(gene_list[2:])})")
 
             print("Estimating fluxes...")
             mle = lambdas_from_samples(samples)
             lambdas_mles[gene] = convert_lambdas_to_dict(mle)
             if save_results:
                 np.save(os.path.join(location_output,
-                                     f"{key}_fluxes_mles.npy"),
+                                        f"{key}_fluxes_mles.npy"),
                         lambdas_mles)
 
             print("Estimating asymptotic confidence intervals...")
@@ -191,8 +197,39 @@ def compute_all_lambdas(key, all_counts, save_results=True):
             lambdas_cis[gene] = convert_lambdas_to_dict(cis)
             if save_results:
                 np.save(os.path.join(location_output,
-                                     f"{key}_fluxes_cis.npy"),
+                                        f"{key}_fluxes_cis.npy"),
                         lambdas_cis)
+
+        elif at_least_000_to_001_and_110_to_111:
+            print(f"Running model with third gene {gene} "
+                    f"(gene number {i+1}/{len(gene_list[2:])})")
+
+            print("Estimating a limited selection of fluxes...")
+            mle = lambdas_from_samples(samples)
+            
+            states_with_zero = [tuple(x) for x in S_3[samples == 0]]
+            indices_with_zero = [order_pos_lambdas(S_3).index((x, tuple(y))) for x, y in order_pos_lambdas(S_3) if x in states_with_zero]
+            for x in indices_with_zero: mle['lambdas'][x] = np.nan
+
+            lambdas_mles[gene] = convert_lambdas_to_dict(mle)
+
+            if save_results:
+                np.save(os.path.join(location_output,
+                                        f"{key}_fluxes_mles.npy"),
+                        lambdas_mles)
+
+            print("Estimating asymptotic confidence intervals...")
+            cis = asymp_CI_lambdas(mle['lambdas'], samples)
+            lambdas_cis[gene] = convert_lambdas_to_dict(cis)
+            if save_results:
+                np.save(os.path.join(location_output,
+                                        f"{key}_fluxes_cis.npy"),
+                        lambdas_cis)
+
+        else:
+            print(f"Skipping estimation for gene {gene} "
+                    "because the fluxes of interest are not "
+                    "computable for that model.")
 
         print("")
 
