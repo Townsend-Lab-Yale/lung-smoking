@@ -78,6 +78,24 @@ results_keys = ["pan_data", "smoking", "nonsmoking", "smoking_plus", "nonsmoking
 
 """
 
+full_mutation_rate_file_names = {
+    key:os.path.join(location_output,
+                    f"{key}_mutation_rates.txt")
+    for key in results_keys[:3]
+}
+
+full_flux_mle_file_names = {
+    key:os.path.join(location_output,
+                    f"{key}_fluxes_mles.npy")
+    for key in results_keys
+}
+
+full_flux_ci_file_names = {
+    key:os.path.join(location_output,
+                    f"{key}_fluxes_cis.npy")
+    for key in results_keys
+}
+
 smoking_sample_ids_file = os.path.join(location_data,
                                        'smoking_sample_ids.txt')
 nonsmoking_sample_ids_file = os.path.join(location_data,

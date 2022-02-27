@@ -65,8 +65,12 @@ def filter_db_for_key(key, db):
     if key == 'pan_data':
         return db
     elif key == 'smoking':
-        return db[db['Sample ID'].isin(smoking_sample_ids + panel_smoking_sample_ids)]
+        return db[db['Sample ID'].isin(smoking_sample_ids)]
     elif key == 'nonsmoking':
+        return db[db['Sample ID'].isin(nonsmoking_sample_ids)]
+    elif key == 'smoking_plus':
+        return db[db['Sample ID'].isin(smoking_sample_ids + panel_smoking_sample_ids)]
+    elif key == 'nonsmoking_plus':
         return db[db['Sample ID'].isin(nonsmoking_sample_ids + panel_nonsmoking_sample_ids)]
 
 

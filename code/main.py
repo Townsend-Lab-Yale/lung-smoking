@@ -123,6 +123,8 @@ def lambdas_from_samples(samples):
 
     bound_changes = 0
     while MLE[1].fun < -1e+20:
+        if bound_changes == 4:
+            return "incomputable"
         print(f"Algorithm did not converge changing bounds...")
         bound_changes += 1
         bounds = np.array(
@@ -200,12 +202,16 @@ def compute_all_lambdas(key, all_counts, save_results=True):
                                         f"{key}_fluxes_cis.npy"),
                         lambdas_cis)
 
-        elif at_least_000_to_001_and_110_to_111:
+        elif at_least_000_to_001_and_110_to_111(samples):
             print(f"Running model with third gene {gene} "
                     f"(gene number {i+1}/{len(gene_list[2:])})")
 
             print("Estimating a limited selection of fluxes...")
             mle = lambdas_from_samples(samples)
+            if(mle == 'incomputable'):
+                with open('../output/incomputable_limited_selection_fluxes.txt','a') as incomputable_output_file:
+                    incomputable_output_file.write(gene + '\n')
+                continue
             
             states_with_zero = [tuple(x) for x in S_3[samples == 0]]
             indices_with_zero = [order_pos_lambdas(S_3).index((x, tuple(y))) for x, y in order_pos_lambdas(S_3) if x in states_with_zero]
