@@ -11,7 +11,7 @@ library(stringr)
 #'   even if they aren't represented in the dataset
 
 
-integrate_cadd_scores = function(cesa, cadd_table){
+merge_variant_cadd_scores = function(cesa, cadd_table){
   variants = c(unlist(cesa$variants[variant_type == 'aac', constituent_snvs]), unlist(cesa$variants[variant_type == 'snv', variant_id]))
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
@@ -37,12 +37,13 @@ integrate_cadd_scores = function(cesa, cadd_table){
   return(integrated_scores)
 }
 
-merge_maf_cadd_scores = function(cesa, cadd_table){
-  maf = cesa$maf
+
+
+integrate_cadd_scores = function(cesa, cadd_table){
   cadd_table[, variant := paste0(`#Chrom`,':',Pos,'_',Ref,'>',Alt)]
-  maf = merge(maf, cadd_table[,.(variant,RawScore,PHRED)], by.x = 'variant_id', by.y = 'variant', all = T)
+  cesa@maf = merge(cesa$maf, cadd_table[,.(variant,RawScore,PHRED)], by.x = 'variant_id', by.y = 'variant', all = T)
   
-  return(maf)
+  return(cesa)
 }
 
 # gene_phred_scores = split(cadd_variants_2$PHRED, cadd_variants_2$gene)

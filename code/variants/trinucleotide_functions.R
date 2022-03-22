@@ -1,4 +1,4 @@
- trinuc_muts_names = 
+order_of_trinuc_muts = 
    c("A[C>A]A", "A[C>A]C", "A[C>A]G", "A[C>A]T",
   "C[C>A]A", "C[C>A]C", "C[C>A]G", "C[C>A]T",
   "G[C>A]A", "G[C>A]C", "G[C>A]G", "G[C>A]T",
@@ -31,9 +31,9 @@
 #'   comes from the set of variants in the dataset. Thus biases which influence
 #'   which variants are represented in the dataset will also influence the proportions.
 
-compute_trinucleotide_mut_proportions = function(gene, cesa){
+compute_trinucleotide_mut_proportions <- function(gene, cesa){
   gene_x = gene
-  variants = c(unlist(cesa$variants[gene == gene_x & variant_type == 'aac',constituent_snvs]), cesa$variants[gene == gene_x & variant_type == 'snv',variant_id])
+  variants = unique(cesa$maf[top_gene == gene_x & !is.na(variant_id), variant_id])
   
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
@@ -57,33 +57,51 @@ compute_trinucleotide_mut_proportions = function(gene, cesa){
   return(trinuc_mut_proportions)
 }
 
-compute_genome_trinucleotide_mut_proportions = function(cesa){
-  variants = c(unlist(cesa$variants[variant_type == 'aac',constituent_snvs]), cesa$variants[variant_type == 'snv',variant_id])
-  
+
+#' Computes proportions of each trinucleotide mutation in the cesa maf file across the entire genome
+compute_genome_trinucleotide_mut_proportions <- function(cesa){
+  variants = unique(cesa$maf[!is.na(variant_id) & variant_type == 'snv', variant_id])
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
   variants = as.data.table(cbind(temp1[,1],temp2))
   colnames(variants) = c('chr','pos','mut')
   variants$pos = strtoi(variants$pos)
-  
-  variants$trinuc = as.vector(as.character(getSeq(BSgenome.Hsapiens.UCSC.hg19, names = str_c('chr', variants$chr), start = variants$pos-1, width=3, strand = '+')))
-  
-  #reverse complementing variants as necessary
+  ## One sample did not have a position (strangely)
+  variants = variants[!is.na(variants$pos)]
+  variants$trinuc = as.vector(as.character(getSeq(
+    BSgenome.Hsapiens.UCSC.hg19,
+    names=str_c('chr', variants$chr),
+    start=variants$pos-1,
+    width=3,
+    strand = '+')))
+  ## reverse complementing variants as necessary
   middle = str_c(substr(variants$trinuc,2,2),collapse="")
   revcomp_ind = c(str_locate_all(middle,'G|A')[[1]][,1])
-  variants[revcomp_ind, ':=' (trinuc = as.character(reverseComplement(DNAStringSet(variants[revcomp_ind, trinuc]))), mut = paste0(as.character(reverseComplement(DNAStringSet(variants[revcomp_ind, substr(mut,1,1)]))),'>',as.character(reverseComplement(DNAStringSet(variants[revcomp_ind, substr(mut,3,3)])))))]
-  
-  #generating COSMIC type format for trinuc mutations
-  variants$trinuc_mut = paste0(substr(variants$trinuc,1,1),'[', variants$mut,']',substr(variants$trinuc,3,3))
-  
-  #concatenated table contains the names of trinuc_muts not represented in the dataset (subtract 1 because table is auto-iniated with 1s)
-  #divides number of observations by number of variants to get proportions
-  trinuc_mut_proportions = (c(table(variants$trinuc_mut), (table(setdiff(trinuc_muts_names, variants$trinuc_mut)) - 1))) / nrow(variants)
-  
-  #order table before returning value
-  
+  variants[revcomp_ind,
+           ':=' (trinuc=as.character(reverseComplement(DNAStringSet(
+             variants[revcomp_ind, trinuc]))),
+             mut=paste0(as.character(reverseComplement(DNAStringSet(
+               variants[revcomp_ind, substr(mut,1,1)]))),
+               '>',
+               as.character(reverseComplement(DNAStringSet(
+                 variants[revcomp_ind, substr(mut,3,3)])))))]
+  ## generating COSMIC type format for trinuc mutations
+  variants$trinuc_mut = paste0(substr(variants$trinuc, 1, 1),
+                               '[', variants$mut, ']',
+                               substr(variants$trinuc, 3, 3))
+  ## concatenated table contains the names of trinuc_muts not
+  ## represented in the dataset (subtract 1 because table is
+  ## auto-iniated with 1s) divides number of observations by number of
+  ## variants to get proportions
+  trinuc_mut_proportions = (
+    c(table(variants$trinuc_mut),
+      table(setdiff(order_of_trinuc_muts, variants$trinuc_mut)) - 1)
+    / nrow(variants))
+  ## TODO: order table before returning value
   return(trinuc_mut_proportions)
 }
+
+
 
 #' Calculates the 32 trinucleotide contexts for every site in any gene of interest in the hg19 genome.
 #' 32 instead of 64 because any purine site is equivalent to its corresponding pyrimidine site 

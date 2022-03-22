@@ -5,16 +5,16 @@
 # find #times that context is observed
 # var_mut_rate = gene_rate * freq / #times-context-observed
 
+#' @param PHRED_threshold threshold PHRED scores (from CADD) for variant to be considered deleterious/pathogenic
 
-variant_mutation_rate = function(gene, cadd_variants, cesa, trinuc_proportion_matrix, cadd_threshold = 20){
+variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, PHRED_threshold = 20){
   gene_x = gene
-  # unlist because some codons have multiple variants
-  variants = c(unlist(cesa$variants[gene == gene_x & variant_type == 'aac',constituent_snvs]), cesa$variants[gene == gene_x & variant_type == 'snv',variant_id])
-  
+  # certain variants have an NA variant_id, but none of these are in genes in our 1290 genes of interest.
   #' 
   #' ASSUMPTION: Relies on CADD providing scores for ALL variants of interest
   #' 
-  variants = variants[variants %in% cadd_variants[gene == gene_x & PHRED > cadd_threshold, variant_id]]
+  variants = unique(cesa$maf[top_gene == gene_x & variant_type == 'snv', PHRED > PHRED_threshold & !is.na(variant_id), 
+                             variant_id])
   
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
@@ -52,7 +52,7 @@ variant_mutation_rate = function(gene, cadd_variants, cesa, trinuc_proportion_ma
   
   #' This only works with the singular table returned by compute tri-nt contexts, if we were to vectorize this, would need to make it dataframe-workable
   tri_nt_contexts = compute_trinucleotide_contexts(gene_x)
-  variants$context_freq = tri_nt_contexts[match(variants$trinuc, names(tri_nt_contexts))]
+  variants$context_freq = tri_nt_contexts[variants$trinuc]
   
   #calculate mutation rate for variants
   variants[,mut_rate := gene_rate * trinuc_mut_prop / context_freq]
