@@ -37,6 +37,14 @@ integrate_cadd_scores = function(cesa, cadd_table){
   return(integrated_scores)
 }
 
+merge_maf_cadd_scores = function(cesa, cadd_table){
+  maf = cesa$maf
+  cadd_table[, variant := paste0(`#Chrom`,':',Pos,'_',Ref,'>',Alt)]
+  maf = merge(maf, cadd_table[,.(variant,RawScore,PHRED)], by.x = 'variant_id', by.y = 'variant', all = T)
+  
+  return(maf)
+}
+
 # gene_phred_scores = split(cadd_variants_2$PHRED, cadd_variants_2$gene)
 # boxplot(gene_phred_scores[gene_list])
 
