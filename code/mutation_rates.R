@@ -11,46 +11,41 @@ colnames(maf_file)[2] <- 'Tumor_Sample_Barcode'
 colnames(maf_file)[7] <- 'Tumor_Allele'
 maf_list <- split(maf_file, maf_file$Source)
 
-Broad_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Broad, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+Broad_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Broad, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 Broad_maf <- Broad_maf[is.na(problem)]
 Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
 
-FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 FMAD_maf <- FMAD_maf[is.na(problem)]
-FMAD_maf <- FMAD_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 Genie_maf <- Genie_maf[is.na(problem)]
-Genie_maf <- Genie_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 MSK2015_maf <- MSK2015_maf[is.na(problem)]
 MSK2015_maf <- MSK2015_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2017_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2017, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+MSK2017_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2017, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 MSK2017_maf <- MSK2017_maf[is.na(problem)]
-MSK2017_maf <- MSK2017_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-MSK2018_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2018, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+MSK2018_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2018, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 MSK2018_maf <- MSK2018_maf[is.na(problem)]
-MSK2018_maf <- MSK2018_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-OncoSG_maf <- cancereffectsizeR::preload_maf(maf = maf_list$OncoSG, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+OncoSG_maf <- cancereffectsizeR::preload_maf(maf = maf_list$OncoSG, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 OncoSG_maf <- OncoSG_maf[is.na(problem)]
 OncoSG_maf <- OncoSG_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TCGA_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TCGA, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+TCGA_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TCGA, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 TCGA_maf <- TCGA_maf[is.na(problem)]
 TCGA_maf <- TCGA_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TracerX_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TracerX, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+TracerX_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TracerX, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 TracerX_maf <- TracerX_maf[is.na(problem)]
 TracerX_maf <- TracerX_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 
-TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")
+TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
 TSP_maf <- TSP_maf[is.na(problem)]
-TSP_maf <- TSP_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 TSP_maf <- TSP_maf[!Unique_Patient_Identifier %in% c("luad_tsp_16929", "luad_tsp_16901", "luad_tsp_16875","luad_tsp_16915")]
 
 #maf_list <- sapply(maf_list, function(x){preload_maf(maf = x, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain")})
@@ -161,7 +156,10 @@ cesa_total <- load_maf(cesa_total, maf = TCGA_maf)
 cesa_total <- load_maf(cesa_total, maf = TracerX_maf)
 cesa_total <- load_maf(cesa_total, maf = FMAD_maf, coverage = 'targeted', covered_regions = '../data/fmad_targets.bed', covered_regions_name = 'fmad_regions', covered_regions_padding = 100) #padding based on 23 variants having distance from interval between 10 and 100.
 
-for(i in 12:length(Genie_maf)){
+#' 
+#' it was 12:length before, idk why, maybe check on this
+#' 
+for(i in 1:length(Genie_maf)){
   cesa_total <- load_maf(cesa_total, maf = Genie_maf[i][[1]], coverage = 'targeted', covered_regions = genie_granges_list[names(Genie_maf)[i]][[1]], covered_regions_name = paste0(names(Genie_maf)[i], '_regions'), covered_regions_padding = 100)
 }
 
@@ -183,8 +181,6 @@ cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
 save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
 fwrite(cesa_total$gene_rates, '../output/pan_data_mutation_rates.txt')
-
-
 # WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
 cesa_exome <- CESAnalysis(ces.refset.hg19)
 cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
