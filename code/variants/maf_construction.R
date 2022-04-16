@@ -18,5 +18,14 @@ cesa_maf_variants = cesa$maf[variant_type == 'snv', .(Unique_Patient_Identifier,
 variants_to_keep = merge(cesa_maf_variants, preload_maf_variants) 
 
 filtered_maf = merge(cesa$maf, variants_to_keep, by = c('Unique_Patient_Identifier','variant_id'))
-filtered_maf = filtered_maf[,-c('genes', 'top_consequence')]
-colnames(filtered_maf) = c('Sample ID', colnames(filtered_maf)[2:ncol(filtered_maf)])
+filtered_maf = filtered_maf[,-c('prelift_chr', 'prelift_start', 'liftover_strand_flip','variant_type', 'genes', 'top_consequence')]
+
+source_panel_info = as.data.table(maf_file)
+source_panel_info = source_panel_info[!duplicated(Tumor_Sample_Barcode),.(Tumor_Sample_Barcode, Source, Panel)]
+source_panel_info[Panel == '', Panel := NA]
+
+filtered_maf = merge(filtered_maf, source_panel_info, by.x = 'Unique_Patient_Identifier', by.y = 'Tumor_Sample_Barcode', all.x = T)
+
+colnames(filtered_maf) = c('Sample ID', 'Mutation', 'Chromosome', 'Start_Position', 'Reference_Allele', 'Tumor_Seq_Allele2', 'Gene', 'Source', 'Panel')
+
+fwrite(filtered_maf, '../output/cesR_maf_for_epistasis_analysis.txt')
