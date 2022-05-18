@@ -209,7 +209,7 @@ def compute_all_lambdas(key, all_counts, save_results=True):
             print("Estimating a limited selection of fluxes...")
             mle = lambdas_from_samples(samples)
             if(mle == 'incomputable'):
-                with open('../output/incomputable_limited_selection_fluxes.txt','a') as incomputable_output_file:
+                with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
                     incomputable_output_file.write(gene + '\n')
                 continue
             
