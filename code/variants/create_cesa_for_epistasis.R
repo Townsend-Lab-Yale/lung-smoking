@@ -1,0 +1,176 @@
+library(cancereffectsizeR)
+library(ces.refset.hg19)
+library(data.table)
+library(dplyr)
+library(rtracklayer)
+library(stringr)
+
+
+#' READ IN ALL MAF FILES
+maf_file <- read.csv(paste0(location_output,"merged_luad_maf.txt"))
+colnames(maf_file)[2] <- 'Tumor_Sample_Barcode'
+colnames(maf_file)[7] <- 'Tumor_Allele'
+maf_list <- split(maf_file, maf_file$Source)
+
+liftover_file = paste0(location_data, "hg38ToHg19.over.chain")
+
+#' PRELOAD ALL MAF FILES
+Broad_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Broad, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+Broad_maf <- Broad_maf[is.na(problem)]
+Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
+
+FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+FMAD_maf <- FMAD_maf[is.na(problem)]
+
+Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+Genie_maf <- Genie_maf[is.na(problem)]
+
+MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+MSK2015_maf <- MSK2015_maf[is.na(problem)]
+MSK2015_maf <- MSK2015_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+
+MSK2017_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2017, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+MSK2017_maf <- MSK2017_maf[is.na(problem)]
+
+MSK2018_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2018, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+MSK2018_maf <- MSK2018_maf[is.na(problem)]
+
+OncoSG_maf <- cancereffectsizeR::preload_maf(maf = maf_list$OncoSG, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+OncoSG_maf <- OncoSG_maf[is.na(problem)]
+OncoSG_maf <- OncoSG_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+
+TCGA_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TCGA, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+TCGA_maf <- TCGA_maf[is.na(problem)]
+TCGA_maf <- TCGA_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+
+TracerX_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TracerX, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+TracerX_maf <- TracerX_maf[is.na(problem)]
+TracerX_maf <- TracerX_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+
+TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refset.hg19, chain_file = "../data/hg38ToHg19.over.chain", keep_extra_columns = T)
+TSP_maf <- TSP_maf[is.na(problem)]
+TSP_maf <- TSP_maf[!Unique_Patient_Identifier %in% c("luad_tsp_16929", "luad_tsp_16901", "luad_tsp_16875","luad_tsp_16915")]
+
+#' EXTRACTING NECESSARY COVERAGE INFORMATION
+
+#READING IN INFORMATION NECESSARY FOR LOADING MAF FILES (EXOME/GENOME AND COVERAGE INTERVALS FOR TGS)
+broad_exome_or_genome <- fread('../data/luad_broad/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Platform')]
+broad_exome_or_genome$Platform <- sapply(broad_exome_or_genome$Platform, function(x){if(str_detect(x, 'WGS')){return('WGS')} else return('WES')})
+msk2017_panels_used <- fread('../data/lung_msk_2017/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Gene Panel')]
+msk2018_panels_used <- fread('../data/nsclc_pd1_msk_2018/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Gene Panel')]
+genie_panels_used <- fread('../data/genie_9/data_clinical_sample.txt')[-(1:4),c('Sample Identifier', 'Sequence Assay ID')]
+
+#READING IN GENES INCLUDED IN EACH PANEL AND CREATING GRANGES OBJECT TO PASS INTO COVERED_REGIONS PARAMETER OF LOAD_MAF
+#once the granges are exported once, these functions don't need to be run anymore
+
+gene_granges <- rtracklayer::import('../data/gencode.v38lift37.basic.annotation.gtf')
+
+if(!file.exists('../data/fmad_targets.bed')){
+  fmad_genes <- unique(fread('../data/gene_panels/foundation_one.txt')$Hugo_Symbol)
+  fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
+  fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
+  fmad_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = fmad_granges)
+  export(fmad_gr_clean, '../data/fmad_targets.bed')
+}
+
+if(!file.exists('../data/tsp_targets.bed')){
+  tsp_genes <- unique(fread('../data/gene_panels/tsp.txt')$Hugo_Symbol)
+  tsp_granges <- gene_granges[gene_granges$gene_name %in% tsp_genes, ]
+  tsp_granges <- tsp_granges[tsp_granges$type %in% c('CDS','stop_codon'),]
+  tsp_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = tsp_granges)
+  export(tsp_gr_clean, '../data/tsp_targets.bed')
+}
+
+if(!file.exists('../data/msk341_targets.bed')){
+  msk_341_genes <- unique(fread('../data/gene_panels/msk341.txt')$Hugo_Symbol)
+  msk341_granges <- gene_granges[gene_granges$gene_name %in% msk_341_genes, ]
+  msk341_granges <- msk341_granges[msk341_granges$type %in% c('CDS','stop_codon'),]
+  msk341_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk341_granges)
+  export(msk341_gr_clean, '../data/msk341_targets.bed')
+}
+
+if(!file.exists('../data/msk410_targets.bed')){
+  msk_410_genes <- unique(fread('../data/gene_panels/msk410.txt')$Hugo_Symbol)
+  msk410_granges <- gene_granges[gene_granges$gene_name %in% msk_410_genes, ]
+  msk410_granges <- msk410_granges[msk410_granges$type %in% c('CDS','stop_codon'),]
+  msk410_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk410_granges)
+  export(msk410_gr_clean, '../data/msk410_targets.bed')
+}
+
+if(!file.exists('../data/msk468_targets.bed')){
+  msk_468_genes <- unique(fread('../data/gene_panels/msk468.txt')$Hugo_Symbol)
+  msk468_granges <- gene_granges[gene_granges$gene_name %in% msk_468_genes, ]
+  msk468_granges <- msk468_granges[msk468_granges$type %in% c('CDS','stop_codon'),]
+  msk468_gr_clean <- cancereffectsizeR:::clean_granges_for_cesa(cesa = CESAnalysis(ces.refset.hg19), gr = msk468_granges)
+  export(msk468_gr_clean, '../data/msk468_targets.bed')
+}
+
+#this should be run everytime so that we don't have to save a bunch of grange files
+genie_panel_genes <- fread('../data/genie_9/genomic_information.txt')[,c('Chromosome', 'Start_Position', 'End_Position', 'Hugo_Symbol', 'Feature_Type', 'SEQ_ASSAY_ID')]
+genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
+seqlevels(genie_granges_list, pruning.mode = "fine") <- c(1:22,'X','Y')
+
+#SOME PANELS IN GENIE DON'T COVER TP53 OR KRAS SO THEY MUST BE REMOVED
+
+genie_panel_genes_2 <- genie_panel_genes[,c('Hugo_Symbol','SEQ_ASSAY_ID')]
+genie_panel_genes_2 <- genie_panel_genes_2[!duplicated(genie_panel_genes_2)]
+genie_panel_genes_list <- split(genie_panel_genes_2$Hugo_Symbol, genie_panel_genes_2$SEQ_ASSAY_ID)
+
+Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+
+panels_to_remove <- c()
+for(panel in names(genie_panel_genes_list)){
+  if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
+    panels_to_remove <- c(panels_to_remove, panel)
+  }
+}
+
+Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
+
+#LIST OF ALL GENES INCLUDED IN ANALYSIS
+genes_list <- fread('../data/genes_list.txt', header = F)$V1
+
+
+#SPLITTING MAF FILES WHEN DIFFERENT SEQUENCING METHODS ARE USED
+Broad_maf <- merge(Broad_maf, broad_exome_or_genome, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+Broad_maf <- split(Broad_maf, Broad_maf$Platform)
+
+MSK2017_maf <- merge(MSK2017_maf, msk2017_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+MSK2017_maf <- split(MSK2017_maf, MSK2017_maf$`Gene Panel`)
+
+MSK2018_maf <- merge(MSK2018_maf, msk2018_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+MSK2018_maf <- split(MSK2018_maf, MSK2018_maf$`Gene Panel`)
+
+Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID.x`)
+
+
+#' LOADING IN MAF FILES INTO CESA OBJECT
+
+cesa <- CESAnalysis(ces.refset.hg19)
+#consider using covered regions padding when variants are outside the intervals
+cesa <- load_maf(cesa, maf = Broad_maf$WES)
+cesa <- load_maf(cesa, maf = MSK2015_maf)
+cesa <- load_maf(cesa, maf = OncoSG_maf)
+cesa <- load_maf(cesa, maf = TCGA_maf)
+cesa <- load_maf(cesa, maf = TracerX_maf)
+cesa <- load_maf(cesa, maf = FMAD_maf, coverage = 'targeted', covered_regions = '../data/fmad_targets.bed', covered_regions_name = 'fmad_regions', covered_regions_padding = 100) #padding based on 23 variants having distance from interval between 10 and 100.
+
+for(i in 1:length(Genie_maf)){
+  cesa <- load_maf(cesa, maf = Genie_maf[i][[1]], coverage = 'targeted', covered_regions = genie_granges_list[names(Genie_maf)[i]][[1]], covered_regions_name = paste0(names(Genie_maf)[i], '_regions'), covered_regions_padding = 100)
+}
+
+cesa <- load_maf(cesa, maf = MSK2017_maf$IMPACT341, coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = MSK2017_maf$IMPACT410, coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = MSK2018_maf$IMPACT341, coverage = 'targeted', covered_regions = '../data/msk341_targets.bed', covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = MSK2018_maf$IMPACT410, coverage = 'targeted', covered_regions = '../data/msk410_targets.bed', covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = MSK2018_maf$IMPACT468, coverage = 'targeted', covered_regions = '../data/msk468_targets.bed', covered_regions_name = 'msk468_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = TSP_maf, coverage = 'targeted', covered_regions = '../data/tsp_targets.bed', covered_regions_name = 'tsp_regions', covered_regions_padding = 100)
+cesa <- load_maf(cesa, maf = Broad_maf$WGS, coverage = 'genome')
+
+
+#' CALCULATING MUTATIONS RATES (NECESSARY FOR VARIANT_MUTATION_RATE)
+cesa <- gene_mutation_rates(cesa, covariates = "lung")
+
+save_cesa('../data/pan_data_cesa_for_cancer_epistasis.rds')

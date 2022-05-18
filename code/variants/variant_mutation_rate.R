@@ -1,3 +1,9 @@
+library(data.table)
+library(cancereffectsizeR)
+library(Biostrings)
+library(stringr)
+
+
 # pick gene
 # get rate
 # collect all variants of interest for gene, reverse complementing as necessary
@@ -7,14 +13,18 @@
 
 #' @param PHRED_threshold threshold PHRED scores (from CADD) for variant to be considered deleterious/pathogenic
 
-variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, PHRED_threshold = 20){
+variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, with_cadd = F, PHRED_threshold = 20){
   gene_x = gene
+  print(gene_x)
   # certain variants have an NA variant_id, but none of these are in genes in our 1290 genes of interest.
-  #' 
-  #' ASSUMPTION: Relies on CADD providing scores for ALL variants of interest
-  #' 
-  variants = unique(cesa$maf[top_gene == gene_x & variant_type == 'snv', PHRED > PHRED_threshold & !is.na(variant_id), 
+  if(with_cadd){
+    variants = variants[PHRED > PHRED_threshold]
+  }
+  variants = unique(cesa$maf[top_gene == gene_x & variant_type == 'snv' & !is.na(variant_id), 
                              variant_id])
+  
+  if(length(variants) == 0){return(NA)}
+
   
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
