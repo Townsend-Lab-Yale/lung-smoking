@@ -1,6 +1,6 @@
 #'
 #' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis
-#' 
+#'
 
 library(data.table)
 library(cancereffectsizeR)
@@ -15,8 +15,8 @@ source('variant_mutation_rate.R')
 #~~~~~~~~~~~~#
 
 #' NOTE: Different users will need to change this
-location_data = '~/Desktop/Research/lung-smoking/data/'
-location_output = '~/Desktop/Research/lung-smoking/output/'
+location_data = '../../data/'
+location_output = '../../output/'
 
 #' Create CESA object for mutation rate calculation and MAF construction
 source('create_cesa_for_epistasis.R')
@@ -54,11 +54,11 @@ source('maf_construction.R')
 ##cesa = integrate_cadd_scores(cesa, cadd_table)
 ##cesa@maf = merge(cesa$maf, var_classification, by='variant_id', all.x = T)
 
-#gene_df = fread('~/Desktop/Research/lung-smoking/data/genes_list.txt', header = F)
+#gene_df = fread('../../data/genes_list.txt', header = F)
 #colnames(gene_df) = 'gene'
 #gene_df[,gene := toupper(gene)]
 
 #print('computing gene mutation rates')
 #genome_trinucleotide_mutation_proportions = compute_genome_trinucleotide_mut_proportions(cesa)
 #gene_df[, mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x, cesa, genome_trinucleotide_mutation_proportions)))]
-#fwrite(gene_df, '~/Desktop/Research/lung-smoking/output/variant_based_mutation_rates.txt')
+#fwrite(gene_df, '../../output/variant_based_mutation_rates.txt')
