@@ -173,4 +173,4 @@ cesa <- load_maf(cesa, maf = Broad_maf$WGS, coverage = 'genome')
 #' CALCULATING MUTATIONS RATES (NECESSARY FOR VARIANT_MUTATION_RATE)
 cesa <- gene_mutation_rates(cesa, covariates = "lung")
 
-save_cesa(paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
+save_cesa(cesa, paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
