@@ -2,11 +2,6 @@
 #' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis
 #' 
 
-library(data.table)
-library(cancereffectsizeR)
-library(Biostrings)
-library(stringr)
-
 #' Load in relevant functions
 #source('../cadd/cadd.R')
 source('trinucleotide_functions.R')
@@ -19,6 +14,7 @@ location_data = '~/Desktop/Research/lung-smoking/data/'
 location_output = '~/Desktop/Research/lung-smoking/output/'
 
 #' Create CESA object for mutation rate calculation and MAF construction
+#' Output location: 'data/pan_data_cesa_for_cancer_epistasis.rds'
 source('create_cesa_for_epistasis.R')
 
 #' List of genes for which to calculate variant-level mutation rates
@@ -30,14 +26,21 @@ gene_df[,gene := toupper(gene)]
 genome_trinucleotide_mutation_proportions = compute_genome_trinucleotide_mut_proportions(cesa)
 
 #' Calculate variant level mutation rates
-#' Then calcualte the gene level mutation rate as the sum of all the variant level mutation rates within the gene
+#' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
 gene_df[, mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x, cesa, genome_trinucleotide_mutation_proportions)))]
 fwrite(gene_df, paste0(location_output,"variant_based_mutation_rates.txt"))
 
 #' Produce MAF for cancer epistasis analysis
+#' Output location: 'data/cesR_maf_for_epistasis_analysis.txt'
 source('maf_construction.R')
 
+#' Additionally, create genes per sample table for new compute_samples functionality
+#' Output location: 'data/genes_per_sample.txt'
+source('produce_samples_per_gene.R')
 
+
+
+#~~~deprecated~~~#
 
 # EXAMPLE USAGE WITH CADD
 #print('loading data')
