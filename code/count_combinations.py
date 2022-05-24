@@ -11,6 +11,34 @@ from locations import merged_maf_clinical_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
+def updated_compute_samples(data,
+                    mutations,
+                    print_info=False):
+    """Compute samples numbers for each mutation combinations in S.
+
+    :type data: pandas.core.frame.DataFrame
+    :param data: Table in which each row is a sample and the 
+        columns are genes. The value of each sample/gene combination 
+        is a binary representation of whether the sample has a mutation 
+        in that gene or not.
+
+    :type mutations: list
+    :param mutations: List with the mutation names to extract
+        information about. This list determines the total number of
+        mutations, M, and thus the space of mutation combinations,
+        S. The order in the list is also important as the vectors in S
+        correspond to that order. Each item on the list can be a
+        string, or a list of strings. In the latter case (NOT
+        IMPLEMENTED YET), those mutations will be aggregated into a
+        single category.
+
+    """
+    
+    pts_per_combination = data.groupby(mutations).size()
+    if print_info:
+        print(pts_per_combination.reset_index().rename(columns={0:'count'}))
+    return list(pts_per_combination)      
+
 
 def compute_samples(data,
                     mutations=None,
