@@ -2,6 +2,8 @@
 #' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis
 #'
 
+.libPaths(c("./.Rlibs", .libPaths()))
+
 #' Load in relevant functions
 #source('../cadd/cadd.R')
 source('trinucleotide_functions.R')

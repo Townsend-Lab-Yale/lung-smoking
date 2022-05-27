@@ -9,6 +9,7 @@ code/.venv
 code/__pycache__
 code/test*.py
 code/six_all_but_one.py
+code/variants/.Rlibs
 
 data/gene_coordinates.csv
 data/genie_9/
