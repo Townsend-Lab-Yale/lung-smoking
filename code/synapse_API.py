@@ -8,12 +8,15 @@ password = input('Synapse password: ')
 syn.login(username, password)
 
 
-# patient clinical data
+print("Obtaining GENIE patient clinical data...")
 entity = syn.get("syn24179660", downloadLocation= os.path.join(location_data, "genie_9"))
-# sample data
+print("")
+print("Obtaining GENIE sample data...")
 entity = syn.get('syn24179661', downloadLocation= os.path.join(location_data, "genie_9"))
-# MAF file
+print("")
+print("Obtaining GENIE MAF file...")
 entity = syn.get('syn24179664', downloadLocation= os.path.join(location_data, "genie_9"))
-# genomic information (genome coverage of TGS)
+print("")
+print("Obtaining GENIE genomic information (genome coverage of TGS)...")
 entity = syn.get('syn24179674', downloadLocation= os.path.join(location_data, "genie_9"))
-
+print("")
