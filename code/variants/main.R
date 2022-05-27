@@ -20,7 +20,7 @@ location_output = '../../output/'
 source('create_cesa_for_epistasis.R')
 
 #' List of genes for which to calculate variant-level mutation rates
-gene_df = fread(paste0(location_output,"genes_list.txt"), header = F)
+gene_df = fread(paste0(location_data,"genes_list.txt"), header = F)
 colnames(gene_df) = 'gene'
 gene_df[,gene := toupper(gene)]
 
