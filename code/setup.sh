@@ -75,6 +75,13 @@ for DATASET in ${DATASETS[@]}; do
     echo "done."
     echo ""
 done
+echo "Renaming data/luad_broad/data_mutations.txt to "`
+     `"data/luad_mskcc_2015/data_mutations_extended.txt for consistency."
+mv luad_broad/data_mutations.txt luad_broad/data_mutations_extended.txt
+echo "Renaming data/luad_mskcc_2015/data_mutations.txt to "`
+     `"data/luad_mskcc_2015/data_mutations_extended.txt for consistency."
+mv luad_mskcc_2015/data_mutations.txt luad_mskcc_2015/data_mutations_extended.txt
+echo ""
 echo "...done downloading cBioPortal data."
 echo ""
 echo ""
