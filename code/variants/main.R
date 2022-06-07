@@ -25,7 +25,7 @@ colnames(gene_df) = 'gene'
 gene_df[,gene := toupper(gene)]
 
 #' Calculate trinucleotide mutation proportions across the whole genome in preparation for calculating variant mutation rates
-genome_trinucleotide_mutation_proportions = compute_genome_trinucleotide_mut_proportions(cesa)
+genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa)
 
 #' Calculate variant level mutation rates
 #' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
@@ -39,6 +39,9 @@ source('maf_construction.R')
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'data/genes_per_sample.txt'
 source('produce_samples_per_gene.R')
+
+
+
 
 
 

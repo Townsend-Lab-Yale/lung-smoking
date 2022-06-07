@@ -9,16 +9,20 @@ cesa@maf = cesa$maf[lengths(genes) == 1 & is.na(top_gene), top_gene := genes]
 
 #' Generating a list of variants when the maf is preloaded and when the maf is loaded
 #' Taking the intersection of these variants as the ones to keep
-preload_maf_variants = rbind(Broad_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              FMAD_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              Genie_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              MSK2015_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              MSK2017_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              MSK2018_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              OncoSG_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              TCGA_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              TracerX_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
-                              TSP_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)])
+preload_maf_variants = rbind(Broad_maf$WES[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             Broad_maf$WGS[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             FMAD_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             rbindlist(Genie_maf)[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             MSK2015_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             MSK2017_maf$IMPACT341[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             MSK2017_maf$IMPACT410[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             MSK2018_maf$IMPACT341[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             MSK2018_maf$IMPACT410[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],  
+                             MSK2018_maf$IMPACT468[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             OncoSG_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             TCGA_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             TracerX_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)],
+                             TSP_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)])
 cesa_maf_variants = cesa$maf[variant_type == 'snv', .(Unique_Patient_Identifier, variant_id)]
 variants_to_keep = merge(cesa_maf_variants, preload_maf_variants) 
 
