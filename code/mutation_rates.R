@@ -181,6 +181,9 @@ cesa_total <- gene_mutation_rates(cesa_total, covariates = "lung")
 
 save_cesa(cesa_total, '../data/pan-dataset_samples_cesa.rds')
 fwrite(cesa_total$gene_rates, '../output/pan_data_mutation_rates.txt')
+
+
+
 # WES/WGS-ONLY CESA ANALYSIS BECAUSE ONLY THESE CAN HAVE SIGNATURE EXTRACTIONS BE PERFORMED ON THEM
 cesa_exome <- CESAnalysis(ces.refset.hg19)
 cesa_exome <- load_maf(cesa_exome, maf = Broad_maf$WGS, coverage = 'genome')
