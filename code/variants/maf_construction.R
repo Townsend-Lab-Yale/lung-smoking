@@ -41,4 +41,4 @@ filtered_maf = merge(filtered_maf, source_panel_info, by.x = 'Unique_Patient_Ide
 colnames(filtered_maf) = c('Sample ID', 'Mutation', 'Chromosome', 'Start_Position', 'Reference_Allele', 'Tumor_Seq_Allele2', 'Gene', 'Source', 'Panel')
 
 #' Output
-fwrite(filtered_maf, paste0(location_data, "cesR_maf_for_epistasis_analysis.txt"))
+fwrite(filtered_maf, paste0(location_output, "cesR_maf_for_epistasis_analysis.txt"))
