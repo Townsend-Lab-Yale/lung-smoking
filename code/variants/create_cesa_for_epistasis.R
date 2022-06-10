@@ -197,8 +197,8 @@ good_sample_weights <- bio_weights_unblended[Unique_Patient_Identifier %in% good
 smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
-fwrite(list(smoking_samples), paste0(location_data, 'smoking_samples_ids.txt'))
-fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_samples_ids.txt'))
+fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
+fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
 
 
 #INCLUDING PANEL DATA
