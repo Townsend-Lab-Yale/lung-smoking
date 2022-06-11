@@ -23,5 +23,5 @@ temp[temp != 0] <- 1
 
 samples_genes = cbind(samples_genes[,.(`Sample ID`,Source,Panel)], temp)
 
-fwrite(samples_genes, paste0(location_data,'genes_per_sample.txt'))
+fwrite(samples_genes, paste0(location_output,'genes_per_sample.txt'))
 
