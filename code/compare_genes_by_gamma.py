@@ -61,6 +61,7 @@ for i in fluxes_mles_dict['smoking_plus'].keys():
 nonsmoking_gammas = dict()
 nonsmoking_gamma_cis = dict()
 for i in fluxes_mles_dict['nonsmoking_plus'].keys():
+    if i in ['TTF1', 'GOPC']: continue
     if i not in mutation_rate_dict['nonsmoking'].keys():
         missing_mus.add(i)
         continue

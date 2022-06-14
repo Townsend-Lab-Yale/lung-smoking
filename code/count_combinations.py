@@ -34,10 +34,10 @@ def updated_compute_samples(data,
 
     """
     
-    pts_per_combination = data.groupby(mutations).size()
+    pts_per_combination = data.groupby(mutations).size().unstack(fill_value=0).stack()
     if print_info:
         print(pts_per_combination.reset_index().rename(columns={0:'count'}))
-    return list(pts_per_combination)      
+    return np.array(pts_per_combination)      
 
 
 def compute_samples(data,

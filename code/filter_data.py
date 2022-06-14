@@ -21,6 +21,7 @@ from locations import panel_nonsmoking_sample_ids_file
 from locations import panel_smoking_sample_ids_file
 from locations import merged_maf_file_name
 from locations import cesR_filtered_maf_file_name
+from locations import genes_per_sample_file_name
 
 all_panel_genes = pd.read_csv(all_panel_genes_file_name)
 all_panels = pd.unique(all_panel_genes['SEQ_ASSAY_ID'])
@@ -87,7 +88,7 @@ db_filtered_for_TP53_KRAS = filter_db_for_gene('TP53', main_db)
 db_filtered_for_TP53_KRAS = filter_db_for_gene('KRAS', db_filtered_for_TP53_KRAS)
 '''
 
-db_filtered_for_TP53_KRAS = pd.read_csv(cesR_filtered_maf_file_name)
+genes_per_sample = pd.read_csv(genes_per_sample_file_name)
 
-prefiltered_dbs = {key: filter_db_for_key(key, db_filtered_for_TP53_KRAS)
+prefiltered_dbs = {key: filter_db_for_key(key, genes_per_sample)
                    for key in results_keys}

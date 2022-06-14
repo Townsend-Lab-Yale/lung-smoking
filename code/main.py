@@ -1,8 +1,11 @@
 import os
+from struct import unpack
 import pandas as pd
 import numpy as np
+import warnings
 
 from count_combinations import compute_samples
+from count_combinations import updated_compute_samples
 
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
@@ -16,6 +19,7 @@ from locations import gene_list_file
 from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
+from locations import genes_per_sample_file_name
 
 from filter_data import prefiltered_dbs
 from filter_data import filter_db_for_gene
@@ -24,7 +28,7 @@ from filter_data import filter_db_for_gene
 
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
-
+gene_list = [gene.upper() for gene in gene_list]
 
 def compute_samples_for_all_genes(key=None, save_results=True):
     """Compute number of patients with each combination of the TP53,
@@ -54,15 +58,23 @@ def compute_samples_for_all_genes(key=None, save_results=True):
 
     number_of_genes = len(genes)
 
+    unrepresented_genes = []
+
     counts = {}
 
     for i, gene in enumerate(genes):
         if (i+1) % 100 == 0 or i == 0:
             print(f"Computing gene {i+1}/{number_of_genes} "
                   f"({round((i+1)/number_of_genes, 2)*100}% done)")
-        subsetted_db = filter_db_for_gene(gene, prefiltered_dbs[key])
-        counts[gene] = compute_samples(subsetted_db,
-                                       mutations=['TP53', 'KRAS', gene])
+        db = prefiltered_dbs[key]
+        if gene in db.columns:
+            counts[gene] = updated_compute_samples(db,
+                                        mutations=['TP53', 'KRAS', gene])
+        else:
+            unrepresented_genes.append(gene)
+            counts[gene] = np.repeat(0, 8)
+    if len(unrepresented_genes) > 0:
+        print(f"No sample availability information for the following genes: {str(unrepresented_genes)}. This may be because there it is not mutated in any tumors or because it is not correctly represented in sequencing data")
 
     if save_results:
         print("Saving results...")
@@ -116,8 +128,8 @@ def lambdas_from_samples(samples):
 
     bounds = 1
     print(f"Bounds for fluxes: {bounds}")
-    MLE = estimate_lambdas(samples, draws=bounds,
-                           upper_bound_prior=1,
+    MLE = estimate_lambdas(samples, draws=1,
+                           upper_bound_prior=bounds,
                            kwargs={'return_raw':True})
     print(f"MLE: {MLE[0]['lambdas']}")
 
@@ -151,7 +163,7 @@ def lambdas_from_samples(samples):
 
 def compute_all_lambdas(key, all_counts, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
-    iterating over all genes in :const:`gene_list`.
+    iterating over all genes in :const:`gene_list`.in 
 
     :type key: str or NoneType
     :param key: What estimates to use. Can be one of:
@@ -242,8 +254,7 @@ def compute_all_lambdas(key, all_counts, save_results=True):
     return lambdas_mles, lambdas_cis
 
 def compute_TP53_KRAS_lambdas(samples):
-    bounds = [0.55, 0.7, 0.6, 0.35]
-    #bounds selected based on repeated runs convergent on certain values with low log likelihood
+    bounds = np.repeat(1,4)
     MLE = estimate_lambdas(samples, draws=1,
                            upper_bound_prior=bounds,
                            kwargs={'return_raw':True})
@@ -292,11 +303,11 @@ def main(recompute_samples_per_combination=False, save_results=True):
         print("")
         print("")
 
-        TP53_KRAS_samples = compute_samples(prefiltered_dbs[key], mutations=['TP53','KRAS'])
+        TP53_KRAS_samples = updated_compute_samples(prefiltered_dbs[key], mutations=['TP53','KRAS'])
         TP53_KRAS_lambdas_mles = compute_TP53_KRAS_lambdas(TP53_KRAS_samples)
         TP53_KRAS_lambdas_cis = asymp_CI_lambdas(TP53_KRAS_lambdas_mles['lambdas'], TP53_KRAS_samples)
 
     return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
 
 if __name__ == "__main__":
-    main()
+    main(recompute_samples_per_combination = True, save_results = False)  
