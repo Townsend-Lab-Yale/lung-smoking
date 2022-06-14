@@ -11,7 +11,7 @@ maf = unique(maf)
 
 #remove all genes that we do not want to consider (and samples whose mutations only occur in those genes)
 genes_list = fread(paste0(location_data,'genes_list.txt'), header = F)$V1
-maf = maf[Gene %in% genes_list]
+maf = maf[Gene %in% toupper(genes_list)]
 
 #' Pivot to make a table where each row is a sample and the columns are genes 
 #' with the value being a binary representation of whether the sample has the 
