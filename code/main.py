@@ -310,4 +310,4 @@ def main(recompute_samples_per_combination=False, save_results=True):
     return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
 
 if __name__ == "__main__":
-    main(recompute_samples_per_combination = True, save_results = False)  
+    main()  
