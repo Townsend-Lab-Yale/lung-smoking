@@ -8,6 +8,8 @@
 #source('../cadd/cadd.R')
 source('trinucleotide_functions.R')
 source('variant_mutation_rate.R')
+source('produce_genes_per_sample.R')
+source('maf_construction.R')
 
 #~~~~~~~~~~~~#
 
@@ -15,8 +17,12 @@ source('variant_mutation_rate.R')
 location_data = '../../data/'
 location_output = '../../output/'
 
+save_results = TRUE
+
 #' Create CESA object for mutation rate calculation and MAF construction
-#' Output location: 'data/pan_data_cesa_for_cancer_epistasis.rds'
+#' Output locations: 'data/pan_data_cesa_for_cancer_epistasis.rds'
+#'   'data/(panel_)(non)smoking_sample_ids.txt'
+#'   'output/(non)smoking_(w_panel_)mutation_rates.txt'
 source('create_cesa_for_epistasis.R')
 
 #' List of genes for which to calculate variant-level mutation rates
@@ -34,11 +40,12 @@ fwrite(gene_df, paste0(location_output,"variant_based_mutation_rates.txt"))
 
 #' Produce MAF for cancer epistasis analysis
 #' Output location: 'data/cesR_maf_for_epistasis_analysis.txt'
-source('maf_construction.R')
+preloaded_maf = rbind(rbindlist(Broad_maf), FMAD_maf, rbindlist(Genie_maf), MSK2015_maf, rbindlist(MSK2017_maf), rbindlist(MSK2018_maf), OncoSG_maf, TCGA_maf, TracerX_maf, TSP_maf, fill = T)
+final_maf = construct_maf(cesa, maf_file, preloaded_maf, save_results = T)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
-#' Output location: 'data/genes_per_sample.txt'
-source('produce_samples_per_gene.R')
+#' Output location: 'output/genes_per_sample.txt'
+samples_genes = produce_genes_per_sample(filtered_maf, gene_df$gene, save_results)
 
 
 
