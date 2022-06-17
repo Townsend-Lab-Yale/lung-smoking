@@ -173,8 +173,6 @@ cesa <- load_maf(cesa, maf = Broad_maf$WGS, coverage = 'genome')
 #' CALCULATING MUTATIONS RATES (NECESSARY FOR VARIANT_MUTATION_RATE)
 cesa <- gene_mutation_rates(cesa, covariates = "lung")
 
-save_cesa(cesa, paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
-
 #' CALCULATING MUTATION RATES FOR SMOKERS AND NONSMOKERS INDEPENDENTLY
 #' First have to use mutational signature convolution on WES/WGS and clinical
 #'   data for TGS to split the samples into smokers and nonsmokers
@@ -197,38 +195,44 @@ good_sample_weights <- bio_weights_unblended[Unique_Patient_Identifier %in% good
 smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
-fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
-fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
 
 
 #INCLUDING PANEL DATA
 maf_clinical = fread(paste0(location_output, 'merged_final.txt'))
 panel_smoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == T, `Sample ID`])
 panel_nonsmoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == F, `Sample ID`])
-fwrite(list(panel_smoking_samples), paste0(location_data, 'panel_smoking_sample_ids.txt'))
-fwrite(list(panel_nonsmoking_samples), paste0(location_data, 'panel_nonsmoking_sample_ids.txt'))
 
 #CALCULATING MUTATION RATES FOR SMOKERS AND NONSMOKERS
 ## mutation rates of only WES/wGS
 cesa_smoking = clear_gene_rates(cesa)
 cesa_smoking = gene_mutation_rates(cesa_smoking, covariates = 'lung', 
                                    samples = cesa_smoking$samples[Unique_Patient_Identifier %in% smoking_samples, Unique_Patient_Identifier])
-fwrite(cesa_smoking$gene_rates, paste0(location_output, 'smoking_mutation_rates.txt'))
 
 cesa_nonsmoking = clear_gene_rates(cesa)
 cesa_nonsmoking = gene_mutation_rates(cesa_nonsmoking, covariates = 'lung', 
                                    samples = cesa_nonsmoking$samples[Unique_Patient_Identifier %in% nonsmoking_samples, Unique_Patient_Identifier])
-fwrite(cesa_nonsmoking$gene_rates, paste0(location_output, 'nonsmoking_mutation_rates.txt'))
 
 # mutation rates of WES/WGS/TGS
 cesa_smoking_w_panel = clear_gene_rates(cesa)
 cesa_smoking_w_panel = gene_mutation_rates(cesa_smoking_w_panel, covariates = 'lung',
                                            samples = cesa_smoking_w_panel$samples[Unique_Patient_Identifier %in% c(smoking_samples, panel_smoking_samples), Unique_Patient_Identifier])
-fwrite(cesa_smoking_w_panel$gene_rates, paste0(location_output, 'smoking_w_panel_mutation_rates.txt'))
 
 cesa_nonsmoking_w_panel = clear_gene_rates(cesa)
 cesa_nonsmoking_w_panel = gene_mutation_rates(cesa_nonsmoking_w_panel, covariates = 'lung',
                                               samples = cesa_nonsmoking_w_panel$samples[Unique_Patient_Identifier %in% c(nonsmoking_samples, panel_nonsmoking_samples), Unique_Patient_Identifier])
-fwrite(cesa_nonsmoking_w_panel$gene_rates, paste0(location_output, 'nonsmoking_w_panel_mutation_rates.txt'))
 
 
+if(save_results){
+  save_cesa(cesa, paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
+  
+  fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
+  fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
+  
+  fwrite(list(panel_smoking_samples), paste0(location_data, 'panel_smoking_sample_ids.txt'))
+  fwrite(list(panel_nonsmoking_samples), paste0(location_data, 'panel_nonsmoking_sample_ids.txt'))
+  
+  fwrite(cesa_smoking$gene_rates, paste0(location_output, 'smoking_mutation_rates.txt'))
+  fwrite(cesa_nonsmoking$gene_rates, paste0(location_output, 'nonsmoking_mutation_rates.txt'))
+  fwrite(cesa_smoking_w_panel$gene_rates, paste0(location_output, 'smoking_w_panel_mutation_rates.txt'))
+  fwrite(cesa_nonsmoking_w_panel$gene_rates, paste0(location_output, 'nonsmoking_w_panel_mutation_rates.txt'))
+}
