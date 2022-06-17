@@ -51,16 +51,11 @@ variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, with_cadd
   variants$trinuc_mut = paste0(substr(variants$trinuc,1,1),'[', variants$mut,']',substr(variants$trinuc,3,3))
   
   #gets trinuc composition for each variant
-  
-  #' Previous implementation: has different trinucleotide mutation context proportions, resulting in differences in calculated mutation rates
-  #' trinuc_mut_index_table = colnames(cesa@trinucleotide_mutation_weights$trinuc_proportion_matrix)
-  #' ind = match(variants$trinuc_mut, trinuc_mut_index_table)
-  #' variants$trinuc_mut_prop= as.vector(unlist(lapply(ind, function(y) cancereffectsizeR:::.ces_ref_data[[cesa@ref_key]][["gene_trinuc_comp"]][[gene_x]][y])))
-  
   variants$trinuc_mut_prop = as.vector(trinuc_proportion_matrix[variants$trinuc_mut])
   variants$gene_rate = cesa$gene_rates[gene == gene_x,rate]
   
-  #' This only works with the singular table returned by compute tri-nt contexts, if we were to vectorize this, would need to make it dataframe-workable
+  #' This only works with the singular table returned by compute tri-nt contexts, 
+  #' if we were to vectorize this, we would need to make it dataframe-workable
   tri_nt_contexts = compute_trinucleotide_contexts(gene_x)
   variants$context_freq = tri_nt_contexts[variants$trinuc]
   
