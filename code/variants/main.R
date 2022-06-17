@@ -45,4 +45,4 @@ final_maf = construct_maf(cesa, maf_file, preloaded_maf, save_results)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'output/genes_per_sample.txt'
-samples_genes = produce_genes_per_sample(filtered_maf, gene_df$gene, save_results)
+samples_genes = produce_genes_per_sample(final_maf, gene_df$gene, save_results)
