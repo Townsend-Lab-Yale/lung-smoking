@@ -35,7 +35,7 @@ cesa <- gene_mutation_rates(cesa, samples = c(nonsmoking_samples, panel_nonsmoki
 compute_gene_selection = function(cesa, genes){
   #' Setting maf_prevalence > 0, thought > 1 may be possible and/or preferable as well
   print('Compounding variants...')
-  for_compound = rbindlist(lapply(genes, function(gene_x){cesa$variants[gene == gene_x & samples_covering >= cesa$variants[gene == gene_x, quantile(samples_covering)]['50%'] & maf_prevalence > 0]}))
+  for_compound = rbindlist(lapply(genes, function(gene_x){cesa$variants[gene == gene_x & samples_covering >= cesa$variants[gene == gene_x, quantile(samples_covering)]['25%'] & maf_prevalence > 0]}))
 
   #' To preserve power, I am making the minimal samples_covering the first quartile because 
   #' ces_variant will only use samples with coverage at all sites, so if I include
