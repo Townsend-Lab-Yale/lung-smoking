@@ -22,7 +22,7 @@ from locations import samples_per_combination_files
 from locations import genes_per_sample_file_name
 
 from filter_data import prefiltered_dbs
-from filter_data import filter_db_for_gene
+from filter_data import filter_samples_for_gene
 
 # from figures import plot_lambdas_gammas
 
@@ -68,7 +68,7 @@ def compute_samples_for_all_genes(key=None, save_results=True):
         if (i+1) % 100 == 0 or i == 0:
             print(f"Computing gene {i+1}/{number_of_genes} "
                   f"({round((i+1)/number_of_genes, 2)*100}% done)")
-        db = prefiltered_dbs[key]
+        db = filter_samples_for_gene(gene, prefiltered_dbs[key])
         #the if statement contains an additional condition to remove problematic genes from the nonsmoking analysis
         # the reason is that genes are covered but aren't mutated in any nonsmokers, so their flux dictionary is a different size
         if gene in db.columns and not((key in ['nonsmoking','nonsmoking_plus']) & 
