@@ -29,6 +29,8 @@ from filter_data import filter_db_for_gene
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 gene_list = [gene.upper() for gene in gene_list]
+mtor_index = gene_list.index('MTOR')
+gene_list = gene_list[:mtor_index] + gene_list[mtor_index + 1:103]
 
 def compute_samples_for_all_genes(key=None, save_results=True):
     """Compute number of patients with each combination of the TP53,
@@ -67,7 +69,10 @@ def compute_samples_for_all_genes(key=None, save_results=True):
             print(f"Computing gene {i+1}/{number_of_genes} "
                   f"({round((i+1)/number_of_genes, 2)*100}% done)")
         db = prefiltered_dbs[key]
-        if gene in db.columns:
+        #the if statement contains an additional condition to remove problematic genes from the nonsmoking analysis
+        # the reason is that genes are covered but aren't mutated in any nonsmokers, so their flux dictionary is a different size
+        if gene in db.columns and not((key in ['nonsmoking','nonsmoking_plus']) & 
+        (gene in ['TTF1', 'GOPC','RAD17','PDGFRA','CCND1','RBP1','LMTK2','CCNE1'])):
             counts[gene] = updated_compute_samples(db,
                                         mutations=['TP53', 'KRAS', gene])
         else:
@@ -310,4 +315,4 @@ def main(recompute_samples_per_combination=False, save_results=True):
     return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
 
 if __name__ == "__main__":
-    main()  
+    main()
