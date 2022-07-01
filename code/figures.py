@@ -218,12 +218,6 @@ def interesting_genes(lambdas,
 
     return set.union(high_lambda_genes, high_gamma_genes, for_sure_include)
 
-
-
-
-
-
-
 def top_genes(rates, top=3):
      return dict(sorted(rates.items(),
                         key=lambda item: item[1],
