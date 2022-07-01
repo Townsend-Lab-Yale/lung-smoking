@@ -48,6 +48,10 @@ location_gene_panels = os.path.join(location_data,
 all_panel_genes_file_name = os.path.join(location_gene_panels,
                                          'all_panel_genes.txt')
 
+all_panel_samples_file_name = os.path.join(location_gene_panels,
+                                           'all_panel_samples.txt')
+
+
 
 full_maf_file_names = {
     db:os.path.join(location_data,

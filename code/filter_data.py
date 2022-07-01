@@ -15,6 +15,7 @@ import numpy as np
 
 from locations import results_keys
 from locations import all_panel_genes_file_name
+from locations import all_panel_samples_file_name
 from locations import nonsmoking_sample_ids_file
 from locations import smoking_sample_ids_file
 from locations import panel_nonsmoking_sample_ids_file
@@ -24,6 +25,7 @@ from locations import cesR_filtered_maf_file_name
 from locations import genes_per_sample_file_name
 
 all_panel_genes = pd.read_csv(all_panel_genes_file_name)
+all_panel_samples = pd.read_csv(all_panel_samples_file_name)
 all_panels = pd.unique(all_panel_genes['SEQ_ASSAY_ID'])
 
 
@@ -52,6 +54,23 @@ def filter_db_for_gene(gene, db, print_info=False):
         print("Panels excluded because they did not sequence "
               + gene + ':' + str(panels_to_remove))
     return db[~db['Panel'].isin(panels_to_remove)]
+
+def filter_samples_for_gene(gene, db, print_info=False):
+    """Remove for the database `db` all patients from panels that do not
+    include the `gene`.
+
+    Return the filtered database.
+
+    """
+    panels_to_remove = [
+        panel for panel in all_panels
+        if gene not in all_panel_genes[
+                all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()]
+    samples_to_remove = all_panel_samples[all_panel_samples['Panel'].isin(panels_to_remove)]['Sample ID']
+    if print_info:
+        print("Panels excluded because they did not sequence "
+              + gene + ':' + str(panels_to_remove))
+    return db[~db['Sample ID'].isin(samples_to_remove)]
 
 
 def filter_db_for_key(key, db):
