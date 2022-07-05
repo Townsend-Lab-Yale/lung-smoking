@@ -69,7 +69,7 @@ compute_gene_selection = function(cesa, genes){
 genes = as.vector(unlist(sorted_genes)) #sorted_genes from representing_selection_intensities.R
 cesa = compute_gene_selection(cesa, genes)
 
-
+#' Find significant differences
 two_group_lik_sum = cesa$selection$smoking$loglikelihood + cesa$selection$nonsmoking$loglikelihood
 combined_lik = cesa$selection$combined$loglikelihood
 chisquared = -2 * (combined_lik - two_group_lik_sum)
@@ -84,6 +84,7 @@ si_tables$nonsmoking[, status := 'nonsmoking']
 si_table = rbindlist(si_tables)
 colnames(si_table) = c('gene', colnames(si_table)[2:4], 'prevalence', 'status')
 si_table$gene = gsub('\\.1','',si_table$gene)
+#' Putting genes in order of the epistasis analysis graph
 si_table$gene = factor(si_table$gene, levels = c('PBRM1','ATF7IP','ARID1A','ATM','STK11','TLR4','EGFR'))
 
 breaks <- unique(as.numeric(round(quantile(si_table$prevalence))))
@@ -104,47 +105,3 @@ ggplot(data = si_table, aes(x = gene, y = selection_intensity, fill = status)) +
     option = "plasma", breaks = breaks
   ) + 
   guides(color = guide_colourbar(ticks = T))
-
-
-
-
-#' APC
-apc_comp = define_compound_variants(cesa, variant_table = cesa$variants[gene == 'APC' & samples_covering > 6000 & maf_prevalence > 0], merge_distance = Inf)
-
-cesa = ces_variant(cesa = cesa, variants = apc_comp,
-                   samples = c(smoking_samples, panel_smoking_samples), run_name = 'APC_smoking')
-cesa = ces_variant(cesa = cesa, variants = apc_comp,
-                   samples = c(nonsmoking_samples, panel_nonsmoking_samples), run_name = 'APC_nonsmoking')
-cesa = ces_variant(cesa = cesa, variants = apc_comp,
-                   samples = c(smoking_samples, nonsmoking_samples, panel_smoking_samples, panel_nonsmoking_samples), run_name = 'APC_combined')
-
-two_group_lik_sum = cesa$selection$APC_smoking$loglikelihood + cesa$selection$APC_nonsmoking$loglikelihood
-combined_lik = cesa$selection$APC_combined$loglikelihood
-chisquared = -2 * (combined_lik - two_group_lik_sum)
-p = pchisq(chisquared, df = 1, lower.tail = F)
-#p = 0.3372228
-si_table = as.data.table(rbind(cesa$selection$APC_smoking, cesa$selection$APC_nonsmoking, cesa$selection$APC_combined)[,.(selection_intensity,ci_low_95,ci_high_95,included_with_variant)])
-si_table = cbind(c('smoking','nonsmoking','all'), si_table)
-si_table 
-
-
-
-#' SETD2
-setd2_comp = define_compound_variants(cesa, variant_table = cesa$variants[gene == 'SETD2' & samples_covering > 6000 & maf_prevalence > 0], merge_distance = Inf)
-
-cesa = ces_variant(cesa = cesa, variants = setd2_comp,
-                   samples = c(smoking_samples, panel_smoking_samples), run_name = 'SETD2_smoking')
-cesa = ces_variant(cesa = cesa, variants = setd2_comp,
-                   samples = c(nonsmoking_samples, panel_nonsmoking_samples), run_name = 'SETD2_nonsmoking')
-cesa = ces_variant(cesa = cesa, variants = setd2_comp,
-                   samples = c(smoking_samples, nonsmoking_samples, panel_smoking_samples, panel_nonsmoking_samples), run_name = 'SETD2_combined')
-
-two_group_lik_sum = cesa$selection$SETD2_smoking$loglikelihood + cesa$selection$SETD2_nonsmoking$loglikelihood
-combined_lik = cesa$selection$SETD2_combined$loglikelihood
-chisquared = -2 * (combined_lik - two_group_lik_sum)
-p = pchisq(chisquared, df = 1, lower.tail = F)
-#p = 0.1391215
-si_table = as.data.table(rbind(cesa$selection$SETD2_smoking, cesa$selection$SETD2_nonsmoking, cesa$selection$SETD2_combined)[,.(selection_intensity,ci_low_95,ci_high_95,included_with_variant)])
-si_table = cbind(c('smoking','nonsmoking','all'), si_table)
-si_table 
-
