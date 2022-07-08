@@ -1,5 +1,4 @@
 import os
-from struct import unpack
 import pandas as pd
 import numpy as np
 import warnings
@@ -19,18 +18,14 @@ from locations import gene_list_file
 from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
-from locations import genes_per_sample_file_name
 
 from filter_data import prefiltered_dbs
 from filter_data import filter_samples_for_gene
 
-# from figures import plot_lambdas_gammas
-
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 gene_list = [gene.upper() for gene in gene_list]
-mtor_index = gene_list.index('MTOR')
-gene_list = gene_list[:mtor_index] + gene_list[mtor_index + 1:103]
+gene_list = gene_list[:103]
 
 def compute_samples_for_all_genes(key=None, save_results=True):
     """Compute number of patients with each combination of the TP53,
@@ -71,8 +66,9 @@ def compute_samples_for_all_genes(key=None, save_results=True):
         db = filter_samples_for_gene(gene, prefiltered_dbs[key])
         #the if statement contains an additional condition to remove problematic genes from the nonsmoking analysis
         # the reason is that genes are covered but aren't mutated in any nonsmokers, so their flux dictionary is a different size
-        if gene in db.columns and not((key in ['nonsmoking','nonsmoking_plus']) & 
-        (gene in ['TTF1', 'GOPC','RAD17','PDGFRA','CCND1','RBP1','LMTK2','CCNE1'])):
+        if gene in db.columns and not(((key in ['nonsmoking','nonsmoking_plus']) & 
+        (gene in ['TTF1', 'GOPC','RAD17','PDGFRA','CCND1','RBP1','LMTK2','CCNE1'])) | 
+        ((key == 'nonsmoking') & (gene in ['MAP2K1', 'MYC', 'MDM2', 'AXL']))):
             counts[gene] = updated_compute_samples(db,
                                         mutations=['TP53', 'KRAS', gene])
         else:
@@ -285,7 +281,8 @@ def main(recompute_samples_per_combination=False, save_results=True):
     """
     all_counts = {}
     all_lambdas = {}
-    for key in results_keys:
+    for key in ['nonsmoking']:
+    #for key in results_keys:
         print("")
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
@@ -315,4 +312,4 @@ def main(recompute_samples_per_combination=False, save_results=True):
     return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
 
 if __name__ == "__main__":
-    main()
+    main(recompute_samples_per_combination = True)
