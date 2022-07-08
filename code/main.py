@@ -281,8 +281,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
     """
     all_counts = {}
     all_lambdas = {}
-    for key in ['nonsmoking']:
-    #for key in results_keys:
+    for key in results_keys:
         print("")
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
