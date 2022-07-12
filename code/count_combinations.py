@@ -34,10 +34,14 @@ def updated_compute_samples(data,
 
     """
     
-    pts_per_combination = data.groupby(mutations).size().unstack(fill_value=0).stack()
+    pts_per_combination = data.groupby(mutations)['Sample ID'].count()
+    levels = [[0,1]] * len(mutations)
+    new_index = pd.MultiIndex.from_product(levels, names=pts_per_combination.index.names)
+    pts_per_combination = pts_per_combination.reindex(new_index, fill_value=0)
+    
     if print_info:
-        print(pts_per_combination.reset_index().rename(columns={0:'count'}))
-    return np.array(pts_per_combination)      
+        print(pts_per_combination.reset_index().rename(columns={'Sample ID':'Sample Count'}))
+    return np.array(pts_per_combination)    
 
 
 def compute_samples(data,

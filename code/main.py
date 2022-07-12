@@ -66,9 +66,7 @@ def compute_samples_for_all_genes(key=None, save_results=True):
         db = filter_samples_for_gene(gene, prefiltered_dbs[key])
         #the if statement contains an additional condition to remove problematic genes from the nonsmoking analysis
         # the reason is that genes are covered but aren't mutated in any nonsmokers, so their flux dictionary is a different size
-        if gene in db.columns and not(((key in ['nonsmoking','nonsmoking_plus']) & 
-        (gene in ['TTF1', 'GOPC','RAD17','PDGFRA','CCND1','RBP1','LMTK2','CCNE1'])) | 
-        ((key == 'nonsmoking') & (gene in ['MAP2K1', 'MYC', 'MDM2', 'AXL']))):
+        if gene in db.columns:
             counts[gene] = updated_compute_samples(db,
                                         mutations=['TP53', 'KRAS', gene])
         else:
