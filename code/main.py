@@ -19,8 +19,9 @@ from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
 
-from filter_data import prefiltered_dbs
-from filter_data import filter_samples_for_gene
+from filter_data import key_filtered_dbs
+from filter_data import dbs_filtered_for_TP53_KRAS
+from filter_data import filter_samples_for_genes
 
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
@@ -63,9 +64,8 @@ def compute_samples_for_all_genes(key=None, save_results=True):
         if (i+1) % 100 == 0 or i == 0:
             print(f"Computing gene {i+1}/{number_of_genes} "
                   f"({round((i+1)/number_of_genes, 2)*100}% done)")
-        db = filter_samples_for_gene(gene, prefiltered_dbs[key])
-        #the if statement contains an additional condition to remove problematic genes from the nonsmoking analysis
-        # the reason is that genes are covered but aren't mutated in any nonsmokers, so their flux dictionary is a different size
+        db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key])
+        
         if gene in db.columns:
             counts[gene] = updated_compute_samples(db,
                                         mutations=['TP53', 'KRAS', gene])
@@ -302,11 +302,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
         print("")
         print("")
 
-        TP53_KRAS_samples = updated_compute_samples(prefiltered_dbs[key], mutations=['TP53','KRAS'])
-        TP53_KRAS_lambdas_mles = compute_TP53_KRAS_lambdas(TP53_KRAS_samples)
-        TP53_KRAS_lambdas_cis = asymp_CI_lambdas(TP53_KRAS_lambdas_mles['lambdas'], TP53_KRAS_samples)
-
-    return all_counts, all_lambdas, TP53_KRAS_lambdas_mles, TP53_KRAS_lambdas_cis
+    return all_counts, all_lambdas
 
 if __name__ == "__main__":
     main(recompute_samples_per_combination = True)

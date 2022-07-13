@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import os
 
-from filter_data import filter_samples_for_gene, prefiltered_dbs
+from filter_data import key_filtered_dbs
+from filter_data import filter_samples_for_genes
+
 from count_combinations import updated_compute_samples
 from main import are_all_fluxes_computable
 from cancer_epistasis import asymp_CI_lambdas, compute_CI_gamma, convert_lambdas_to_dict, estimate_lambdas, compute_gammas
@@ -60,9 +62,8 @@ def produce_results_for_one_gene_set(genes, dataset):
     '''
     Calculates lambdas and gammas for a single set of genes, NOT for multiple maps
     '''
-    db = prefiltered_dbs[dataset]
-    for gene in genes[2:]:
-        db = filter_samples_for_gene(gene, db)
+
+    db = filter_samples_for_genes(genes, key_filtered_dbs[dataset])
 
     results = {}
 
@@ -99,69 +100,7 @@ def produce_results_for_one_gene_set(genes, dataset):
     results["gammas_cis"] = compute_CI_gamma(results["lambdas_cis"],
                                            results["mus"])
     print("...done")
-    '''
-    if save:
-        print("")
-        print("Saving results...")
-        for key, value in results.items():
-            np.save(os.path.join(location_results,
-                                 f'{dataset}_{key}.npy'), value)
-        print("...done")
-    '''
-    return results
 
-def produce_results_for_one_3_gene_set_interested_in_middle_gene(genes, dataset):
-    '''
-    Calculates lambdas and gammas for a single set of genes, NOT for multiple maps
-    '''
-    db = prefiltered_dbs[dataset]
-    for gene in genes[2:]:
-        db = filter_samples_for_gene(gene, db)
-
-    results = {}
-
-    print("Counting samples on each mutation combination for " + genes + "...")
-    samples = updated_compute_samples(db, mutations=genes)
-    results["samples"] = convert_samples_to_dict(samples)
-    print("...done")
-    print("")
-
-    print("Estimating fluxes MLE...")
-    mle = estimate_lambdas(samples, draws=1)
-    results["lambdas"] = convert_lambdas_to_dict(mle)
-    print("...done")
-    print("")
-
-    print("Computing fluxes confidence intervals (CI)...")
-    results["lambdas_cis"] = convert_lambdas_to_dict(
-        asymp_CI_lambdas(mle['lambdas'],
-                         samples,
-                         print_progress=False))
-    print("...done")
-
-    print("Importing mutation rates...")
-    if 'plus' in dataset:
-        results["mus"] = convert_mus_to_dict(genes, dataset[:dataset.index('_plus')])
-    else:
-        results["mus"] = convert_mus_to_dict(genes, dataset)
-    print("...done")
-    print("")
-
-    print("Computing selection coefficients...")
-    results["gammas"] = compute_gammas(results["lambdas"],
-                                       results["mus"])
-    results["gammas_cis"] = compute_CI_gamma(results["lambdas_cis"],
-                                           results["mus"])
-    print("...done")
-    '''
-    if save:
-        print("")
-        print("Saving results...")
-        for key, value in results.items():
-            np.save(os.path.join(location_results,
-                                 f'{dataset}_{key}.npy'), value)
-        print("...done")
-    '''
     return results
 
 def produce_results(gene_combinations, dataset, save=True):
