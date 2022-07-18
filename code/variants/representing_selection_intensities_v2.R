@@ -70,6 +70,8 @@ ggplot(data = pivoted_table, aes(x = gene, y = selection_intensity, fill = datas
   ) + 
   guides(color = guide_colourbar(ticks = T))
 
+ggsave('../../figures/pan_data_epistasis.png', height = 10)
+
 
 #' SMOKING/NONSMOKING
 smoking_gammas = genes_by_gamma[,-c('pd_from_110_gamma', 'pd_from_110_low', 'pd_from_110_high', 'pd_from_WT_gamma', 'pd_from_WT_low', 'pd_from_WT_high', 'pd_prevalence', 'pd_from_WT_prevalence')]
@@ -87,6 +89,18 @@ ci_highs = as.data.frame(smoking_gammas)[,str_which(colnames(smoking_gammas), 'h
 #' If the CI of the max value for any gene overlaps with the CIs of any other values 
 #' for that gene, remove that gene
 #' Implemented by checking if max of ci_lows is greater than 2nd highest ci_high
+#' 
+#' However this is imperfect because it will only return genes which feature a
+#' difference in epistatic interactions between smokers and nonsmokers, which is
+#' important, but not the whole story
+#' 
+#' I will probably want to include any gene for which the gamma from 110
+#' is different from the gamma from WT within smoker or nonsmoker or any gene
+#' for which the gamma from the same mutational state is different between smokers
+#' and nonsmokers
+#' this will leave in too many genes though :/
+#' 
+#' Actually, since this part is focused on 
 significant_gammas = smoking_gammas[apply(ci_lows, 1, max, na.rm = T) > apply(ci_highs, 1, function(x){sort(x, decreasing = T)[2]})]
 
 #' Excluding genes that don't have values for all 4 gammas
@@ -131,3 +145,5 @@ ggplot(data = pivoted_table, aes(x = gene, y = selection_intensity, fill = datas
     option = "plasma", breaks = breaks
   ) + 
   guides(color = guide_colourbar(ticks = T))
+
+ggsave('../../figures/smoker_nonsmoker_epistasis.png', height = 10)

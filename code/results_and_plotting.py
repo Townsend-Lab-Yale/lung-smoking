@@ -2,15 +2,15 @@ import numpy as np
 import pandas as pd
 import os
 
+
 from filter_data import key_filtered_dbs
 from filter_data import filter_samples_for_genes
 
 from count_combinations import updated_compute_samples
 from main import are_all_fluxes_computable
 from cancer_epistasis import asymp_CI_lambdas, compute_CI_gamma, convert_lambdas_to_dict, estimate_lambdas, compute_gammas
-from plotting import plot_all
 from theory import build_S_as_array
-from locations import full_mutation_rate_file_names, results_keys
+from locations import full_mutation_rate_file_names
 
 location_results = '../to_delete'
 
@@ -42,7 +42,7 @@ def convert_samples_to_dict(samples):
 
     return results_as_dict
 
-def convert_mus_to_dict(genes, dataset):
+def convert_mus_to_dict(genes, dataset, pathway=False):
     """Convert the dictionary with :const:`mutation_rates` to a dictionary
     indexed by the order of `genes`.
 
@@ -51,23 +51,34 @@ def convert_mus_to_dict(genes, dataset):
 
     """
     M = len(genes)
-    mus = {(i*(0,) + (1,) + (M-i-1)*(0,)):mutation_rate_dict[dataset][genes[i]]
-           for i in range(M)}
+
+    if not pathway:
+        mus = {(i*(0,) + (1,) + (M-i-1)*(0,)):mutation_rate_dict[dataset][genes[i]]
+            for i in range(M)}
+    else:
+        gene_indices = [i for i, included in enumerate(genes.values()) if len(included) == 1]
+        mus = {(i*(0,) + (1,) + (M-i-1)*(0,)):mutation_rate_dict[dataset][list(genes.keys())[i]] if i in gene_indices
+                    else sum([mutation_rate_dict[dataset][gene] for gene in list(genes.values())[i]])
+                for i in range(M)}
+        
+    
     return mus
 
 def at_least_000_to_010_and_001_to_011(samples):
     return np.all(samples[[0,1]] > 0)
 
+'''
+TODO: check if necessary sample counts are fulfilled based on user input
+'''
 def produce_results_for_one_gene_set(genes, dataset):
     '''
     Calculates lambdas and gammas for a single set of genes, NOT for multiple maps
     '''
-
     db = filter_samples_for_genes(genes, key_filtered_dbs[dataset])
 
     results = {}
 
-    print("Counting samples on each mutation combination for " + genes + "...")
+    print("Counting samples on each mutation combination for " + ', '.join(genes) + "...")
     samples = updated_compute_samples(db, mutations=genes)
     results["samples"] = convert_samples_to_dict(samples)
     print("...done")
@@ -104,7 +115,7 @@ def produce_results_for_one_gene_set(genes, dataset):
     return results
 
 def produce_results(gene_combinations, dataset, save=True):
-    results = {gene_set: produce_results_for_one_gene_set(gene_set, dataset) for gene_set in gene_combinations}
+    results = {'_'.join(gene_set): produce_results_for_one_gene_set(gene_set, dataset) for gene_set in gene_combinations}
     if save:
         print("")
         print("Saving results...")
@@ -112,7 +123,7 @@ def produce_results(gene_combinations, dataset, save=True):
         if not os.path.isdir(location_dataset):
             os.mkdir(location_dataset)
         for gene_set, results_dict in results.items():
-            location_gene_set = os.path.join(location_results, '_'.join(gene_set))
+            location_gene_set = os.path.join(location_results, dataset, gene_set)
             if not os.path.isdir(location_gene_set):
                 os.mkdir(location_gene_set)
 
@@ -122,23 +133,123 @@ def produce_results(gene_combinations, dataset, save=True):
         print("...done")
 
 
+def produce_results_for_pathway_analysis(samples, genes_and_pathways, dataset, save=True):
+    '''
+    genes_and_pathways is a dictionary with the keys as the genes and or pathway names
+    and the values as a LIST of the gene(s) included. Singular genes should still be entered
+    as a list value.
+    '''
+    results = {}
+
+    print("Estimating fluxes MLE...")
+    mle = estimate_lambdas(samples, draws=1)
+    results["lambdas"] = convert_lambdas_to_dict(mle)
+    print("...done")
+    print("")
+
+    print("Computing fluxes confidence intervals (CI)...")
+    results["lambdas_cis"] = convert_lambdas_to_dict(
+        asymp_CI_lambdas(mle['lambdas'],
+                        samples,
+                        print_progress=False))
+    print("...done")
+
+    print("Importing mutation rates...")
+    if 'plus' in dataset:
+        results["mus"] = convert_mus_to_dict(genes_and_pathways, dataset[:dataset.index('_plus')], pathway=True)
+    else:
+        results["mus"] = convert_mus_to_dict(genes_and_pathways, dataset, pathway=True)
+    print("...done")
+    print("")
+
+    print("Computing selection coefficients...")
+    results["gammas"] = compute_gammas(results["lambdas"],
+                                    results["mus"])
+    results["gammas_cis"] = compute_CI_gamma(results["lambdas_cis"],
+                                        results["mus"])
+    print("...done")
+
+    if save:
+        print("")
+        print("Saving results...")
+        location_pathway_output = os.path.join(location_results, dataset, '_'.join(genes_and_pathways))
+        if not os.path.isdir(location_pathway_output):
+            os.makedirs(location_pathway_output)
+        for key, value in results.items():
+            np.save(os.path.join(location_pathway_output,
+                                f'{key}.npy'), value)
+        print("...done")
+
+    return results
+
 results_to_save = ["samples", "lambdas", "lambdas_cis", "mus",
                    "gammas", "gammas_cis"]
 
 
 
 def load_results(dataset):
-    results = {key:np.load(os.path.join(location_results,
-                                        f'{dataset}_{key}.npy'),
+    results = {analysis: 
+                {key: np.load(os.path.join(location_results, 
+                                        dataset, analysis,
+                                        f'{key}.npy'),
                            allow_pickle=True).item()
-               for key in results_to_save}
+                for key in results_to_save}
+               for analysis in [f for f in os.listdir(
+                   os.path.join(location_results, dataset)) 
+                   if not f.startswith('.')]}
 
     return results
 
 '''
-genes = ['TP53','KRAS','EGFR']
+EGFR_pathway_genes = ['BRAF','MEK','ERK','MAPK','MAP2K1','PIK3CA','PTEN','AKT1','NFKB','RAS','RAF','RAC','TSC1','TSC2','NF1','JAK1','JAK2','SHC','SOS','GRB2','STAT','MYC','FOXO3A','IRS1','IRS2','PDK','AMPK1','STK11']
+RAS_pathway_genes = pd.read_csv('~/Downloads/PID_RAS_PATHWAY.v7.5.1.tsv', sep = '\t').iloc[18,1].split(',')
+PI3K_AKT_pathway_genes = pd.read_csv('~/Downloads/PID_PI3KCI_AKT_PATHWAY.v7.5.1.tsv', sep = '\t').iloc[18,1].split(',')
+MTOR_pathway_genes = pd.read_csv('~/Downloads/PID_MTOR_4PATHWAY.v7.5.1.tsv', sep = '\t').iloc[18,1].split(',')
 
-#produce_results(genes, 'pan_data')
-#produce_results(genes, 'smoking_plus')
-produce_results(genes, 'nonsmoking_plus')
+EGFR_pathway_genes = list(set(EGFR_pathway_genes + RAS_pathway_genes + PI3K_AKT_pathway_genes + MTOR_pathway_genes))
+#set(EGFR_pathway_genes) - set(RAS_pathway_genes + PI3K_AKT_pathway_genes + MTOR_pathway_genes)
+EGFR_pathway_genes.pop(EGFR_pathway_genes.index('KRAS'))
+
+from locations import gene_list_file
+gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
+gene_list = [gene.upper() for gene in gene_list]
+gene_list = gene_list[:103]
+
+EGFR_pathway_genes = [gene for gene in EGFR_pathway_genes if gene in gene_list]
+
+mutations = {'KRAS':['KRAS'],'EGFR':['EGFR'],'EGFR_pathway':EGFR_pathway_genes}
+key = 'smoking_plus'
+
+db = filter_samples_for_genes(list(chain(*mutations.values())), key_filtered_dbs[key])
+#create new column that represents if any gene in the EGFR pathway is mutated
+pathway_grouped_db = db.assign(EGFR_pathway=db[EGFR_pathway_genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x))
+
+samples = updated_compute_samples(pathway_grouped_db, mutations = list(mutations.keys()), print_info=True)
+
+np.save(os.path.join(location_results, key,
+                        '_'.join(mutations.keys()),
+                        'samples.npy'),
+                    convert_samples_to_dict(samples))
+
+produce_results_for_pathway_analysis(samples, mutations, key)
+
+key = 'nonsmoking_plus'
+
+db = filter_samples_for_genes(list(chain(*mutations.values())), key_filtered_dbs[key])
+#create new column that represents if any gene in the EGFR pathway is mutated
+pathway_grouped_db = db.assign(EGFR_pathway=db[EGFR_pathway_genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x))
+
+samples = updated_compute_samples(pathway_grouped_db, mutations = list(mutations.keys()), print_info=True)
+
+np.save(os.path.join(location_results, key,
+                        '_'.join(mutations.keys()),
+                        'samples.npy'),
+                    convert_samples_to_dict(samples))
+
+produce_results_for_pathway_analysis(samples, mutations, key)
+'''
+
+'''
+for key in ['pan_data','smoking_plus','nonsmoking_plus']:
+    produce_results([['TP53','KRAS',gene] for gene in ['STK11','ARID1A']], key)
 '''
