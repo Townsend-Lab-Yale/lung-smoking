@@ -11,12 +11,22 @@ mutation of TP53 and KRAS.
 
 - Python, ideally installed with pyenv
   (https://github.com/pyenv/pyenv) to be able to have exactly the same
-  version (3.9.5) as the tested
+  version (3.9.5) as the tested, but otherwise at least 3.7 so that
+  the order of dictionaries is preserved.
 - R (in debian or ubuntu install the packages r-base and r-base-dev)
 - the development files for libcurl (OpenSSL flavour) are required for
   many R packages including RCurl (that is required for
   cancereffectsizeR). In debian or ubuntu install the
   libcurl4-openssl-dev package
+
+* Setup
+
+To prepare the system for running the analysis, within the ==code==
+directory run
+#+begin_src shell
+  ./setup.sh
+#+end_src
+and follow the instructions.
 
 * Data decisions
 
