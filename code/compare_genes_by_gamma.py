@@ -1,3 +1,6 @@
+## Get relevant gammas to make plotting in R easier. In python this is
+## done with import_results.py
+
 import pandas as pd
 import numpy as np
 from cancer_epistasis import compute_gammas

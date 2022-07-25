@@ -9,7 +9,11 @@ from filter_data import filter_samples_for_genes
 
 from count_combinations import updated_compute_samples
 from main import at_least_000_to_001_and_110_to_111
-from cancer_epistasis import asymp_CI_lambdas, compute_CI_gamma, convert_lambdas_to_dict, estimate_lambdas, compute_gammas
+from cancer_epistasis import asymp_CI_lambdas
+from cancer_epistasis import compute_CI_gamma
+from cancer_epistasis import convert_lambdas_to_dict
+from cancer_epistasis import estimate_lambdas
+from cancer_epistasis import compute_gammas
 from theory import build_S_as_array
 from theory import order_pos_lambdas
 
@@ -22,6 +26,7 @@ mutation_rate_dict = {
     for key in full_mutation_rate_file_names.keys()
 }
 
+## copied from cancer_epistasis
 def convert_samples_to_dict(samples):
     """Convert a samples array to a dictionary.
 
@@ -45,6 +50,8 @@ def convert_samples_to_dict(samples):
 
     return results_as_dict
 
+
+## modified from cancer_epistasis so that it can do pathways too
 def convert_mus_to_dict(genes, dataset, pathway=False):
     """Convert the dictionary with :const:`mutation_rates` to a dictionary
     indexed by the order of `genes`.
@@ -63,18 +70,22 @@ def convert_mus_to_dict(genes, dataset, pathway=False):
         mus = {(i*(0,) + (1,) + (M-i-1)*(0,)):mutation_rate_dict[dataset][list(genes.keys())[i]] if i in gene_indices
                     else sum([mutation_rate_dict[dataset][gene] for gene in list(genes.values())[i]])
                 for i in range(M)}
-        
-    
+
+
     return mus
 
+
+## new
 def at_least_000_to_010_and_001_to_011(samples):
     return np.all(samples[[0,1]] > 0)
 
 '''
-TODO: 
+TODO:
 - check if necessary sample counts are fulfilled based on user input
 - make bound changes for 4+ genes
 '''
+
+## new (should probably even go to cancer_epistasis)
 def produce_results_for_one_gene_set(genes, dataset):
     '''
     Calculates lambdas and gammas for a single set of genes, NOT for multiple maps
@@ -97,25 +108,29 @@ def produce_results_for_one_gene_set(genes, dataset):
 
     bound_changes = 0
     while mle[1].fun < -1e+20:
+        ## We figure out that when this happens for TP53+KRAS+third
+        ## gene models it is because our initial estimates for fluxes
+        ## to the third gene are way too large (the initial bounds are
+        ## [0, 1] so the initial estimate is 0.5)
         if len(genes) != 3:
-            raise Exception("Lambdas incalculable at bounds=1, suitable bound changes for more or less than are yet to be implemented")
+            raise Exception("Lambdas incalculable at bounds=1, suitable bound changes for more or less than 3 genes are yet to be implemented")
         if bound_changes == 4:
             return "incomputable"
         print(f"Algorithm did not converge changing bounds...")
         bound_changes += 1
         bounds = np.array(
             [1/(2**bound_changes),  # (0, 0, 0) -> (0, 0, 1)
-                1,                     # (0, 0, 0) -> (0, 1, 0)
-                1,                     # (0, 0, 1) -> (0, 1, 1)
-                1/(2**bound_changes),  # (0, 1, 0) -> (0, 1, 1)
-                1,                     # (0, 0, 0) -> (1, 0, 0)
-                1,                     # (0, 0, 1) -> (1, 0, 1)
-                1/(2**bound_changes),  # (1, 0, 0) -> (1, 0, 1)
-                1,                     # (0, 1, 0) -> (1, 1, 0)
-                1,                     # (1, 0, 0) -> (1, 1, 0)
-                1,                     # (0, 1, 1) -> (1, 1, 1)
-                1,                     # (1, 0, 1) -> (1, 1, 1)
-                1/(2**bound_changes)]) # (1, 1, 0) -> (1, 1, 1)
+             1,                     # (0, 0, 0) -> (0, 1, 0)
+             1,                     # (0, 0, 1) -> (0, 1, 1)
+             1/(2**bound_changes),  # (0, 1, 0) -> (0, 1, 1)
+             1,                     # (0, 0, 0) -> (1, 0, 0)
+             1,                     # (0, 0, 1) -> (1, 0, 1)
+             1/(2**bound_changes),  # (1, 0, 0) -> (1, 0, 1)
+             1,                     # (0, 1, 0) -> (1, 1, 0)
+             1,                     # (1, 0, 0) -> (1, 1, 0)
+             1,                     # (0, 1, 1) -> (1, 1, 1)
+             1,                     # (1, 0, 1) -> (1, 1, 1)
+             1/(2**bound_changes)]) # (1, 1, 0) -> (1, 1, 1)
         print(f"Proposed bounds: {bounds}")
         mle = estimate_lambdas(samples, draws=1,
                                 upper_bound_prior=bounds,
@@ -157,11 +172,16 @@ def produce_results_for_one_gene_set(genes, dataset):
 
     return results
 
+
 def produce_results(gene_combinations, dataset, save=True):
+    '''Takes NESTED LISTS for gene_combinations where within the list
+    is each set of genes to be tested
+
     '''
-    Takes NESTED LISTS for gene_combinations where within the list is each set of genes to be tested
-    '''
-    results = {'_'.join(gene_set): produce_results_for_one_gene_set(gene_set, dataset) for gene_set in gene_combinations}
+    results = {
+        '_'.join(gene_set):produce_results_for_one_gene_set(
+            gene_set, dataset)
+        for gene_set in gene_combinations}
     if save:
         print("")
         print("Saving results...")
@@ -276,14 +296,14 @@ results_to_save = ["samples", "lambdas", "lambdas_cis", "mus",
 
 
 def load_results(dataset):
-    results = {analysis: 
-                {key: np.load(os.path.join(location_results, 
+    results = {analysis:
+                {key: np.load(os.path.join(location_results,
                                         dataset, analysis,
                                         f'{key}.npy'),
                            allow_pickle=True).item()
                 for key in results_to_save}
                for analysis in [f for f in os.listdir(
-                   os.path.join(location_results, dataset)) 
+                   os.path.join(location_results, dataset))
                    if not f.startswith('.')]}
 
     return results
