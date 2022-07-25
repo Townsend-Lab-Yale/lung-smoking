@@ -1,9 +1,16 @@
+## Compute gene level selection without epistasis
+
+## Note: uses the default CES mutation rates, so mutation rates are
+## not the same as those used in the epistasis analysis, where the
+## mutation rate of a gene is the sum of the the mutation rates of its
+## observed variants
+
 library(cancereffectsizeR)
 library(data.table)
 library(ggplot2)
 library(ces.refset.hg19)
 
-location_data = '~/Desktop/Research/lung-smoking/data/'
+location_data = '../data/'
 
 smoking_samples = fread(paste0(location_data, 'smoking_sample_ids.txt'), header = F)$V1
 nonsmoking_samples = fread(paste0(location_data, 'nonsmoking_sample_ids.txt'), header = F)$V1
@@ -40,30 +47,30 @@ compute_gene_selection = function(cesa, genes){
   #' status (only exome/genome and MSK TGS samples), we only add variants that have
   #' coverage by these panels. We can ignore the other panel's not overlapping
   #' because we won't be using their panels anyway.
-  #' 
-  #' For the genes that are covered by the MSK-IMPACT panels (20 genes), 
-  #' only add the variants that are covered by the panels. 
+  #'
+  #' For the genes that are covered by the MSK-IMPACT panels (20 genes),
+  #' only add the variants that are covered by the panels.
   #' For the genes that we want that
   for_compound_1 = for_compound[unlist(lapply(for_compound$covered_in, function(x){any(c('msk341_regions','msk410_regions','msk468_regions') %in% x)}))]
   for_compound_2 = for_compound[gene %in% setdiff(unique(for_compound$gene), unique(for_compound_1$gene))]
   for_compound_2 = for_compound_2[unlist(lapply(for_compound_2$covered_in, function(x){'exome+' %in% x}))]
   for_compound = rbind(for_compound_1, for_compound_2)
-  
+
   comp = define_compound_variants(cesa, variant_table = for_compound, by = 'gene', merge_distance = Inf)
   print('Done compounding variants\nComputing cancer effect size...')
-  
+
   cesa = ces_variant(cesa = cesa, variants = comp,
                      samples = c(smoking_samples, panel_smoking_samples), run_name = 'smoking')
   cesa = ces_variant(cesa = cesa, variants = comp,
                      samples = c(nonsmoking_samples, panel_nonsmoking_samples), run_name = 'nonsmoking')
   cesa = ces_variant(cesa = cesa, variants = comp,
                      samples = c(smoking_samples, nonsmoking_samples, panel_smoking_samples, panel_nonsmoking_samples), run_name = 'combined')
-  
+
   return(cesa)
 }
 
 #' This line outputs the proportion of variants retained for each gene
-#table(for_compound$gene) / 
+#table(for_compound$gene) /
 #  table(cesa$variants[gene %in% genes & maf_prevalence > 0, gene])
 
 genes = as.vector(unlist(sorted_genes)) #sorted_genes from representing_selection_intensities.R
@@ -88,20 +95,20 @@ si_table$gene = gsub('\\.1','',si_table$gene)
 si_table$gene = factor(si_table$gene, levels = c('PBRM1','ATF7IP','ARID1A','ATM','STK11','TLR4','EGFR'))
 
 breaks <- unique(as.numeric(round(quantile(si_table$prevalence))))
-ggplot(data = si_table, aes(x = gene, y = selection_intensity, fill = status)) + 
+ggplot(data = si_table, aes(x = gene, y = selection_intensity, fill = status)) +
   coord_flip() +
-  scale_x_discrete(limits = rev) + 
-  geom_point(aes(color = prevalence, shape = status), size = 2, position = position_dodge(0.5)) + 
+  scale_x_discrete(limits = rev) +
+  geom_point(aes(color = prevalence, shape = status), size = 2, position = position_dodge(0.5)) +
   scale_shape_manual(values = c(16, 18)) +
-  geom_errorbar(aes(ymin = ci_low_95, ymax = ci_high_95), width = .2, color = "dark grey", position = position_dodge(0.5)) + 
+  geom_errorbar(aes(ymin = ci_low_95, ymax = ci_high_95), width = .2, color = "dark grey", position = position_dodge(0.5)) +
   geom_vline(xintercept = 1:(nrow(si_table)/2) + 0.5, size = 0.2, color = 'grey') +
   geom_vline(xintercept = 2.5, color = 'red') +
-  theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(color = 'light grey', size = 0.2), panel.background = element_rect(fill = 'white')) + 
-  ggtitle('Cancer Effect Sizes of TP53 and KRAS in Smoker and Nonsmoker Lung Adenocarcinoma') + 
+  theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(color = 'light grey', size = 0.2), panel.background = element_rect(fill = 'white')) +
+  ggtitle('Cancer Effect Sizes of TP53 and KRAS in Smoker and Nonsmoker Lung Adenocarcinoma') +
   xlab('Gene') +
-  ylab('Effect Size') + 
+  ylab('Effect Size') +
   scale_color_viridis_c(
     name = "variant prevalence", guide = "colorbar", trans = "log10",
     option = "plasma", breaks = breaks
-  ) + 
+  ) +
   guides(color = guide_colourbar(ticks = T))
