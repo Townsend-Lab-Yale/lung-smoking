@@ -50,7 +50,7 @@ echo -e "GENIE requires a username and password, "`
      `"have done so yet, go to:\r\n"`
      `"https://www.synapse.org/#!Synapse:syn24179660\r\n"`
      `"to register."
-python synapse_API.py
+python get_synapse_data.py
 deactivate
 echo "...done downloading GENIE data."
 echo ""
