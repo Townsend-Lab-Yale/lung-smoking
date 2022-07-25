@@ -144,7 +144,7 @@ clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
 * TODO [3/9] TODO list
-SCHEDULED: <2021-11-16 Tue>
+SCHEDULED: <2022-07-28 Thu>
 
 - [X] Track theory.py and check for duplicate code in
   count_combinations.py
@@ -176,6 +176,8 @@ smoking and nonsmoking
   nonsmoking have less uncertainty
 
 - [ ] Add KRAS and TP53 in the normal to 001 graph
+
+  Run model with just KRAS and TP53
 
 - [ ] Include graph of paths in top right corner to distinguish
   000->001 from 110->110
@@ -233,3 +235,21 @@ Two genes I removed because I do not trust the flux estimate:
 - CSMD3
 - TTN
 I'll rerun the epistasis analysis for those
+
+* TODO Use get_cBioPortal_data.R in setup.sh
+SCHEDULED: <2022-07-26 Tue>
+
+* TODO Check how main.py produces results
+
+Also import_results that handles those results. Try to make it so that
+it produces results that can be plotted with the regular functions
+from plotting.py and figures.py
+
+* TODO Use updated_compute_samples everywhere
+
+That is a version of compute_samples that uses a pandas dataframe of
+patients instead of the MAF file directly.
+
+* TODO Add code to count_combinations for handling pathways
+
+In general aggregating multiple genes
