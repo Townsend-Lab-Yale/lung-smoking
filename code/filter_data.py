@@ -39,23 +39,6 @@ panel_nonsmoking_sample_ids = pd.read_csv(panel_nonsmoking_sample_ids_file,
                                     header=None)[0].to_list()
 
 
-def filter_db_for_gene(gene, db, print_info=False):
-    """Remove for the database `db` all patients from panels that do not
-    include the `gene`.
-
-    Return the filtered database.
-
-    """
-    panels_to_remove = [
-        panel for panel in all_panels
-        if gene not in all_panel_genes[
-                all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()]
-    if print_info:
-        print("Panels excluded because they did not sequence "
-              + gene + ':' + str(panels_to_remove))
-    return db[~db['Panel'].isin(panels_to_remove)]
-
-
 def filter_samples_for_genes(genes, db, print_info=False):
     """Remove for the database `db` all patients from panels that do not
     include the `genes`.
@@ -65,11 +48,11 @@ def filter_samples_for_genes(genes, db, print_info=False):
     """
     if type(genes) == str:
         genes = [genes]
-    
+
     panels_to_remove = [
-        panel for panel in all_panels 
+        panel for panel in all_panels
         if any(gene not in all_panel_genes[
-            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist() 
+            all_panel_genes['SEQ_ASSAY_ID'] == panel]['Hugo_Symbol'].tolist()
             for gene in genes)]
 
     samples_to_remove = all_panel_samples[all_panel_samples['Panel'].isin(panels_to_remove)]['Sample ID']
@@ -118,5 +101,5 @@ genes_per_sample = pd.read_csv(genes_per_sample_file_name)
 key_filtered_dbs = {key: filter_db_for_key(key, genes_per_sample)
                    for key in results_keys}
 
-dbs_filtered_for_TP53_KRAS = {key: filter_samples_for_genes(['TP53','KRAS'], db) 
+dbs_filtered_for_TP53_KRAS = {key: filter_samples_for_genes(['TP53','KRAS'], db)
                             for key, db in key_filtered_dbs.items()}
