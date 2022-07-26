@@ -171,7 +171,7 @@ flux TP53+KRAS compared to wildtype
 selection TP53+KRAS compared to wildtype
 smoking and nonsmoking
 
-- [ ] Calculate the highest number with 111 out of all genes and do
+- [X] Calculate the highest number with 111 out of all genes and do
   the figures with those to see if estimates of 110->110 for
   nonsmoking have less uncertainty
 
@@ -212,6 +212,17 @@ a linear relationship between age and cancer"):
 - Krimmel, J.D.; Salk, J.J.; Risques, R.A. Cancer-like mutations in
   non-cancer tissue: Towards a better understanding of multistep
   carcinogenesis. Transl. Cancer Res. 2016, 5, S1302–S1304.
+
+Regarding smoking:
+
+- Devarakonda et al. Genomic Profiling of Lung Adenocarcinoma in
+  Never-Smokers https://ascopubs.org/doi/full/10.1200/JCO.21.01691
+
+Regarding both:
+
+- Huang et al. Single-cell analysis of somatic mutations in human
+  bronchial epithelial cells in relation to aging and smoking
+  https://www.nature.com/articles/s41588-022-01035-w
 
 * Notes for presentation
 
