@@ -2,6 +2,9 @@ import os
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+from statsmodels.graphics.mosaicplot import mosaic
 
 from locations import location_figures
 
@@ -1025,7 +1028,82 @@ def plot_all():
     return scatter_plots
 
 
+## * Mosaic plot of proportions of lung cancer cases
+
+## Based on Table 2 from Kenfield SA, Wei EK, Stampfer MJ, Rosner BA,
+## Colditz GA. Comparison of aspects of smoking among the four
+## histological types of lung cancer. Tob Control. 2008
+
+kenfield_table_2 = {"L-C":[11, 7, 19, 23],
+                    "SqC":[7, 1, 4, 34, 76],
+                    "S-C":[2, 1, 5, 60, 110],
+	            "Adenocarcinoma":[85, 4, 13, 83, 185]}
+
+kenfield_data = {(cancer_type, 'Non-smoker'):table_values[0]
+                 for cancer_type, table_values in kenfield_table_2.items()}
+kenfield_data.update({(cancer_type, 'Smoker'):np.sum(table_values[1:])
+                      for cancer_type, table_values in kenfield_table_2.items()})
+
+cancer_type_colors = [cm.get_cmap("tab10")(x)
+                      for x in np.linspace(0, 1, 10)]
+
+# Create a mosaic plot using statsmodels
+
+def create_mosaic_plot(plot_name=None):
+
+    def tile_props(key):
+        cancer_type, smoking_status = key
+        colors = {"L-C":cancer_type_colors[7],
+                  "SqC":cancer_type_colors[4],
+                  "S-C":cancer_type_colors[3],
+	          "Adenocarcinoma":cancer_type_colors[0]}
+        if smoking_status == "Non-smoker":
+            return {'color':colors[cancer_type], 'hatch':"/", 'alpha':0.4}
+        else:
+            return {'color':colors[cancer_type], 'hatch':"-", 'alpha':0.95}
+
+    fig = fig = plt.figure(figsize=[3.61*1.1, 2.35*1.1])
+    ax = fig.add_subplot(111)
+
+    mosaic(kenfield_data,
+           ax=ax,
+           axes_label=True,
+           gap=0.015,
+           properties=tile_props,
+           labelizer=lambda k: '')
+
+    ax.yaxis.set_tick_params(rotation=90,
+                             labelright=True,
+                             right=True,
+                             labelleft=False,
+                             left=False)
+    for tick_label in ax.yaxis.get_ticklabels():
+        tick_label.set_verticalalignment('center')
+
+    if plot_name is None:
+        plot_name = "mosaic_plot.png"
+    fig.savefig(os.path.join(location_figures,
+                             plot_name),
+                dpi=1000)
+    plt.close('all')
+    return fig
+
+
+
+# import plotly.express as px
+
+# # Create DataFrame from the given data
+# data = {
+#     'SmokingStatus': ['Non-smokers', 'Smokers', 'Non-smokers', 'Smokers', 'Non-smokers', 'Smokers', 'Non-smokers', 'Smokers'],
+#     'CancerType': ['Squamous Cell Carcinoma', 'Squamous Cell Carcinoma', 'Small Cell Carcinoma', 'Small Cell Carcinoma', 'Adenocarcinoma', 'Adenocarcinoma', 'Large Cell Carcinoma', 'Large Cell Carcinoma'],
+#     'Counts': [7, 115, 2, 176, 85, 285, 11, 49]
+# }
+
+# df = pd.DataFrame(data)
+
+# # Create a sunburst plot
+# fig = px.sunburst(df, path=['SmokingStatus', 'CancerType'], values='Counts', title='Cancer Types by Smoking Status')
+# fig.show()
+
 if __name__ == "__figures__":
     plot_all()
-
-plot_all()
