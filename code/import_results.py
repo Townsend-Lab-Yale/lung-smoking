@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from locations import location_output
+from locations import pts_by_mutation_file
 from locations import results_keys
 from locations import samples_per_combination_files
 
@@ -215,6 +216,12 @@ def provide_all_relevant_lambdas_and_gammas():
                     for key in results_keys})
 
     return lambdas, gammas
+
+
+
+## * Number of patients with mutation per gene
+
+pts_per_mutation = pd.read_csv(pts_by_mutation_file, index_col=0)
 
 
 
