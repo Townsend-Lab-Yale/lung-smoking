@@ -10,6 +10,9 @@ from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
 
+from cancer_epistasis import compute_gammas
+from cancer_epistasis import compute_CI_gamma
+
 from theory import build_S_with_tuples
 from theory import build_S_as_array
 from theory import order_pos_lambdas
@@ -65,7 +68,7 @@ def compute_samples_for_all_genes(key=None, save_results=True):
             print(f"Computing gene {i+1}/{number_of_genes} "
                   f"({round((i+1)/number_of_genes, 2)*100}% done)")
         db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key])
-        
+
         if gene in db.columns:
             counts[gene] = updated_compute_samples(db,
                                         mutations=['TP53', 'KRAS', gene])
@@ -107,7 +110,7 @@ def are_all_fluxes_computable(samples):
     return np.all(samples[:-1] > 0)
 
 def at_least_000_to_001_and_110_to_111(samples):
-    """Return True if the flux from wildtype to only the third gene and 
+    """Return True if the flux from wildtype to only the third gene and
     the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
     return np.all(samples[[0,-2]] > 0)
 
@@ -135,6 +138,9 @@ def lambdas_from_samples(samples):
     bound_changes = 0
     while MLE[1].fun < -1e+20:
         if bound_changes == 4:
+            print(f"We have changed the bounds {bound_changes} already, "
+                  "and the algorithm has not converged. Concluding that these "
+                  "samples are incomputable.")
             return "incomputable"
         print(f"Algorithm did not converge changing bounds...")
         bound_changes += 1
@@ -162,7 +168,7 @@ def lambdas_from_samples(samples):
 
 def compute_all_lambdas(key, all_counts, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
-    iterating over all genes in :const:`gene_list`.in 
+    iterating over all genes in :const:`gene_list`.in
 
     :type key: str or NoneType
     :param key: What estimates to use. Can be one of:
@@ -223,7 +229,7 @@ def compute_all_lambdas(key, all_counts, save_results=True):
                 with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
                     incomputable_output_file.write(gene + '\n')
                 continue
-            
+
             states_with_zero = [tuple(x) for x in S_3[samples == 0]]
             indices_with_zero = [order_pos_lambdas(S_3).index((x, tuple(y))) for x, y in order_pos_lambdas(S_3) if x in states_with_zero]
             for x in indices_with_zero: mle['lambdas'][x] = np.nan
@@ -252,12 +258,66 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
     return lambdas_mles, lambdas_cis
 
-def compute_TP53_KRAS_lambdas(samples):
+
+def compute_TP53_KRAS_model(key='pan_data', save_results=True):
+    """Compute a model for M=2 that only includes TP53 and KRAS.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: dict
+    :return: A dictionary with all results (lambdas, mus and gammas).
+
+    """
+    samples = pd.read_csv(samples_per_combination_files[key], index_col='third gene')
+
+    samples = samples.loc['EGFR'] ## these ones are for 3 gene model
+
+    samples_00 = samples["(0, 0, 0)"] + samples["(0, 0, 1)"]
+    samples_01 = samples["(0, 1, 0)"] + samples["(0, 1, 1)"]
+    samples_10 = samples["(1, 0, 0)"] + samples["(1, 0, 1)"]
+    samples_11 = samples["(1, 1, 0)"] + samples["(1, 1, 1)"]
+
+    samples = [samples_00, samples_01, samples_10, samples_11]
+
+    results = {}
+
     bounds = np.repeat(1,4)
     MLE = estimate_lambdas(samples, draws=1,
                            upper_bound_prior=bounds,
-                           kwargs={'return_raw':True})
-    return MLE[0]
+                           kwargs={'return_raw':True})[0]
+
+    results[('lambdas', 'mle')] = convert_lambdas_to_dict(MLE)
+
+    results[('lambdas', 'cis')] = convert_lambdas_to_dict(
+        asymp_CI_lambdas(MLE['lambdas'], samples))
+
+    mus = pd.read_csv(os.path.join(location_output,
+                                   f"{key}_mutation_rates.txt"),
+                      index_col='gene')
+
+    mus = {(1, 0): float(mus.loc['TP53']),
+           (0, 1): float(mus.loc['KRAS'])}
+    results['mus'] = mus
+
+    results[('gammas', 'mle')] = compute_gammas(results[('lambdas', 'mle')], mus)
+    results[('gammas', 'cis')] = compute_CI_gamma(results[('lambdas', 'cis')], mus)
+
+    if save_results:
+        print("Saving results...")
+
+        np.save(os.path.join(location_output,
+                             f"results_TP53_KRAS_model.npy"),
+                results)
+
+    return results
+
 
 def main(recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of the all the fluxes.
