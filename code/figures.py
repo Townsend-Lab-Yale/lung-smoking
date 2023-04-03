@@ -226,9 +226,11 @@ def top_genes(rates, top=3):
                         key=lambda item: item[1],
                         reverse=True)[:top])
 
-top_genes_no_epi = set.union(*[set(top_genes(lambdas, top=5).keys())
-                               for lambdas in [all_lambdas[key, 'no_epi', 'mles']
-                                                         for key in results_keys]])
+
+## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
+# top_genes_no_epi = set.union(*[set(top_genes(lambdas, top=5).keys())
+#                                for lambdas in [all_lambdas[key, 'no_epi', 'mles']
+#                                                          for key in results_keys]])
 
 top_genes_from_110 = set.union(
     set(top_genes(all_lambdas['pan_data', 'from_110', 'mles'],
@@ -540,195 +542,203 @@ def plot_all():
 
     scatter_plots = {}
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis include TP53 and KRAS
     ## ** Pan data
 
-    key, epi_key = ('pan_data', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('pan_data', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    axis_args_lambdas= {
-        'lim':1.7,
-        'label':"Flux to gene",
-        'tick_each':0.5,
-        'tick_minor_each':0.1,
-        'scale':1}
+    # axis_args_lambdas= {
+    #     'lim':1.7,
+    #     'label':"Flux to gene",
+    #     'tick_each':0.5,
+    #     'tick_minor_each':0.1,
+    #     'scale':1}
 
-    axis_args_gammas= {
-        'lim':775,
-        'label':("Selection of gene "
-                 "(thousands)"),
-        'tick_each':100,
-        'tick_minor_each':50,
-        'scale':10**3}
+    # axis_args_gammas= {
+    #     'lim':775,
+    #     'label':("Selection of gene "
+    #              "(thousands)"),
+    #     'tick_each':100,
+    #     'tick_minor_each':50,
+    #     'scale':10**3}
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        left_top_genes={'KEAP1', 'SPATA3'},
-        bottom_genes={'RYR2'},
-        plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     left_top_genes={'KEAP1', 'SPATA3'},
+    #     bottom_genes={'RYR2'},
+    #     plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis include TP53 and KRAS
     ## ** Smoking
 
-    key, epi_key = ('smoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('smoking', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        left_top_genes={'KEAP1', 'BRAF'},
-        left_bottom_genes={'SPATA3'},
-        bottom_genes={'STK11', 'RYR2'},
-        title="Smoking",
-        plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     left_top_genes={'KEAP1', 'BRAF'},
+    #     left_bottom_genes={'SPATA3'},
+    #     bottom_genes={'STK11', 'RYR2'},
+    #     title="Smoking",
+    #     plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis include TP53 and KRAS but not EGFR
     ## ** Non-smoking
 
-    key, epi_key = ('nonsmoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('nonsmoking', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        bottom_genes={'RYR2', 'KRAS', 'BRAF'},
-        title="Non-smoking",
-        plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53_no_EGRF.png")
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     bottom_genes={'RYR2', 'KRAS', 'BRAF'},
+    #     title="Non-smoking",
+    #     plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53_no_EGRF.png")
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis include TP53 and KRAS with EGFR
     ## ** Non-smoking
 
-    axis_args_lambdas= {
-        'lim':1.7,
-        'label':"Flux to gene",
-        'tick_each':0.5,
-        'tick_minor_each':0.1,
-        'scale':1}
+    # axis_args_lambdas= {
+    #     'lim':1.7,
+    #     'label':"Flux to gene",
+    #     'tick_each':0.5,
+    #     'tick_minor_each':0.1,
+    #     'scale':1}
 
-    axis_args_gammas= {
-        'lim':1.55,
-        'label':("Selection of gene "
-                 "(millions)"),
-        'tick_each':0.5,
-        'tick_minor_each':0.1,
-        'scale':10**6}
+    # axis_args_gammas= {
+    #     'lim':1.55,
+    #     'label':("Selection of gene "
+    #              "(millions)"),
+    #     'tick_each':0.5,
+    #     'tick_minor_each':0.1,
+    #     'scale':10**6}
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        bottom_genes={'RYR2', 'BRAF'},
-        left_top_genes={'KRAS', 'SPATA3'},
-        title="Non-smoking",
-        plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     bottom_genes={'RYR2', 'BRAF'},
+    #     left_top_genes={'KRAS', 'SPATA3'},
+    #     title="Non-smoking",
+    #     plot_name = f"fluxes_and_selections_{key}_{epi_key}_with_KRAS_TP53.png")
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis zoom in
     ## ** Pan data
 
-    key, epi_key = ('pan_data', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('pan_data', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    axis_args_lambdas= {
-        'lim':0.44,
-        'label':"Flux to gene",
-        'tick_each':0.1,
-        'tick_minor_each':0.01,
-        'scale':1}
+    # axis_args_lambdas= {
+    #     'lim':0.44,
+    #     'label':"Flux to gene",
+    #     'tick_each':0.1,
+    #     'tick_minor_each':0.01,
+    #     'scale':1}
 
-    axis_args_gammas= {
-        'lim':160,
-        'label':("Selection of gene "
-                 "(thousands)"),
-        'tick_each':50,
-        'tick_minor_each':10,
-        'scale':10**3}
+    # axis_args_gammas= {
+    #     'lim':160,
+    #     'label':("Selection of gene "
+    #              "(thousands)"),
+    #     'tick_each':50,
+    #     'tick_minor_each':10,
+    #     'scale':10**3}
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi).difference(
-            {'TP53', 'KRAS'}),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        left_top_genes={'KEAP1', 'SPATA3'})
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
+    #         {'TP53', 'KRAS'}),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     left_top_genes={'KEAP1', 'SPATA3'})
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis zoom in
     ## ** Smoking
 
-    key, epi_key = ('smoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('smoking', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi).difference(
-            {'TP53', 'KRAS'}),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        left_top_genes={'BRAF', 'SPATA3'},
-        title="Smoking",
-        bottom_genes={'STK11'})
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
+    #         {'TP53', 'KRAS'}),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     left_top_genes={'BRAF', 'SPATA3'},
+    #     title="Smoking",
+    #     bottom_genes={'STK11'})
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
 
 
+    ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis zoom in
     ## ** Non-smoking
 
-    key, epi_key = ('nonsmoking', 'no_epi')
-    print(f"Plotting {key}, {epi_key}...")
+    # key, epi_key = ('nonsmoking', 'no_epi')
+    # print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
-        key,
-        epi_key,
-        genes=set.union(top_genes_no_epi, top_genes_epi).difference(
-            {'TP53', 'KRAS'}),
-        genes_to_annotate=top_genes_no_epi,
-        axis_args_lambdas=axis_args_lambdas,
-        axis_args_gammas=axis_args_gammas,
-        title="Non-smoking")
+    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    #     key,
+    #     epi_key,
+    #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
+    #         {'TP53', 'KRAS'}),
+    #     genes_to_annotate=top_genes_no_epi,
+    #     axis_args_lambdas=axis_args_lambdas,
+    #     axis_args_gammas=axis_args_gammas,
+    #     title="Non-smoking")
 
-    print("...done.")
-    print("")
+    # print("...done.")
+    # print("")
+
 
 
     ## * Epistasis from normal

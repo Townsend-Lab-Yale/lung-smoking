@@ -12,16 +12,16 @@ from locations import samples_per_combination_files
 mutation_rates = {
     key:pd.read_csv(os.path.join(location_output,
                                  f'{key}_mutation_rates.txt'),
-                    index_col=0)['rate'].to_dict()
+                    index_col=0).to_dict()
     for key in results_keys if 'plus' not in key}
 
 mutation_rates['smoking_plus'] = pd.read_csv(os.path.join(location_output,
                                  'smoking_mutation_rates.txt'),
-                                 index_col=0)['rate'].to_dict()
+                                 index_col=0).to_dict()
 
 mutation_rates['nonsmoking_plus'] = pd.read_csv(os.path.join(location_output,
                                  'nonsmoking_mutation_rates.txt'),
-                                 index_col=0)['rate'].to_dict()
+                                 index_col=0).to_dict()
 
 
 
@@ -76,18 +76,20 @@ def compute_lambdas(gammas, mu):
         return {x_y:compute_gammas(the_gamma, mu)
                 for x_y, the_gamma in gammas.items()}
 
-fluxes_ne_mles = {
-    key:{gene:compute_lambdas(selection_ne_mles[key][gene],
-                              mutation_rates[key][gene])
-         for gene in selection_ne_mles[key].keys()}
-    for key in results_keys}
+
+## TODO: Fix bug. Keys here are not matching here.
+# fluxes_ne_mles = {
+#     key:{gene:compute_lambdas(selection_ne_mles[key][gene],
+#                               mutation_rates[key][gene])
+#          for gene in selection_ne_mles[key].keys()}
+#     for key in ['smoking', 'nonsmoking', 'smoking_plus', 'nonsmoking_plus']}
 
 
-fluxes_ne_cis = {
-    key:{gene:compute_lambdas(selection_ne_cis[key][gene],
-                              mutation_rates[key][gene])
-         for gene in selection_ne_cis[key].keys()}
-    for key in results_keys}
+# fluxes_ne_cis = {
+#     key:{gene:compute_lambdas(selection_ne_cis[key][gene],
+#                               mutation_rates[key][gene])
+#          for gene in selection_ne_cis[key].keys()}
+#     for key in results_keys}
 
 
 ## * Load fluxes with epistasis
@@ -187,10 +189,13 @@ def provide_all_relevant_lambdas_and_gammas():
 
     """
 
-    lambdas = {(key, 'no_epi', 'mles'):fluxes_ne_mles[key]
-               for key in results_keys}
-    lambdas.update({(key, 'no_epi', 'cis'):fluxes_ne_cis[key]
-               for key in results_keys})
+    lambdas = {}
+
+    ## TODO: Needs to fix bug above keys are not matching
+    # lambdas.update({(key, 'no_epi', 'mles'):fluxes_ne_mles[key]
+    #                           for key in results_keys})
+    # lambdas.update({(key, 'no_epi', 'cis'):fluxes_ne_cis[key]
+    #            for key in results_keys})
 
     lambdas.update({(key, 'from_110', 'mles'):filter_110_to_111(fluxes_mles[key])
                     for key in results_keys})
