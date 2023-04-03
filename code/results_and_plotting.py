@@ -168,6 +168,7 @@ def produce_results_for_one_gene_set(genes, dataset):
                                        results["mus"])
     results["gammas_cis"] = compute_CI_gamma(results["lambdas_cis"],
                                            results["mus"])
+
     print("...done")
 
     return results
@@ -376,5 +377,7 @@ EGFR_pathway_genes = [gene for gene in EGFR_pathway_genes if gene in gene_list]
 for key in ['pan_data','smoking_plus','nonsmoking_plus']:
     produce_results([['KRAS','EGFR',gene] for gene in EGFR_pathway_genes if gene != 'CCNE1'], key)
 '''
-for key in ['pan_data','smoking_plus','nonsmoking_plus']:
-    produce_results([['TP53','KRAS','STK11','KEAP1']], key)
+
+def main():
+    for key in ['pan_data','smoking_plus','nonsmoking_plus']:
+        produce_results([['TP53','KRAS','STK11','KEAP1']], key)
