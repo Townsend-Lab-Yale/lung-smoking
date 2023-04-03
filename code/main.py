@@ -320,7 +320,7 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
 
 
 def main(recompute_samples_per_combination=False, save_results=True):
-    """Main method for the estimation of the all the fluxes.
+    """Main method for the estimation of all the fluxes.
 
     :type recompute_samples_per_combination: bool
     :param recompute_samples_per_combination: If True force
