@@ -1,5 +1,5 @@
 #'
-#' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis
+#' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis. It assumes that the working directory is set to variants
 #'
 
 .libPaths(c("./.Rlibs", .libPaths()))
@@ -13,7 +13,6 @@ source('maf_construction.R')
 
 #~~~~~~~~~~~~#
 
-#' NOTE: Different users will need to change this
 location_data = '../../data/'
 location_output = '../../output/'
 
@@ -26,7 +25,7 @@ save_results = TRUE
 source('create_cesa_for_epistasis.R')
 
 #' List of genes for which to calculate variant-level mutation rates
-gene_df = fread(paste0(location_data,"genes_list.txt"), header = F)
+gene_df = fread(paste0(location_data, "genes_list.txt"), header = F)
 colnames(gene_df) = 'gene'
 gene_df[,gene := toupper(gene)]
 
