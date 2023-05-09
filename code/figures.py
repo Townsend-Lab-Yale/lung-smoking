@@ -7,13 +7,39 @@ import matplotlib.cm as cm
 from statsmodels.graphics.mosaicplot import mosaic
 
 from locations import location_figures
+from locations import location_output
 
 from import_results import provide_all_relevant_lambdas_and_gammas
 from import_results import results_keys
 from import_results import pts_per_mutation
 from import_results import samples_per_combination
+from import_results import mutation_rates
+
+from landscape_plotting import plot_landscape
 
 all_lambdas, all_gammas = provide_all_relevant_lambdas_and_gammas()
+
+results_TP53_KRAS_smoking = np.load(
+    os.path.join(location_output,
+                 "results_TP53_KRAS_model_smoking_plus.npy"),
+    allow_pickle=True).item()
+
+results_TP53_KRAS_nonsmoking = np.load(
+    os.path.join(location_output,
+                 "results_TP53_KRAS_model_nonsmoking_plus.npy"),
+    allow_pickle=True).item()
+
+
+results_TP53_KRAS_EGFR_smoking = np.load(
+    os.path.join(location_output,
+                 "results_TP53_KRAS_EGFR_model_smoking_plus.npy"),
+    allow_pickle=True).item()
+
+results_TP53_KRAS_EGFR_nonsmoking = np.load(
+    os.path.join(location_output,
+                 "results_TP53_KRAS_EGFR_model_nonsmoking_plus.npy"),
+    allow_pickle=True).item()
+
 
 
 default_axis_args_lambdas= {
@@ -39,7 +65,7 @@ def make_tick_labels(axis_args):
     round_to = None
     if scale == 1:
         scale_label = ''
-        round_to = 1
+        round_to = 2
     elif scale == 1000:
         scale_label = 'K'
     elif scale == 10**6:
@@ -220,6 +246,7 @@ def interesting_genes(lambdas,
         for_sure_include = set()
 
     return set.union(high_lambda_genes, high_gamma_genes, for_sure_include)
+
 
 def top_genes(rates, top=3):
      return dict(sorted(rates.items(),
@@ -540,7 +567,7 @@ def plot_all():
     #     'tick_labels':["0", "0.05", "0.1", "0.15", "0.2", "0.25", "0.3", "0.35"]
     # }
 
-    scatter_plots = {}
+    all_plots = {}
 
     ## TODO: Needs to fix bug on import_figures, where keys are not matching for no_epi
     ## * No epistasis include TP53 and KRAS
@@ -564,7 +591,7 @@ def plot_all():
     #     'tick_minor_each':50,
     #     'scale':10**3}
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -586,7 +613,7 @@ def plot_all():
     # key, epi_key = ('smoking', 'no_epi')
     # print(f"Plotting {key}, {epi_key}...")
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -610,7 +637,7 @@ def plot_all():
     # key, epi_key = ('nonsmoking', 'no_epi')
     # print(f"Plotting {key}, {epi_key}...")
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -644,7 +671,7 @@ def plot_all():
     #     'tick_minor_each':0.1,
     #     'scale':10**6}
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -682,7 +709,7 @@ def plot_all():
     #     'tick_minor_each':10,
     #     'scale':10**3}
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
@@ -703,7 +730,7 @@ def plot_all():
     # key, epi_key = ('smoking', 'no_epi')
     # print(f"Plotting {key}, {epi_key}...")
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
@@ -726,7 +753,7 @@ def plot_all():
     # key, epi_key = ('nonsmoking', 'no_epi')
     # print(f"Plotting {key}, {epi_key}...")
 
-    # scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    # all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
     #     key,
     #     epi_key,
     #     genes=set.union(top_genes_no_epi, top_genes_epi).difference(
@@ -738,7 +765,6 @@ def plot_all():
 
     # print("...done.")
     # print("")
-
 
 
     ## * Epistasis from normal
@@ -762,7 +788,7 @@ def plot_all():
         'tick_minor_each':5,
         'scale':10**3}
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -784,7 +810,7 @@ def plot_all():
     key, epi_key = ('smoking', 'from_normal')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -807,7 +833,7 @@ def plot_all():
     key, epi_key = ('nonsmoking', 'from_normal')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -845,7 +871,7 @@ def plot_all():
         'tick_minor_each':0.1,
         'scale':10**6}
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -867,7 +893,7 @@ def plot_all():
     key, epi_key = ('smoking', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -890,7 +916,7 @@ def plot_all():
     key, epi_key = ('nonsmoking', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -912,7 +938,7 @@ def plot_all():
     key, epi_key = ('smoking_plus', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -935,7 +961,7 @@ def plot_all():
     key, epi_key = ('nonsmoking_plus', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -973,7 +999,7 @@ def plot_all():
     key, epi_key = ('pan_data', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -995,7 +1021,7 @@ def plot_all():
     key, epi_key = ('smoking', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -1018,7 +1044,7 @@ def plot_all():
     key, epi_key = ('nonsmoking', 'from_110')
     print(f"Plotting {key}, {epi_key}...")
 
-    scatter_plots[(key, epi_key)] = plot_lambdas_gammas(
+    all_plots[('scatter', key, epi_key)] = plot_lambdas_gammas(
         key,
         epi_key,
         genes=set.union(top_genes_no_epi, top_genes_epi),
@@ -1035,7 +1061,8 @@ def plot_all():
     print("")
 
 
-    return scatter_plots
+    return all_plots
+
 
 
 ## * Mosaic plot of proportions of lung cancer cases
@@ -1091,7 +1118,7 @@ def create_mosaic_plot(plot_name=None):
         tick_label.set_verticalalignment('center')
 
     if plot_name is None:
-        plot_name = "mosaic_plot.png"
+        plot_name = "lc_types_by_smoking_mosaic_plot.png"
     fig.savefig(os.path.join(location_figures,
                              plot_name),
                 dpi=1000)
@@ -1100,20 +1127,458 @@ def create_mosaic_plot(plot_name=None):
 
 
 
-# import plotly.express as px
+def plot_xs_vs_ys_scatter(xs_key,
+                          ys_key=None,
+                          xs="lambdas",
+                          ys="lambdas",
+                          xs_epi_key='from_normal',
+                          ys_epi_key='from_110',
+                          genes=None,
+                          with_cis=True,
+                          axis_args_xs=None,
+                          axis_args_ys=None,
+                          genes_to_annotate=None,
+                          always_annotate_genes=None,
+                          xs_cut_for_annotate=np.inf,
+                          ys_cut_for_annotate=np.inf,
+                          annotate_adjust_x=0,
+                          annotate_adjust_y=0,
+                          bottom_genes=None,
+                          left_top_genes=None,
+                          left_bottom_genes=None,
+                          title=None,
+                          include_x_equal_y_line=True,
+                          plot_name=None,
+                          dpi=300):
+    """Create a scatter plot with the xs and the ys values for each
+    gene.
 
-# # Create DataFrame from the given data
-# data = {
-#     'SmokingStatus': ['Non-smokers', 'Smokers', 'Non-smokers', 'Smokers', 'Non-smokers', 'Smokers', 'Non-smokers', 'Smokers'],
-#     'CancerType': ['Squamous Cell Carcinoma', 'Squamous Cell Carcinoma', 'Small Cell Carcinoma', 'Small Cell Carcinoma', 'Adenocarcinoma', 'Adenocarcinoma', 'Large Cell Carcinoma', 'Large Cell Carcinoma'],
-#     'Counts': [7, 115, 2, 176, 85, 285, 11, 49]
-# }
+    :type xs_key: str or NoneType
+    :param xs_key: What estimates to use. Can be one of:
+        - 'pan_data'
+        - 'smoking'
+        - 'nonsmoking'
+        - 'smoking_plus'
+        - 'nonsmoking_plus'
 
-# df = pd.DataFrame(data)
+    :type ys_key: str or NoneType
+    :param ys_key: What estimates to use. Can be one of:
+        - 'pan_data'
+        - 'smoking'
+        - 'nonsmoking'
+        - 'smoking_plus'
+        - 'nonsmoking_plus'
+        If None is provided, then use `xs_key`
 
-# # Create a sunburst plot
-# fig = px.sunburst(df, path=['SmokingStatus', 'CancerType'], values='Counts', title='Cancer Types by Smoking Status')
-# fig.show()
+    :type xs: str
+    :param xs: What to use for xs values. Can be one of:
+        - 'gammas' (selection coefficients, default)
+        - 'lambdas' (fluxes)
+        - 'mus' (mutation rates)
+
+    :type ys: str
+    :param ys: What to use for xs values. Can be one of:
+        - 'gammas' (selection coefficients, default)
+        - 'lambdas' (fluxes)
+        - 'mus' (mutation rates)
+
+    :type xs_epi_key: str
+    :param xs_epi_key: If 'no_epi' (default), do not
+        consider epistastic effects. Otherwise consider epistatic
+        effects in a model with 3 genes that includes TP53, KRAS and a
+        third gene and plot the estimates of fluxes and selection
+        coefficients from either the normal genotype (if `epi_key` is
+        'from_normal') or the TP53+KRAS genotype (if `epi_key` is
+        'from_110') to the mutation of the third gene.
+
+    :type ys_epi_key: str
+    :param ys_epi_key: If 'no_epi' (default), do not
+        consider epistastic effects. Otherwise consider epistatic
+        effects in a model with 3 genes that includes TP53, KRAS and a
+        third gene and plot the estimates of fluxes and selection
+        coefficients from either the normal genotype (if `epi_key` is
+        'from_normal') or the TP53+KRAS genotype (if `epi_key` is
+        'from_110') to the mutation of the third gene.
+
+    :type genes: list or NoneType
+    :param genes: Restrict points to only these genes.
+
+    :type with_cis: bool
+    :param with_cis: If True, include confidence intervals as lines in
+        the plot. Only available when `no_epistasis` is False.
+
+    :type include_x_equal_y_line: bool
+    :param include_x_equal_y_line: If True, include an x=y line.
+
+    :type plot_name: str or NoneType
+    :param plot_name: Name used to save the plot. If None, use
+        f'{xs}_{xs_epi_key}_vs_{ys}_{ys_epi_key}_{key}.png'.
+
+    """
+    if ys_key is None:
+        ys_key = xs_key
+
+
+    def translate_epi_key(epi_key):
+        if epi_key == 'from_normal':
+            return "from normal"
+        elif epi_key == 'from_110':
+            return "from TP53+KRAS"
+
+    if xs == "gammas":
+        xs_mles = all_gammas[(xs_key, xs_epi_key, 'mles')]
+        if with_cis:
+            xs_cis = all_gammas[(xs_key, xs_epi_key, 'cis')]
+        if axis_args_xs is None:
+            axis_args_xs = default_axis_args_gammas
+
+
+    elif xs == "lambdas":
+        xs_mles = all_lambdas[(xs_key, xs_epi_key, 'mles')]
+        if with_cis:
+            xs_cis = all_lambdas[(xs_key, xs_epi_key, 'cis')]
+        if axis_args_xs is None:
+            axis_args_xs = default_axis_args_lambdas.copy()
+            axis_args_xs['label'] = f"Flux {translate_epi_key(xs_epi_key)} to 'gene'"
+
+    elif xs == "mus":
+        xs_mles = all_mus[(key, xs_epi_key, 'mles')]
+
+
+    if ys == "gammas":
+        ys_mles = all_gammas[(key, ys_epi_key, 'mles')]
+        if with_cis:
+            ys_cis = all_gammas[(key, ys_epi_key, 'cis')]
+        if axis_args_ys is None:
+            axis_args_ys = default_axis_args_gammas
+
+    elif ys == "lambdas":
+        ys_mles = all_lambdas[(key, ys_epi_key, 'mles')]
+        if with_cis:
+            ys_cis = all_lambdas[(key, ys_epi_key, 'cis')]
+        if axis_args_ys is None:
+            axis_args_ys = default_axis_args_lambdas.copy()
+            axis_args_ys['label'] = f"Flux {translate_epi_key(ys_epi_key)} to 'gene'"
+
+    elif ys == "mus":
+        ys_mles = all_mus[(key, ys_epi_key, 'mles')]
+        if with_cis:
+            ys_cis = all_mus[(key, ys_epi_key, 'cis')]
+
+
+    if genes is None:
+        genes = set.intersection(set(xs_mles.keys()),
+                                 set(ys_mles.keys()))
+        print(f'For {key} and {xs_epi_key}:')
+        print(f'  genes in xs MLEs: {len(xs_mles.keys())}')
+        print(f'  genes in ys MLEs: {len(ys_mles.keys())}')
+
+        if with_cis:
+            genes = set.intersection(genes,
+                                     set(xs_cis.keys()),
+                                     set(ys_cis.keys()))
+            print(f'  genes in xs CIs: {len(xs_cis.keys())}')
+            print(f'  genes in ys CIs: {len(ys_cis.keys())}')
+
+        print(f'  genes to plot (intersection of above): {len(genes)}')
+
+
+    if bottom_genes is None:
+        bottom_genes = set()
+    if left_top_genes is None:
+        left_top_genes = set()
+    if left_bottom_genes is None:
+        left_bottom_genes = set()
+
+    if genes_to_annotate is None:
+        genes_to_annotate = set()
+    elif genes_to_annotate == 'all':
+        genes_to_annotate = genes
+
+    if always_annotate_genes is None:
+        always_annotate_genes = set()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ## This needs to make sure that xs and ys are in the same order
+    # genes_in_both_sets = set.union(xs_mles.keys(), ys_mles.keys())
+    # slope = curve_fit(lambda x, s: s*x,
+    #                   list(xs_mles.values()),
+    #                   list(ys_mles.values()))[0][0]
+    # ax.plot([0, axis_args_xs['lim']],
+    #         [0, slope*axis_args_xs['lim']],
+    #         "--",
+    #         color="Purple",
+    #         alpha=0.1)
+
+    genes_to_remove = set()
+    for gene in genes:
+        if gene not in xs_mles.keys():
+            print(f"Gene {gene} not in xs, removing from plot")
+            genes_to_remove.add(gene)
+        if gene not in ys_mles.keys():
+            print(f"Gene {gene} not in ys, removing from plot")
+            genes_to_remove.add(gene)
+
+    genes = set.difference(genes, genes_to_remove)
+
+    for gene in genes:
+        if xs_mles[gene] < ys_mles[gene]:
+            color = 'Red'
+            if ys_mles[gene] < ys_cut_for_annotate:
+                genes_to_annotate = set.difference(genes_to_annotate, {gene})
+        elif xs_mles[gene] > ys_mles[gene]:
+            color = 'Blue'
+            if xs_mles[gene] < xs_cut_for_annotate:
+                genes_to_annotate = set.difference(genes_to_annotate, {gene})
+        else:
+            color = 'Purple'
+
+        if gene in always_annotate_genes:
+            genes_to_annotate = set.union(genes_to_annotate, {gene})
+
+
+        if gene in genes_to_annotate:
+            print(f"Annotating {gene} in {color}, value: ({xs_mles[gene]}, {ys_mles[gene]})")
+            ax.text((xs_mles[gene] - annotate_adjust_x
+                     if gene in set.union(left_top_genes, left_bottom_genes)
+                     else xs_mles[gene] + annotate_adjust_x),
+                    (ys_mles[gene] - 3*annotate_adjust_y
+                     if gene in set.union(bottom_genes, left_bottom_genes)
+                     else ys_mles[gene] + annotate_adjust_y),
+                    gene,
+                    ha=('right' if gene in set.union(left_top_genes, left_bottom_genes)
+                        else 'left'),
+                    va=('top' if gene in set.union(bottom_genes, left_bottom_genes)
+                        else 'bottom'),
+                    fontsize=6 if gene in {'ERBB4', 'GRM1', 'SLIT3', 'KMT2D'} else 7,
+                    zorder=3,
+                    color=color)
+
+            if with_cis:
+                ax.plot([xs_mles[gene], xs_mles[gene]],
+                        ys_cis[gene],
+                        color=color,
+                        lw=0.5,
+                        alpha=0.1,
+                        zorder=4)
+                ax.plot(xs_cis[gene],
+                        [ys_mles[gene], ys_mles[gene]],
+                        color=color,
+                        lw=0.5,
+                        alpha=0.2,
+                        zorder=4)
+            ax.scatter(xs_mles[gene],
+                       ys_mles[gene],
+                       marker='.',
+                       color=color,
+                       alpha=0.5,
+                       zorder=5)
+        else:
+            ax.scatter(xs_mles[gene],
+                       ys_mles[gene],
+                       marker='.',
+                       color=color,
+                       alpha=0.25,
+                       zorder=5)
+
+
+    print("")
+    if include_x_equal_y_line:
+        x_equal_y_xs = np.linspace(0,
+                                   max(axis_args_xs['lim'], axis_args_ys['lim']),
+                                   1000)
+
+        ax.plot(x_equal_y_xs, x_equal_y_xs, "--", color="Purple", alpha=0.7)
+
+    ax.spines['bottom'].set_position('zero')  # Set x-axis position to zero
+    ax.spines['bottom'].set_zorder(1)  # Set a lower zorder for the x-axis
+
+    # Hide the top and right spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+
+    if title is not None:
+        ax.set_title(title)
+
+    ax = prettify_axis(ax, 'x',
+                       axis_args_xs)
+    ax = prettify_axis(ax, 'y',
+                       axis_args_ys)
+
+
+    if plot_name is None:
+        plot_name = f'{xs}_{xs_epi_key}_{xs_key}_vs_{ys}_{ys_epi_key}_{ys_key}.png'
+    fig.savefig(os.path.join(location_figures,
+                             plot_name),
+                dpi=dpi)
+    plt.close('all')
+
+    return fig
+
+
+
+
 
 if __name__ == "__figures__":
     plot_all()
+
+
+mutations_per_gene = {}
+
+for key in ['pan_data', 'smoking', 'nonsmoking']:
+
+    mutations_per_gene[key] = {gene: (samples_per_combination[key].loc[gene].loc['(0, 0, 1)']
+                                      + samples_per_combination[key].loc[gene].loc['(1, 0, 1)']
+                                      + samples_per_combination[key].loc[gene].loc['(0, 1, 1)']
+                                      + samples_per_combination[key].loc[gene].loc['(1, 1, 1)'])
+                                   for gene in samples_per_combination[key].index}
+
+
+    mutations_per_gene[key].update({'TP53':(samples_per_combination[key].loc['EGFR'].loc['(1, 0, 0)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 0, 1)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 0)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 1)']),
+                                    'KRAS':(samples_per_combination[key].loc['EGFR'].loc['(0, 1, 0)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(0, 1, 1)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 0)']
+                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 1)'])})
+
+
+    mutations_per_gene[key] = {k: v for k, v in sorted(mutations_per_gene[key].items(), key=lambda item: item[1])}
+
+
+def plot_figures_poster():
+    all_plots = {}
+
+    ## * Epistasis only TP53 and KRAS
+    print(f"Plotting TP53 and KRAS only model")
+
+    all_plots['tp53_kras_landscape_nonsmoking', 'gammas'] = plot_landscape(
+        results_TP53_KRAS_nonsmoking[('gammas', 'mle')],
+        results_TP53_KRAS_nonsmoking['samples'],
+        ['TP53', 'KRAS'],
+        positions='left_to_right',
+        scale_arrows=0.5*10**(-6),
+        scale_circles=0.025,
+        # name_y_offsets=name_y_offsets,
+        # name_x_offsets=name_x_offsets,
+        plot_name='landscape_gammas_tp53_kras_nonsmoking')
+
+
+    all_plots['tp53_kras_landscape_smoking', 'gammas'] = plot_landscape(
+        results_TP53_KRAS_smoking[('gammas', 'mle')],
+        results_TP53_KRAS_smoking['samples'],
+        ['TP53', 'KRAS'],
+        positions='left_to_right',
+        scale_arrows=0.5*10**(-6),
+        scale_circles=0.025,
+        # name_y_offsets=name_y_offsets,
+        # name_x_offsets=name_x_offsets,
+        plot_name='landscape_gammas_tp53_kras_smoking')
+
+
+
+    ## * Epistasis TP53, KRAS, EGFR
+    print(f"Plotting TP53, KRAS, EGFR model")
+
+    ## We overide this value that was actually non-computable
+    results_TP53_KRAS_EGFR_nonsmoking['gammas', 'mle'][((0, 1, 1), (1, 1, 1))] = 0
+
+    all_plots['tp53_kras_egfr_landscape_nonsmoking', 'gammas'] = plot_landscape(
+        results_TP53_KRAS_EGFR_nonsmoking[('gammas', 'mle')],
+        results_TP53_KRAS_EGFR_nonsmoking['samples'],
+        ['TP53', 'KRAS', 'EGFR'],
+        positions='left_to_right',
+        scale_arrows=0.5*10**(-6),
+        scale_circles=0.025,
+        # name_y_offsets=name_y_offsets,
+        # name_x_offsets=name_x_offsets,
+        plot_name='landscape_gammas_tp53_kras_egfr_nonsmoking')
+
+
+    all_plots['tp53_kras_egfr_landscape_smoking', 'gammas'] = plot_landscape(
+        results_TP53_KRAS_EGFR_smoking[('gammas', 'mle')],
+        results_TP53_KRAS_EGFR_smoking['samples'],
+        ['TP53', 'KRAS', 'EGFR'],
+        positions='left_to_right',
+        scale_arrows=0.5*10**(-6),
+        scale_circles=0.025,
+        # name_y_offsets=name_y_offsets,
+        # name_x_offsets=name_x_offsets,
+        plot_name='landscape_gammas_tp53_kras_egfr_smoking')
+
+
+
+    ## * Flux from normal vs TP53+KRAS smoking
+
+    print(f"Plotting flux from normal vs from TP53+KRAS for smoking")
+
+    axis_args_xs= {
+        'lim':0.45,
+        'label':"Flux from normal to 'gene'",
+        'tick_each':0.1,
+        'tick_minor_each':0.01,
+        'scale':1}
+    axis_args_ys= {
+        'lim':0.7,
+        'label':"Flux to from TP53+KRAS to 'gene'",
+        'tick_each':0.1,
+        'tick_minor_each':0.01,
+        'scale':1}
+
+    plot_xs_vs_ys_scatter("smoking_plus",
+                          genes_to_annotate='all',
+                          axis_args_xs=axis_args_xs,
+                          axis_args_ys=axis_args_ys,
+                          xs_cut_for_annotate=0.2,
+                          ys_cut_for_annotate=0.4,
+                          annotate_adjust_x=0.002,
+                          annotate_adjust_y=0.002,
+                          always_annotate_genes={'NAV3', 'RYR1', 'PXDNL', 'STK11'},
+                          # bottom_genes={'KEAP1'},
+                          left_top_genes={'STK11'},
+                          dpi=150
+                          # dpi=1500
+)
+
+
+    print(f"Plotting flux from normal vs from TP53+KRAS for nonsmoking")
+
+    axis_args_xs= {
+        'lim':0.07,
+        'label':"Flux from normal to 'gene'",
+        'tick_each':0.01,
+        'tick_minor_each':0.005,
+        'scale':1}
+    axis_args_ys= {
+        'lim':0.7,
+        'label':"Flux to from TP53+KRAS to 'gene'",
+        'tick_each':0.1,
+        'tick_minor_each':0.01,
+        'scale':1}
+
+    plot_xs_vs_ys_scatter("nonsmoking_plus",
+                          genes_to_annotate='all',
+                          axis_args_xs=axis_args_xs,
+                          axis_args_ys=axis_args_ys,
+                          annotate_adjust_x=0.0001,
+                          annotate_adjust_y=0.002,
+                          xs_cut_for_annotate=0.03,
+                          ys_cut_for_annotate=0.4,
+                          always_annotate_genes={'RYR1', 'SETBP1', 'FAT1', 'APC', 'NAV3', 'LRP1B'},
+                          bottom_genes={'RBM10', 'RB1'},
+                          left_top_genes={'CTNNB1'},
+                          left_bottom_genes={'SMAD4', 'FAT1'},
+                          dpi=150
+                          # dpi=1500
+                          )
+
+
+
+
+
+
+    return all_plots

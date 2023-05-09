@@ -5,6 +5,7 @@ import warnings
 
 from count_combinations import compute_samples
 from count_combinations import updated_compute_samples
+from count_combinations import convert_samples_to_dict
 
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
@@ -109,10 +110,12 @@ def are_all_fluxes_computable(samples):
     """
     return np.all(samples[:-1] > 0)
 
+
 def at_least_000_to_001_and_110_to_111(samples):
     """Return True if the flux from wildtype to only the third gene and
     the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
     return np.all(samples[[0,-2]] > 0)
+
 
 def lambdas_from_samples(samples):
     """Estimate the fluxes from the samples, varying the bounds if
@@ -231,7 +234,9 @@ def compute_all_lambdas(key, all_counts, save_results=True):
                 continue
 
             states_with_zero = [tuple(x) for x in S_3[samples == 0]]
-            indices_with_zero = [order_pos_lambdas(S_3).index((x, tuple(y))) for x, y in order_pos_lambdas(S_3) if x in states_with_zero]
+            indices_with_zero = [order_pos_lambdas(S_3).index((x, tuple(y)))
+                                 for x, y in order_pos_lambdas(S_3)
+                                 if x in states_with_zero]
             for x in indices_with_zero: mle['lambdas'][x] = np.nan
 
             lambdas_mles[gene] = convert_lambdas_to_dict(mle)
@@ -275,7 +280,10 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
     :return: A dictionary with all results (lambdas, mus and gammas).
 
     """
-    samples = pd.read_csv(samples_per_combination_files[key], index_col='third gene')
+    results = {}
+
+    samples = pd.read_csv(samples_per_combination_files[key],
+                          index_col='third gene')
 
     samples = samples.loc['EGFR'] ## these ones are for 3 gene model
 
@@ -286,7 +294,10 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
 
     samples = [samples_00, samples_01, samples_10, samples_11]
 
-    results = {}
+    results['samples'] = {(0, 0):samples_00,
+                          (0, 1):samples_01,
+                          (1, 0):samples_10,
+                          (1, 1):samples_11}
 
     bounds = np.repeat(1,4)
     MLE = estimate_lambdas(samples, draws=1,
@@ -298,12 +309,21 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
     results[('lambdas', 'cis')] = convert_lambdas_to_dict(
         asymp_CI_lambdas(MLE['lambdas'], samples))
 
-    mus = pd.read_csv(os.path.join(location_output,
-                                   f"{key}_mutation_rates.txt"),
-                      index_col='gene')
+    if key[-4:] == 'plus':
+        final_part_key = 'w_panel'
+    else:
+        final_part_key = key[-4:]
+    mus = pd.read_csv(
+        os.path.join(location_output,
+                     f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+        index_col='gene')
 
-    mus = {(1, 0): float(mus.loc['TP53']),
-           (0, 1): float(mus.loc['KRAS'])}
+    if key == 'pan_data':
+        mus = {(1, 0): float(mus.loc['TP53']),
+               (0, 1): float(mus.loc['KRAS'])}
+    else:
+        mus = {(1, 0): mus.loc['TP53', 'rate_grp_1'],
+               (0, 1): mus.loc['KRAS', 'rate_grp_1']}
     results['mus'] = mus
 
     results[('gammas', 'mle')] = compute_gammas(results[('lambdas', 'mle')], mus)
@@ -313,8 +333,93 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
         print("Saving results...")
 
         np.save(os.path.join(location_output,
-                             f"results_TP53_KRAS_model.npy"),
+                             f"results_TP53_KRAS_model_{key}.npy"),
                 results)
+
+    return results
+
+
+
+def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_results=True):
+    """Compute a model for M=3 that includes TP53, KRAS and gene.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: dict
+    :return: A dictionary with all results (lambdas, mus and gammas).
+
+    """
+    results = {}
+
+    print("Loading samples...")
+    samples = pd.read_csv(samples_per_combination_files[key],
+                          index_col='third gene')
+
+    samples = samples.loc[gene]
+
+    results['samples'] = convert_samples_to_dict(samples)
+    print("...done.")
+
+
+    print("Computing fluxes MLE...")
+    bounds = np.repeat(1, 12)
+    MLE = estimate_lambdas(samples, draws=1,
+                           upper_bound_prior=bounds,
+                           kwargs={'return_raw':True})[0]
+
+    results[('lambdas', 'mle')] = convert_lambdas_to_dict(MLE)
+    print("...done.")
+
+
+    if compute_CIs:
+        print("Computing fluxes CI...")
+        results[('lambdas', 'cis')] = convert_lambdas_to_dict(
+            asymp_CI_lambdas(MLE['lambdas'], samples))
+        print("...done.")
+
+    print("Loading mutation rates...")
+    if key[-4:] == 'plus':
+        final_part_key = 'w_panel'
+    else:
+        final_part_key = key[-4:]
+    mus = pd.read_csv(
+        os.path.join(location_output,
+                     f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+        index_col='gene')
+
+    if key == 'pan_data':
+        mus = {(1, 0, 0): float(mus.loc['TP53']),
+               (0, 1, 0): float(mus.loc['KRAS']),
+               (0, 0, 1): float(mus.loc[gene])}
+    else:
+        mus = {(1, 0, 0): mus.loc['TP53', 'rate_grp_1'],
+               (0, 1, 0): mus.loc['KRAS', 'rate_grp_1'],
+               (0, 0, 1): mus.loc[gene, 'rate_grp_1']}
+    results['mus'] = mus
+    print("...done.")
+
+
+    print("Computing selection coefficients...")
+    results[('gammas', 'mle')] = compute_gammas(results[('lambdas', 'mle')], mus)
+    if compute_CIs:
+        results[('gammas', 'cis')] = compute_CI_gamma(results[('lambdas', 'cis')], mus)
+    print("...done.")
+
+
+    if save_results:
+        print("Saving results...")
+
+        np.save(os.path.join(location_output,
+                             f"results_TP53_KRAS_{gene}_model_{key}.npy"),
+                results)
+        print("...done.")
 
     return results
 

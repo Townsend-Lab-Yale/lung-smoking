@@ -1,5 +1,7 @@
 import os
 
+from string import ascii_uppercase as alphabet
+
 if '__file__' not in globals():
     __file__ = '.'
 
@@ -117,3 +119,10 @@ panel_nonsmoking_sample_ids_file = os.path.join(location_data,
 samples_per_combination_files = {key: os.path.join(location_output,
                                                    f"samples_per_combination_{key}.csv")
                                  for key in results_keys}
+
+
+default_mutation_names = list(alphabet)
+"""Default mutation names, in case `mutation_names` is not provided
+for the plotting functions. The default is A, B, C, etc.
+
+"""
