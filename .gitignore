@@ -25,3 +25,4 @@ data/nsclc_tracerx_2017/
 data/gencode.v38lift37.basic.annotation.gtf
 
 output/*
+/data/gene_panels/all_panel_samples.txt
