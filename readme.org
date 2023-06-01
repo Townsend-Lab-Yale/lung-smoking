@@ -144,7 +144,7 @@ clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
 * TODO [3/9] TODO list
-SCHEDULED: <2023-02-10 Fri>
+SCHEDULED: <2023-06-02 Fri>
 
 - [X] Track theory.py and check for duplicate code in
   count_combinations.py
@@ -248,7 +248,7 @@ Two genes I removed because I do not trust the flux estimate:
 I'll rerun the epistasis analysis for those
 
 * TODO Use get_cBioPortal_data.R in setup.sh
-SCHEDULED: <2023-02-10 Fri>
+SCHEDULED: <2023-06-02 Fri>
 
 * TODO Check how main.py produces results
 
@@ -266,12 +266,12 @@ patients instead of the MAF file directly.
 In general aggregating multiple genes
 
 * TODO Put 'gene' in graphs that flux and selection
-SCHEDULED: <2023-02-10 Fri>
+SCHEDULED: <2023-06-02 Fri>
 
 Currently, the inset graph can be confusing
 
 * TODO Add total n in landscapes figures
-SCHEDULED: <2023-02-10 Fri>
+SCHEDULED: <2023-06-02 Fri>
 
 * For introduction
 
@@ -292,22 +292,30 @@ the co-ocurrence of mutationss with KRAS: K-ras Mutation Subtypes in
 NSCLC and Associated Co-occuring Mutations in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
 
-Differences in selection might caused directly by something other
-than smoking, for example non-smokers are older and aging could be
-directly responsible for most of the difference in selection between
-smokers and non-smokers. But it is clear that smoking is the factor
-that causes those differences (is it?).
+Differences in selection might caused directly by something other than
+smoking, for example non-smokers are older and aging could be directly
+responsible for most of the difference in selection between smokers
+and non-smokers. But it is clear (is it?) that smoking is the factor
+that causes those differences.
 
-
-
-K-ras Mutation
-Subtypes in NSCLC and Associated Co-occuring Mutations in Other
-Oncogenic Pathways
+K-ras Mutation Subtypes in NSCLC and Associated Co-occuring Mutations
+in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
-
 
 TP53 mutations are associated with the development of distant
 metastases and poor diagnosis and are more common in smokers: Genomic
 analysis of early-stage lung cancer reveals a role for TP53 mutations
 in distant metastasis
 https://www.nature.com/articles/s41598-022-21448-1
+
+If we take a look at KRAS effect on other mutations and OS: "Mutations
+in KEAP1 and SMARCA4, but not STK11, were associated with metastatic
+disease and poor OS. Functional STK11 loss, however, may contribute to
+poor outcomes in KEAP1MUT tumors." Molecular markers of metastatic
+disease in KRAS mutant lung adenocarcinoma
+https://www.sciencedirect.com/science/article/pii/S0923753423006567
+
+** TODO KRAS, KEAP1, STK11 model
+
+Run model with KRAS, KEAP1, STK11 and maybe SMARCA4 check if the above
+is true
