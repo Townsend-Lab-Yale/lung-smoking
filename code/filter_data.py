@@ -80,19 +80,6 @@ def filter_db_for_key(key, db):
     elif key == 'nonsmoking_plus':
         return db[db['Sample ID'].isin(nonsmoking_sample_ids + panel_nonsmoking_sample_ids)]
 
-''' Commenting this section out because its functionality has been replaced by cesR filtering
-
-main_db = pd.read_csv(merged_maf_file_name, index_col=0)
-
-#silent variants removed
-main_db = main_db[main_db['Variant_Classification'] != 'Silent']
-main_db = main_db[~pd.isnull(main_db['Mutation'])]
-
-#only including datasets that sequenced TP53 and KRAS (vast majority did so)
-db_filtered_for_TP53_KRAS = filter_db_for_gene('TP53', main_db)
-db_filtered_for_TP53_KRAS = filter_db_for_gene('KRAS', db_filtered_for_TP53_KRAS)
-'''
-
 genes_per_sample = pd.read_csv(genes_per_sample_file_name)
 
 key_filtered_dbs = {key: filter_db_for_key(key, genes_per_sample)
