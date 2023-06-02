@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-from pandas.core.reshape.merge import merge
 
 from locations import merged_clinical_file_name
 from locations import location_data
