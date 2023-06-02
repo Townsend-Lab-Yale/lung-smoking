@@ -78,60 +78,11 @@ compute_trinuc_mut_proportions <- function(variants){
   return(trinuc_mut_proportions)
 }
 
-#' Computes proportions of each trinucleotide mutation in the cesa maf file for a specific gene
-gene_trinuc_mut_proportions <- function(gene, cesa){
-  variants = unique(cesa$maf[top_gene == gene & !is.na(variant_id) & variant_type == 'snv', variant_id])
-
-  return(compute_trinuc_mut_proportions(variants))
-}
-
 
 #' Computes proportions of each trinucleotide mutation in the CESA MAF file across the entire genome
 genome_trinuc_mut_proportions <- function(cesa){
   variants = unique(cesa$maf[!is.na(variant_id) & variant_type == 'snv', variant_id])
   return(compute_trinuc_mut_proportions(variants))
-}
-
-sample_trinuc_mut_proportions <- function(cesa){
-  samples = cesa$maf[!duplicated(variant_id) & !is.na(variant_id) & variant_type == 'snv', .(Unique_Patient_Identifier, variant_id)]
-  
-  temp1 = str_split_fixed(samples$variant_id, pattern = ':', n=2)
-  temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
-  variants = as.data.table(cbind(samples$Unique_Patient_Identifier,temp1[,1],temp2))
-  colnames(variants) = c('ID', 'chr','pos','mut')
-  variants$pos = strtoi(variants$pos)
-  ## One sample did not have a position (strangely)
-  variants = variants[!is.na(variants$pos)]
-  variants$trinuc = as.vector(as.character(getSeq(
-    BSgenome.Hsapiens.UCSC.hg19,
-    names=str_c('chr', variants$chr),
-    start=variants$pos-1,
-    width=3,
-    strand = '+')))
-  ## reverse complementing variants as necessary
-  middle = str_c(substr(variants$trinuc,2,2),collapse="")
-  revcomp_ind = c(str_locate_all(middle,'G|A')[[1]][,1])
-  variants[revcomp_ind,
-           ':=' (trinuc=as.character(reverseComplement(DNAStringSet(
-             variants[revcomp_ind, trinuc]))),
-             mut=paste0(as.character(reverseComplement(DNAStringSet(
-               variants[revcomp_ind, substr(mut,1,1)]))),
-               '>',
-               as.character(reverseComplement(DNAStringSet(
-                 variants[revcomp_ind, substr(mut,3,3)])))))]
-  ## generating COSMIC type format for trinuc mutations
-  variants$trinuc_mut = paste0(substr(variants$trinuc, 1, 1),
-                               '[', variants$mut, ']',
-                               substr(variants$trinuc, 3, 3))
-  
-  variants = split(variants, by = 'ID', keep.by=F)
-  
-  trinuc_mut_proportions = t(sapply(variants, function(x)
-    c(table(x$trinuc_mut),
-      table(setdiff(order_of_trinuc_muts, x$trinuc_mut)) - 1)
-    / nrow(x)))
-  ## TODO: order table before returning value
-  return(trinuc_mut_proportions)
 }
 
 
