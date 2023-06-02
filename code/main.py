@@ -1,9 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import warnings
 
-from count_combinations import compute_samples
 from count_combinations import updated_compute_samples
 from count_combinations import convert_samples_to_dict
 
@@ -23,7 +21,6 @@ from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
 
-from filter_data import key_filtered_dbs
 from filter_data import dbs_filtered_for_TP53_KRAS
 from filter_data import filter_samples_for_genes
 

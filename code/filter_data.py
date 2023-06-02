@@ -10,7 +10,6 @@ without a gene the gene is mutated or not.
 """
 
 import pandas as pd
-import numpy as np
 
 
 from locations import results_keys
@@ -20,8 +19,6 @@ from locations import nonsmoking_sample_ids_file
 from locations import smoking_sample_ids_file
 from locations import panel_nonsmoking_sample_ids_file
 from locations import panel_smoking_sample_ids_file
-from locations import merged_maf_file_name
-from locations import cesR_filtered_maf_file_name
 from locations import genes_per_sample_file_name
 
 all_panel_genes = pd.read_csv(all_panel_genes_file_name)

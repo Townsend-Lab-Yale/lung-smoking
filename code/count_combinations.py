@@ -1,13 +1,9 @@
 import numpy as np
 import pandas as pd
-from itertools import product, combinations
-from time import time
 
-from theory import build_S_with_tuples
 from theory import build_S_as_array
 
 from locations import gene_coordinates_file
-from locations import merged_maf_clinical_file_name
 
 genes = pd.read_csv(gene_coordinates_file, index_col='gene')
 
