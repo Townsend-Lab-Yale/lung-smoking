@@ -35,13 +35,6 @@ echo "Downloading data..."
 echo ""
 
 
-echo "Obtaining gene coordinates..."
-source .venv/bin/activate
-python obtain_gene_coordinates.py
-echo ""
-echo ""
-
-
 echo "Downloading GENIE data..."
 echo ""
 echo -e "GENIE requires a username and password, "`
@@ -81,6 +74,15 @@ mv luad_broad/data_mutations.txt luad_broad/data_mutations_extended.txt
 echo "Renaming data/luad_mskcc_2015/data_mutations.txt to "`
      `"data/luad_mskcc_2015/data_mutations_extended.txt for consistency."
 mv luad_mskcc_2015/data_mutations.txt luad_mskcc_2015/data_mutations_extended.txt
+echo "Renaming data/luad_oncosg_2020/data_mutations.txt to "`
+     `"data/luad_oncosg_2020/data_mutations_extended.txt for consistency."
+mv luad_oncosg_2020/data_mutations.txt luad_oncosg_2020/data_mutations_extended.txt
+echo "Renaming data/lung_msk_2017/data_mutations.txt to "`
+     `"data/lung_msk_2017/data_mutations_extended.txt for consistency."
+mv lung_msk_2017/data_mutations.txt lung_msk_2017/data_mutations_extended.txt
+echo "Renaming data/nsclc_pd1_msk_2018/data_mutations.txt to "`
+     `"data/nsclc_pd1_msk_2018/data_mutations_extended.txt for consistency."
+mv nsclc_pd1_msk_2018/data_mutations.txt nsclc_pd1_msk_2018/data_mutations_extended.txt
 echo ""
 echo "...done downloading cBioPortal data."
 echo ""
