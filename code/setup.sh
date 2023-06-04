@@ -145,6 +145,12 @@ echo "...done."
 echo ""
 echo ""
 
+echo "Downloading hg38 to hg19 chain file..."
+wget 'ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz' -O hg38ToHg19.over.chain.gz
+gunzip -d hg38ToHg19.over.chain.gz
+echo "...done."
+echo ""
+echo ""
 
 echo "...done downloading all data."
 echo ""
