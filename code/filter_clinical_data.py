@@ -146,7 +146,7 @@ tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
 #randomly sampling from multiple samples per patient (multi-region sampling)
 tracer_df_sampled = pd.DataFrame()
 for id in pd.unique(tracer_df['PATIENT_ID']):
-    tracer_df_sampled = tracer_df_sampled.append(tracer_df[tracer_df['PATIENT_ID'] == id].sample(random_state=random_seeds[0]))
+    tracer_df_sampled = pd.concat([tracer_df_sampled, tracer_df[tracer_df['PATIENT_ID'] == id].sample(random_state=random_seeds[0])])
 tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment']]
 #not sure if regression free survival = progression free survival
 tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment"]
