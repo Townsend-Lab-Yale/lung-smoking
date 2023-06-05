@@ -224,29 +224,6 @@ Regarding both:
   bronchial epithelial cells in relation to aging and smoking
   https://www.nature.com/articles/s41588-022-01035-w
 
-* Notes for presentation
-
-No epistasis
-- Top 3 genes pan: 'EGFR', 'STK11', 'KEAP1'       (last two not in nonsmoking)
--         smoking: 'EGFR', 'STK11',        'RYR2'
--      nonsmoking: 'EGFR',                        'BRAF', 'SPATA3'
-
-Epistasis from 110:
-- All top 3 only 'RYR2' in 'no epistasis'
-- All top 3 = 8 genes only 'COL11A1' in both smoking and pan_data
-- All top 3, none of them are included in nonsmoking for no epistasis
-
-Epistasis from normal:
-- All top 3 only 'RYR2' and 'EGFR' in 'no epistasis'
-- All top 3 = 5 genes only 'COL11A1' in both smoking and pan_data
-- All top 3, none of them are included in nonsmoking for no epistasis
-- 'EGFR' not in nonsmoking (have to investigate why)
-
-Two genes I removed because I do not trust the flux estimate:
-- CSMD3
-- TTN
-I'll rerun the epistasis analysis for those
-
 * TODO Use get_cBioPortal_data.R in setup.sh
 SCHEDULED: <2023-06-02 Fri>
 
