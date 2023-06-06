@@ -3,10 +3,6 @@ import pandas as pd
 
 from theory import build_S_as_array
 
-from locations import gene_coordinates_file
-
-genes = pd.read_csv(gene_coordinates_file, index_col='gene')
-
 def updated_compute_samples(data,
                     mutations,
                     print_info=False):

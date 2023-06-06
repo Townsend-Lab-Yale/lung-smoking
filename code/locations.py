@@ -70,7 +70,6 @@ full_maf_file_names_lifted = {
 
 
 gene_list_file = os.path.join(location_data, "genes_list.txt")
-gene_coordinates_file = os.path.join(location_data, "gene_coordinates.csv")
 
 
 pts_by_mutation_file = os.path.join(location_output, "pts_by_mutation.csv")
