@@ -80,11 +80,10 @@ compute_trinuc_mut_proportions <- function(variants){
 
 
 #' Computes proportions of each trinucleotide mutation in the CESA MAF file across the entire genome
-genome_trinuc_mut_proportions <- function(cesa){
-  variants = unique(cesa$maf[!is.na(variant_id) & variant_type == 'snv', variant_id])
+genome_trinuc_mut_proportions <- function(maf){
+  variants = unique(maf[!is.na(variant_id) & variant_type == 'snv', variant_id])
   return(compute_trinuc_mut_proportions(variants))
 }
-
 
 #' Calculates the 32 trinucleotide contexts for every site in any gene of interest in the hg19 genome.
 #' 32 instead of 64 because any purine site is equivalent to its corresponding pyrimidine site 

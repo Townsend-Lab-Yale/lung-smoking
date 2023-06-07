@@ -11,16 +11,16 @@ library(stringr)
 # find #times that context is observed
 # var_mut_rate = gene_rate * freq / #times-context-observed
 
-#' @param PHRED_threshold threshold PHRED scores (from CADD) for variant to be considered deleterious/pathogenic
-
-variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, with_cadd = F, PHRED_threshold = 20){
+variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, samples=NA){
   gene_x = gene
   print(gene_x)
   # certain variants have an NA variant_id, but none of these are in genes in our 1290 genes of interest.
-  if(with_cadd){
-    variants = variants[PHRED > PHRED_threshold]
-  }
-  variants = unique(cesa$maf[top_gene == gene_x & variant_type == 'snv' & !is.na(variant_id), 
+  maf = cesa$maf
+  
+  if(any(is.na(samples))){stop('Please enter a list of samples. If you want to include all samples, use cesa$samples$Unique_Patient_Identifier')}
+  
+  variants = unique(cesa$maf[Unique_Patient_Identifier %in% samples & top_gene == gene_x & 
+                               variant_type == 'snv' & !is.na(variant_id), 
                              variant_id])
   
   if(length(variants) == 0){return(NA)}
@@ -52,7 +52,13 @@ variant_mutation_rate = function(gene, cesa, trinuc_proportion_matrix, with_cadd
   
   #gets trinuc composition for each variant
   variants$trinuc_mut_prop = as.vector(trinuc_proportion_matrix[variants$trinuc_mut])
-  variants$gene_rate = cesa$gene_rates[gene == gene_x,rate]
+  
+  if(colnames(cesa$gene_rates)[2] == "rate"){
+    variants$gene_rate = cesa$gene_rates[gene == gene_x, rate]
+  } else if(colnames(cesa$gene_rates)[2] == "rate_grp_1"){
+    variants$gene_rate = cesa$gene_rates[gene == gene_x, rate_grp_1]
+  } else{stop('Gene mutation rate column not recognized')}
+  
   
   #' This only works with the singular table returned by compute tri-nt contexts, 
   #' if we were to vectorize this, we would need to make it dataframe-workable
