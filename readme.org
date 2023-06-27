@@ -144,7 +144,7 @@ clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
 
 * TODO [3/9] TODO list
-SCHEDULED: <2023-06-02 Fri>
+SCHEDULED: <2023-06-30 Fri>
 
 - [X] Track theory.py and check for duplicate code in
   count_combinations.py
@@ -225,7 +225,7 @@ Regarding both:
   https://www.nature.com/articles/s41588-022-01035-w
 
 * TODO Use get_cBioPortal_data.R in setup.sh
-SCHEDULED: <2023-06-02 Fri>
+SCHEDULED: <2023-06-30 Fri>
 
 * TODO Check how main.py produces results
 
@@ -243,12 +243,12 @@ patients instead of the MAF file directly.
 In general aggregating multiple genes
 
 * TODO Put 'gene' in graphs that flux and selection
-SCHEDULED: <2023-06-02 Fri>
+SCHEDULED: <2023-06-30 Fri>
 
 Currently, the inset graph can be confusing
 
 * TODO Add total n in landscapes figures
-SCHEDULED: <2023-06-02 Fri>
+SCHEDULED: <2023-06-30 Fri>
 
 * For introduction
 
@@ -268,6 +268,9 @@ This paper didn't find a difference between smokers and non-smokers in
 the co-ocurrence of mutationss with KRAS: K-ras Mutation Subtypes in
 NSCLC and Associated Co-occuring Mutations in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
+
+More on KRAS
+https://www.sciencedirect.com/science/article/pii/S0923753423006567
 
 Differences in selection might caused directly by something other than
 smoking, for example non-smokers are older and aging could be directly
