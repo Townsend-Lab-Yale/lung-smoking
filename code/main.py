@@ -29,6 +29,7 @@ gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 gene_list = [gene.upper() for gene in gene_list]
 gene_list = gene_list[:103]
 
+
 def compute_samples_for_all_genes(key=None, save_results=True):
     """Compute number of patients with each combination of the TP53,
     KRAS and a third gene, for each third gene in the
@@ -87,6 +88,7 @@ def compute_samples_for_all_genes(key=None, save_results=True):
 
     return counts
 
+
 def are_all_fluxes_computable(samples):
     """Return True if we can compute all fluxes, that is, if there are
     patients in `data` with every possible combination of `genes`
@@ -114,7 +116,7 @@ def at_least_000_to_001_and_110_to_111(samples):
     return np.all(samples[[0,-2]] > 0)
 
 
-def lambdas_from_samples(samples):
+def lambdas_from_samples(samples, max_bound_changes=4):
     """Estimate the fluxes from the samples, varying the bounds if
     necessary.
 
@@ -123,9 +125,22 @@ def lambdas_from_samples(samples):
         be of the same size as S, and have in each entry the number of
         individuals that have the respective mutation combination.
 
+    :type max_bound_changes: int
+    :param max_bound_changes: If the estimating algorithm does not
+        converge using the default bounds ([0, 1]) for the uniform
+        prior use for each of the lambdas, then those bounds are
+        changed for the particular lambdas that we have identified as
+        problematic with those bounds for certain models. We change
+        the upper bound to half of the previous bound. This variable
+        is the maximum number of times that we will try to change
+        those bounds before concluding that we cannot compute the
+        model for those samples (likely they are too few samples for
+        the gene combination).
+
     :rtype: dict
     :return: Estimates of the fluxes as a dictionary with the MAP
         (also MLE, because the priors are uniform) estimates.
+
     """
 
     bounds = 1
@@ -137,8 +152,8 @@ def lambdas_from_samples(samples):
 
     bound_changes = 0
     while MLE[1].fun < -1e+20:
-        if bound_changes == 4:
-            print(f"We have changed the bounds {bound_changes} already, "
+        if bound_changes == max_bound_changes:
+            print(f"We have changed the bounds {bound_changes} times already, "
                   "and the algorithm has not converged. Concluding that these "
                   "samples are incomputable.")
             return "incomputable"
@@ -201,7 +216,8 @@ def compute_all_lambdas(key, all_counts, save_results=True):
         samples = counts[gene]
         if are_all_fluxes_computable(samples):
             print(f"Running model with third gene {gene} "
-                    f"(gene number {i+1}/{len(gene_list[2:])})")
+                  f"(gene number {i+1}/{len(gene_list[2:])}"
+                  f"for {key})")
 
             print("Estimating fluxes...")
             mle = lambdas_from_samples(samples)
