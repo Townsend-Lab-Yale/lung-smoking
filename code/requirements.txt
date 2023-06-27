@@ -31,7 +31,7 @@ numpy==1.20.3
 packaging==23.0
 pandas==1.2.4
 parso==0.8.2
-patsy==0.5.1
+patsy==0.5.3
 pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==8.3.1
@@ -49,6 +49,7 @@ SecretStorage==2.3.1
 semver==2.13.0
 sexpdata==0.0.3
 six==1.16.0
+statsmodels==0.13.5
 synapseclient==2.4.0
 Theano-PyMC==1.1.2
 traitlets==5.0.5
