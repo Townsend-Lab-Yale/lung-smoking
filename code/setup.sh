@@ -25,6 +25,7 @@ echo ""
 
 echo "Installing all python packages..."
 echo ""
+.venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 echo "done installing python packages."
 echo ""
