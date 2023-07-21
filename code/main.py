@@ -602,3 +602,105 @@ def main(recompute_samples_per_combination=False, save_results=True):
 
 if __name__ == "__main__":
     main(recompute_samples_per_combination = True)
+
+
+
+import matplotlib.pyplot as plt
+from locations import location_figures
+
+default_genes = ['TP53', 'KRAS', 'EGFR']
+
+df_smoking = pd.read_csv(samples_per_combination_files['smoking_plus'], index_col='third gene')
+counts_smoking = {gene:np.array(df_smoking.loc[gene]) for gene in gene_list[2:]}['EGFR']
+counts_smoking = {x:y for x, y in zip(build_S_with_tuples(3), counts_smoking)}
+
+df = pd.DataFrame(columns=default_genes)
+
+for mutation, count in counts_smoking.items():
+    temp_df = pd.DataFrame([mutation]*count*4, columns=df.columns)
+    df = pd.concat([temp_df, df])
+
+df = df.replace(0, 0.25)
+
+# Convert DataFrame to numpy array for plotting
+data_array = df.T.astype(float)
+
+# for col in data_array.columns:
+#     for _ in range(2):
+#         data_array = pd.concat([data_array, data_array[col]], axis=1)
+
+total_smoking = sum(counts_smoking.values())
+
+for i in range(4, total_smoking*5, 5):
+    data_array.insert(i, f'Z{i}', np.zeros(len(data_array)))
+
+
+# Plot the heatmap
+plt.figure(figsize=(10, 1.8))
+plt.imshow(data_array, cmap='gray_r', interpolation='none', aspect='auto')
+# plt.colorbar(label='Mutation status')
+percs = np.round(np.array([sum([value for x, value in counts_smoking.items()
+                                if x[i] == 1])
+                           for i in range(3)])/total_smoking*100).astype(int)
+percs = ["47", "36",  " 8"]
+plt.yticks(ticks=np.arange(3), labels=[f"$\it{y}$    {perc}%"
+                                       for y, perc in zip(df.columns,
+                                                          percs)])#
+# np.round(np.array([sum([value for x, value in counts_smoking.items() if x[i] == 1]) for i in range(3)])/total_smoking*100)
+
+plt.xticks([])
+# plt.xlabel('Patients')
+
+# plt.ylabel('Genes')
+plt.title(f"Lung adenocarcinoma smokers (multiple sources) $n={total_smoking}$")
+plt.savefig(os.path.join(location_figures,
+                         "heatmap_smoking.png"), dpi=600)
+
+
+
+df_nonsmoking = pd.read_csv(samples_per_combination_files['nonsmoking_plus'], index_col='third gene')
+counts_nonsmoking = {gene:np.array(df_nonsmoking.loc[gene]) for gene in gene_list[2:]}['EGFR']
+counts_nonsmoking = {x:y for x, y in zip(build_S_with_tuples(3), counts_nonsmoking)}
+
+
+df = pd.DataFrame(columns=default_genes)
+
+for mutation, count in counts_nonsmoking.items():
+    temp_df = pd.DataFrame([mutation]*count*4, columns=df.columns)
+    df = pd.concat([temp_df, df])
+
+df = df.replace(0, 0.25)
+
+# Convert DataFrame to numpy array for plotting
+data_array = df.T.astype(float)
+
+# for col in data_array.columns:
+#     for _ in range(2):
+#         data_array = pd.concat([data_array, data_array[col]], axis=1)
+
+total_nonsmoking = sum(counts_nonsmoking.values())
+
+for i in range(4, total_nonsmoking*5, 5):
+    data_array.insert(i, f'Z{i}', np.zeros(len(data_array)))
+
+
+# Plot the heatmap
+plt.figure(figsize=(10, 1.8))
+plt.imshow(data_array, cmap='gray_r', interpolation='none', aspect='auto')
+# plt.colorbar(label='Mutation status')
+
+percs = np.round(np.array([sum([value for x, value in counts_nonsmoking.items()
+                                if x[i] == 1])
+                           for i in range(3)])/total_nonsmoking*100).astype(int)
+percs = ["37", " 8", "26"]
+plt.yticks(ticks=np.arange(3), labels=[f"$\it{y}$    {perc}%"
+                                       for y, perc in zip(df.columns,
+                                                          percs)])#
+
+plt.xticks([])
+# plt.xlabel('Patients')
+
+# plt.ylabel('Genes')
+plt.title(f"Lung adenocarcinoma non-smokers (multiple sources) $n={total_nonsmoking}$")
+plt.savefig(os.path.join(location_figures,
+                         "heatmap_nonsmoking.png"), dpi=600)
