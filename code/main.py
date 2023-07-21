@@ -63,9 +63,6 @@ def compute_samples_for_all_genes(key=None, save_results=True):
     counts = {}
 
     for i, gene in enumerate(genes):
-        if (i+1) % 100 == 0 or i == 0:
-            print(f"Computing gene {i+1}/{number_of_genes} "
-                  f"({round((i+1)/number_of_genes, 2)*100}% done)")
         db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key])
 
         if gene in db.columns:
@@ -75,7 +72,10 @@ def compute_samples_for_all_genes(key=None, save_results=True):
             unrepresented_genes.append(gene)
             counts[gene] = np.repeat(0, 8)
     if len(unrepresented_genes) > 0:
-        print(f"No sample availability information for the following genes: {str(unrepresented_genes)}. This may be because there it is not mutated in any tumors or because it is not correctly represented in sequencing data")
+        print(f"No sample availability information for the following genes: "
+              f"{str(unrepresented_genes)}."
+              "\nThis may be because there are not mutations in those genes in the data, "
+              "or because the genes are not correctly represented in sequencing data")
 
     if save_results:
         print("Saving results...")
@@ -437,6 +437,114 @@ def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_r
     return results
 
 
+def load_mutation_rates(key):
+    """Load the mutation rates in a format that :func:`compute_gammas` uses,
+    where we will assume an M=3 model including TP53, KRAS and a third gene.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+
+    :rtype: dict
+    :return: A dictionary of dictionaries indexed by the third gene,
+        where the mutation rates are represented by:
+        - (1, 0, 0): TP53
+        - (0, 1, 0): KRAS
+        - (0, 0, 1): the third gene in the model.
+
+    """
+
+    if key[-4:] == 'plus':
+        final_part_key = 'w_panel'
+    else:
+        final_part_key = key[-4:]
+
+    mus_df = pd.read_csv(
+        os.path.join(location_output,
+                     f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+        index_col='gene')
+
+    genes_available = set.intersection(set(gene_list),
+                                       set(mus_df.index))
+
+    mus = {gene:{(1, 0, 0): mus_df.loc['TP53', 'rate_grp_1'],
+                 (0, 1, 0): mus_df.loc['KRAS', 'rate_grp_1'],
+                 (0, 0, 1): mus_df.loc[gene, 'rate_grp_1']}
+           for gene in genes_available
+           if gene not in ['TP53', 'KRAS']}
+
+    return mus
+
+
+def compute_all_gammas(key, all_lambdas, mus, save_results=True):
+    """Compute all estimates of the selection coefficient for the data
+    set `key` iterating over all genes in the intersection of
+    :const:`gene_list` and the genes available from the results of
+    CES.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+
+    :type all_lambdas: dict
+    :param all_lambdas: Dictionary with the results for fluxes as
+        obtained from :func:`compute_all_lambdas`. It is indexed by
+        tuples containing the a key and either 'mles' or 'cis'
+
+    :type mus: dict
+    :param mus: Dictionary with the results of mutation rates for
+        `key` as obtained from :func:`load_mutation_rates`.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with the maximum likelihood estimations and the
+        95% asymptomatic confidence intervals for the fluxes.
+
+    """
+    gammas_mles = {}
+    gammas_cis = {}
+
+
+    lambdas_mles = all_lambdas[key, 'mles']
+    lambdas_cis = all_lambdas[key, 'cis']
+
+    genes_available = set.intersection(set(gene_list),
+                                       set(lambdas_mles.keys()),
+                                       set(mus.keys()))
+
+    for i, gene in enumerate(genes_available):
+
+        gammas_mles[gene] = compute_gammas(
+            lambdas_mles[gene],
+            mus[gene])
+
+        gammas_cis[gene] = compute_CI_gamma(
+            lambdas_cis[gene],
+            mus[gene])
+
+        if save_results:
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_mles.npy"),
+                    gammas_mles)
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_cis.npy"),
+                    gammas_cis)
+
+    return gammas_mles, gammas_cis
+
+
+
+
 def main(recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
@@ -479,6 +587,16 @@ def main(recompute_samples_per_combination=False, save_results=True):
         print(f"done estimating all epistatic models for {key}.")
         print("")
         print("")
+
+        print(f"Computing selection coefficients for {key}...")
+        print("")
+        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, save_results)
+        all_lambdas[(key, 'mles')] = lambdas_mles
+        all_lambdas[(key, 'cis')] = lambdas_cis
+        print(f"done computing selection coefficients for {key}.")
+        print("")
+        print("")
+
 
     return all_counts, all_lambdas
 
