@@ -195,8 +195,81 @@ smoking and nonsmoking
 
 - [ ] Use get_cBioPortal_data.R in setup.sh
 
-- [ ] Add code to count_combinations for handling pathways (in general
-  aggregating multiple genes)
+Regarding age these references could help (and be cited for "there is
+a linear relationship between age and cancer"):
+
+- Salk, J.J.; Schmitt, M.W.; Loeb, L.A. Enhancing the accuracy of
+  next-generation sequencing for detecting rare and subclonal
+  mutations. Nat. Rev. Genet. 2018, 19, 269–285.
+- Risques, R.A.; Kennedy, S.R. Aging and the rise of somatic
+  cancer-associated mutations in normal tissues. PLoS Genet. 2018, 14,
+  e1007108.
+- Forsberg, L.A.; Gisselsson, D.; Dumanski, L.A.F.J.P. Mosaicism in
+  health and disease—Clones picking up speed. Nat. Rev. Genet. 2017,
+  18, 128–142.
+- Krimmel, J.D.; Salk, J.J.; Risques, R.A. Cancer-like mutations in
+  non-cancer tissue: Towards a better understanding of multistep
+  carcinogenesis. Transl. Cancer Res. 2016, 5, S1302–S1304.
+
+Regarding smoking:
+
+- Devarakonda et al. Genomic Profiling of Lung Adenocarcinoma in
+  Never-Smokers https://ascopubs.org/doi/full/10.1200/JCO.21.01691
+
+Regarding both:
+
+- Huang et al. Single-cell analysis of somatic mutations in human
+  bronchial epithelial cells in relation to aging and smoking
+  https://www.nature.com/articles/s41588-022-01035-w
+
+* Notes for presentation
+
+No epistasis
+- Top 3 genes pan: 'EGFR', 'STK11', 'KEAP1'       (last two not in nonsmoking)
+-         smoking: 'EGFR', 'STK11',        'RYR2'
+-      nonsmoking: 'EGFR',                        'BRAF', 'SPATA3'
+
+Epistasis from 110:
+- All top 3 only 'RYR2' in 'no epistasis'
+- All top 3 = 8 genes only 'COL11A1' in both smoking and pan_data
+- All top 3, none of them are included in nonsmoking for no epistasis
+
+Epistasis from normal:
+- All top 3 only 'RYR2' and 'EGFR' in 'no epistasis'
+- All top 3 = 5 genes only 'COL11A1' in both smoking and pan_data
+- All top 3, none of them are included in nonsmoking for no epistasis
+- 'EGFR' not in nonsmoking (have to investigate why)
+
+Two genes I removed because I do not trust the flux estimate:
+- CSMD3
+- TTN
+I'll rerun the epistasis analysis for those
+
+* TODO Use get_cBioPortal_data.R in setup.sh
+SCHEDULED: <2023-06-20 Tue>
+
+* TODO Check how main.py produces results
+
+Also import_results that handles those results. Try to make it so that
+it produces results that can be plotted with the regular functions
+from plotting.py and figures.py
+
+* TODO Use updated_compute_samples everywhere
+
+That is a version of compute_samples that uses a pandas dataframe of
+patients instead of the MAF file directly.
+
+* TODO Add code to count_combinations for handling pathways
+
+In general aggregating multiple genes
+
+* TODO Put 'gene' in graphs that flux and selection
+SCHEDULED: <2023-06-20 Tue>
+
+Currently, the inset graph can be confusing
+
+* TODO Add total n in landscapes figures
+SCHEDULED: <2023-06-20 Tue>
 
 * For introduction
 
@@ -247,3 +320,7 @@ https://www.sciencedirect.com/science/article/pii/S0923753423006567
 
 Run model with KRAS, KEAP1, STK11 and maybe SMARCA4 check if the above
 is true
+
+* Possible reviewers
+
+Teresa Landi (suggested by Jeff on the slack channel [2022-08-22 Mon])
