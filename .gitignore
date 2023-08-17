@@ -24,5 +24,9 @@ data/nsclc_pd1_msk_2018/
 data/nsclc_tracerx_2017/
 data/gencode.v38lift37.basic.annotation.gtf
 
+presentations/*
+
 output/*
 /data/gene_panels/all_panel_samples.txt
+
+figures/*
