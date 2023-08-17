@@ -21,8 +21,8 @@ from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
 
-# from filter_data import dbs_filtered_for_TP53_KRAS
-# from filter_data import filter_samples_for_genes
+from filter_data import dbs_filtered_for_TP53_KRAS
+from filter_data import filter_samples_for_genes
 
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
@@ -56,13 +56,11 @@ def compute_samples_for_all_genes(key=None, save_results=True):
 
     genes = gene_list[2:]
 
-    number_of_genes = len(genes)
-
     unrepresented_genes = []
 
     counts = {}
 
-    for i, gene in enumerate(genes):
+    for gene in genes:
         db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key])
 
         if gene in db.columns:
