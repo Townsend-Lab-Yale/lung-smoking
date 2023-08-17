@@ -565,6 +565,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
     """
     all_counts = {}
     all_lambdas = {}
+    all_gammas = {}
     for key in results_keys:
         print("")
         if (recompute_samples_per_combination
@@ -590,15 +591,16 @@ def main(recompute_samples_per_combination=False, save_results=True):
 
         print(f"Computing selection coefficients for {key}...")
         print("")
-        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, save_results)
-        all_lambdas[(key, 'mles')] = lambdas_mles
-        all_lambdas[(key, 'cis')] = lambdas_cis
+        mus = load_mutation_rates(key)
+        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
+        all_gammas[(key, 'mles')] = gammas_mles
+        all_gammas[(key, 'cis')] = gammas_cis
         print(f"done computing selection coefficients for {key}.")
         print("")
         print("")
 
 
-    return all_counts, all_lambdas
+    return all_counts, all_lambdas, all_gammas
 
 if __name__ == "__main__":
     main(recompute_samples_per_combination = True)
