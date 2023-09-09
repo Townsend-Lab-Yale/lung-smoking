@@ -435,10 +435,9 @@ def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_r
     return results
 
 
-def load_mutation_rates(key):
+def load_mutation_rates(key, method):
     """Load the mutation rates in a format that :func:`compute_gammas` uses,
     where we will assume an M=3 model including TP53, KRAS and a third gene.
-
     :type key: str or NoneType
     :param key: What estimates to use. Can be one of:
         - pan_data (default)
@@ -446,6 +445,11 @@ def load_mutation_rates(key):
         - nonsmoking
         - smoking_plus
         - nonsmoking_plus
+    
+    :type method: str or NoneType
+    :param method: Which mutation rate calculation method to use. Can be one of:
+        - variant (sum of mutation rate for each variant site in gene)
+        - cesR (gene mutation rate directly from cancereffectsizeR)
 
     :rtype: dict
     :return: A dictionary of dictionaries indexed by the third gene,
@@ -453,28 +457,48 @@ def load_mutation_rates(key):
         - (1, 0, 0): TP53
         - (0, 1, 0): KRAS
         - (0, 0, 1): the third gene in the model.
-
     """
+    if(method == "variant"):
+        variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
+                                                        'variant_based_mutation_rates.txt'),
+                                                        index_col=0)
+        genes_available = set.intersection(set(gene_list),
+                                           set(variant_based_mutation_rates.index))
+        variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking"
+        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
-    if key[-4:] == 'plus':
-        final_part_key = 'w_panel'
-    else:
-        final_part_key = key[-4:]
+        if key[-4:] == 'plus':
+            key = key[:-5]
 
-    mus_df = pd.read_csv(
-        os.path.join(location_output,
-                     f"{key[:-4] + final_part_key}_mutation_rates.txt"),
-        index_col='gene')
+        variant_based_mutation_rates = variant_based_mutation_rates[key]
 
-    genes_available = set.intersection(set(gene_list),
-                                       set(mus_df.index))
-
-    mus = {gene:{(1, 0, 0): mus_df.loc['TP53', 'rate_grp_1'],
-                 (0, 1, 0): mus_df.loc['KRAS', 'rate_grp_1'],
-                 (0, 0, 1): mus_df.loc[gene, 'rate_grp_1']}
+        mus = {gene:{(1, 0, 0): variant_based_mutation_rates['TP53'],
+                     (0, 1, 0): variant_based_mutation_rates['KRAS'],
+                     (0, 0, 1): variant_based_mutation_rates[gene]}
            for gene in genes_available
            if gene not in ['TP53', 'KRAS']}
 
+    elif(method == "cesR"):
+        if key[-4:] == 'plus':
+            final_part_key = 'w_panel'
+        else:
+            final_part_key = key[-4:]
+        mus_df = pd.read_csv(
+            os.path.join(location_output,
+                        f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+            index_col='gene')
+        genes_available = set.intersection(set(gene_list),
+                                        set(mus_df.index))
+        mus = {gene:{(1, 0, 0): mus_df.loc['TP53', 'rate_grp_1'],
+                    (0, 1, 0): mus_df.loc['KRAS', 'rate_grp_1'],
+                    (0, 0, 1): mus_df.loc[gene, 'rate_grp_1']}
+            for gene in genes_available
+            if gene not in ['TP53', 'KRAS']}
+        
+    else:
+        raise Exception("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
+
+    
     return mus
 
 
@@ -589,7 +613,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
 
         print(f"Computing selection coefficients for {key}...")
         print("")
-        mus = load_mutation_rates(key)
+        mus = load_mutation_rates(key, method = "variant")
         gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
