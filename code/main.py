@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 
+from itertools import combinations
+
 from count_combinations import updated_compute_samples
 from count_combinations import convert_samples_to_dict
 
@@ -21,7 +23,7 @@ from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
 
-from filter_data import dbs_filtered_for_TP53_KRAS
+from filter_data import key_filtered_dbs
 from filter_data import filter_samples_for_genes
 
 
@@ -30,7 +32,75 @@ gene_list = [gene.upper() for gene in gene_list]
 gene_list = gene_list[:103]
 
 
-def compute_samples_for_all_genes(key=None, save_results=True):
+def compute_samples_for_all_combinations(gene_list = None, key=None, num_per_combo = 3, save_results=True):
+    """Compute number of patients with each combination of 
+    const:`gene_list`.
+
+    :type gene_list: list or NoneType
+    :param gene_list: List of genes from which gene-set
+        combinations will be made. 
+    
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus (includes panel data)
+        - nonsmoking_plus (includes panel data)
+    
+    :type num_per_combo: int
+    :param num_per_combo: How many genes to include in
+        each set of genes
+
+    :type save_results: bool
+    :param save_results: If True (default) save results as a csv file.
+
+    :rtype: dict
+    :return: Dictionary with keys being the gene-sets, and values being
+        arrays with number of samples per mutation combination as
+        return by :func:`compute_samples`.
+
+    """
+
+    if key is None:
+        key = "pan_data"
+    if gene_list is None:
+        raise IOError("Please input a list of genes")
+    if num_per_combo < 2 or not isinstance(num_per_combo, int):
+        raise ValueError("The number of genes in each combinations must be an integer greater than 1")
+    print(f"Computing samples for all combinations of {num_per_combo} from {len(gene_list)} genes.")
+
+    unrepresented_genes = [gene for gene in gene_list if gene not in db.columns]
+    if len(unrepresented_genes) > 0:
+        print(f"No sample availability information for the following genes: "
+              f"{str(unrepresented_genes)}."
+              "\nThis may be because there are not mutations in those genes in the data, "
+              "or because the genes are not correctly represented in sequencing data")
+
+    gene_list = list(filter(lambda gene: gene not in unrepresented_genes, gene_list))
+
+    counts = {}
+
+    for combo in combinations(gene_list, num_per_combo):
+        db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
+        counts[combo] = updated_compute_samples(db,
+                                                mutations = combo,
+                                                print_info = True)
+
+    if save_results:
+        print("Saving results...")
+        # EDIT
+        df = pd.DataFrame.from_dict(counts, orient='index',
+                                    columns=[str(x) for x in build_S_with_tuples(3)])
+        df.index.name = "gene combination"
+        df.to_csv(samples_per_combination_files[key])
+
+        print("done.")
+
+    return counts
+
+def compute_samples_for_TP53_KRAS_gene_model(key=None, save_results=True):
     """Compute number of patients with each combination of the TP53,
     KRAS and a third gene, for each third gene in the
     const:`gene_list`.
@@ -61,7 +131,7 @@ def compute_samples_for_all_genes(key=None, save_results=True):
     counts = {}
 
     for gene in genes:
-        db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key])
+        db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key],print_info=True)
 
         if gene in db.columns:
             counts[gene] = updated_compute_samples(db,
@@ -593,7 +663,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
-            all_counts[key] = compute_samples_for_all_genes(key, save_results)
+            all_counts[key] = compute_samples_for_TP53_KRAS_gene_model(key, save_results)
         else:
             f"Loading counts per combination for {key}..."
             df = pd.read_csv(samples_per_combination_files[key], index_col='third gene')
