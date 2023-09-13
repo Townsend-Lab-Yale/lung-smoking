@@ -282,7 +282,7 @@ def compute_all_lambdas(key, all_counts, save_results=True):
         samples = counts[combo]
         if are_all_fluxes_computable(samples):
             print(f"Running model with {combo} "
-                  f"(combo number {i+1}/{len(counts)}"
+                  f"(combo number {i+1}/{len(counts)} "
                   f"for {key})")
 
             print("Estimating fluxes...")
@@ -567,9 +567,64 @@ def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_r
     return results
 
 
-def load_mutation_rates(key, method):
-    """Load the mutation rates in a format that :func:`compute_gammas` uses,
-    where we will assume an M=3 model including TP53, KRAS and a third gene.
+def load_mutation_rates(key, method): 
+    """Load the mutation rates in a format that :func:`compute_gammas` uses.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+    
+    :type method: str or NoneType
+    :param method: Which mutation rate calculation method to use. Can be one of:
+        - variant (sum of mutation rate for each variant site in gene)
+        - cesR (gene mutation rate directly from cancereffectsizeR)
+
+    :rtype: dict
+    :return: A dictionary with the genes as keys and the mutation rates as values.
+        - gene: mutation rate
+    """
+    # TODO: Account for when mutation rates are not available for a gene
+    
+    if(method == "variant"):
+        variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
+                                                        'variant_based_mutation_rates.txt'),
+                                                        index_col=0)
+        genes_available = set.intersection(set(gene_list),
+                                           set(variant_based_mutation_rates.index))
+        variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking"
+        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
+
+        if key[-4:] == 'plus':
+            key = key[:-5]
+
+        mus = variant_based_mutation_rates[key]
+
+    elif(method == "cesR"):
+        if key[-4:] == 'plus':
+            final_part_key = 'w_panel'
+        else:
+            final_part_key = key[-4:]
+        mus_df = pd.read_csv(
+            os.path.join(location_output,
+                        f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+            index_col='gene')
+        
+        mus = mus_df["rate_grp_1"].to_dict()
+        
+    else:
+        raise ValueError("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
+
+    
+    return mus
+
+def load_mutation_rates_for_TP53_KRAS_gene_model(key, method):
+    """Load the mutation rates in a format that :func:`compute_gammas_for_TP53_KRAS_gene_model`
+    uses, where we will assume an M=3 model including TP53, KRAS and a third gene.
+
     :type key: str or NoneType
     :param key: What estimates to use. Can be one of:
         - pan_data (default)
@@ -633,8 +688,74 @@ def load_mutation_rates(key, method):
     
     return mus
 
-
 def compute_all_gammas(key, all_lambdas, mus, save_results=True):
+    """Compute all estimates of the selection coefficient for the data
+    set `key` iterating over all gene combinations that are present in 
+    the keys of :dict:`all_lambdas`
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+
+    :type all_lambdas: dict
+    :param all_lambdas: Dictionary with the results for fluxes as
+        obtained from :func:`compute_all_lambdas`. It is indexed by
+        tuples containing the a key and either 'mles' or 'cis'
+
+    :type mus: dict
+    :param mus: Dictionary with the mutation rates for each gene in
+        data set `key` as obtained from :func:`load_mutation_rates`.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with the maximum likelihood estimations and the
+        95% asymptomatic confidence intervals for the fluxes.
+
+    """
+    gammas_mles = {}
+    gammas_cis = {}
+
+    lambdas_mles = all_lambdas[key, 'mles']
+    lambdas_cis = all_lambdas[key, 'cis']
+
+    for i, combo in enumerate(lambdas_mles.keys()):
+        
+        combo_length = len(combo)
+        # Constructs dictionary of the form:
+        # mu_combo = {combo:{(1, 0, 0): mus[combo[0]],
+        #                    (0, 1, 0): mus[combo[1]],
+        #                    (0, 0, 1): mus[combo[2]]}}
+        # if combo_length == 3
+        mu_combo = {tuple([0]*i + [1] + [0]*(combo_length-i-1)):
+                        mus[combo[i]]
+                     for i in range(0,combo_length)}
+
+        gammas_mles[combo] = compute_gammas(
+            lambdas_mles[combo],
+            mu_combo[combo])
+
+        gammas_cis[combo] = compute_CI_gamma(
+            lambdas_cis[combo],
+            mu_combo[combo])
+
+        if save_results:
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_mles.npy"),
+                    gammas_mles)
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_cis.npy"),
+                    gammas_cis)
+
+    return gammas_mles, gammas_cis
+
+
+def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_results=True):
     """Compute all estimates of the selection coefficient for the data
     set `key` iterating over all genes in the intersection of
     :const:`gene_list` and the genes available from the results of
