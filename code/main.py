@@ -73,7 +73,7 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
         raise ValueError("The number of genes in each combinations must be an integer greater than 1.")
     print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes.")
 
-    unrepresented_genes = [gene for gene in genes if gene not in db.columns]
+    unrepresented_genes = [gene for gene in genes if gene not in key_filtered_dbs[key].columns]
     if len(unrepresented_genes) > 0:
         print(f"No sample availability information for the following genes: "
               f"{str(unrepresented_genes)}."
@@ -87,12 +87,11 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
     for combo in combinations(genes, num_per_combo):
         db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
         counts[combo] = updated_compute_samples(db,
-                                                mutations = combo,
+                                                mutations = list(combo),
                                                 print_info = True)
 
     if save_results:
         print("Saving results...")
-        # EDIT
         df = pd.DataFrame.from_dict(counts, orient='index',
                                     columns=[str(x) for x in build_S_with_tuples(3)])
         df.index.name = "gene combination"
@@ -701,6 +700,14 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
 def main(genes = gene_list, num_per_combo = 3, recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
+    :type genes: list or NoneType
+    :param genes: List of genes from which gene-set
+        combinations will be made. 
+    
+    :type num_per_combo: int
+    :param num_per_combo: How many genes to include in
+        each set of genes
+    
     :type recompute_samples_per_combination: bool
     :param recompute_samples_per_combination: If True force
         recomputing the samples per combination of each
