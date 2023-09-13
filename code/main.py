@@ -24,7 +24,9 @@ from locations import results_keys
 from locations import samples_per_combination_files
 
 from filter_data import key_filtered_dbs
+from filter_data import dbs_filtered_for_TP53_KRAS
 from filter_data import filter_samples_for_genes
+
 
 
 gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
@@ -32,12 +34,12 @@ gene_list = [gene.upper() for gene in gene_list]
 gene_list = gene_list[:103]
 
 
-def compute_samples_for_all_combinations(gene_list = None, key=None, num_per_combo = 3, save_results=True):
+def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo = 3, save_results=True):
     """Compute number of patients with each combination of 
-    const:`gene_list`.
+    const:`genes`.
 
-    :type gene_list: list or NoneType
-    :param gene_list: List of genes from which gene-set
+    :type genes: list or NoneType
+    :param genes: List of genes from which gene-set
         combinations will be made. 
     
 
@@ -65,24 +67,24 @@ def compute_samples_for_all_combinations(gene_list = None, key=None, num_per_com
 
     if key is None:
         key = "pan_data"
-    if gene_list is None:
-        raise IOError("Please input a list of genes")
+    if genes is None:
+        raise IOError("Please input a list of genes.")
     if num_per_combo < 2 or not isinstance(num_per_combo, int):
-        raise ValueError("The number of genes in each combinations must be an integer greater than 1")
-    print(f"Computing samples for all combinations of {num_per_combo} from {len(gene_list)} genes.")
+        raise ValueError("The number of genes in each combinations must be an integer greater than 1.")
+    print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes.")
 
-    unrepresented_genes = [gene for gene in gene_list if gene not in db.columns]
+    unrepresented_genes = [gene for gene in genes if gene not in db.columns]
     if len(unrepresented_genes) > 0:
         print(f"No sample availability information for the following genes: "
               f"{str(unrepresented_genes)}."
               "\nThis may be because there are not mutations in those genes in the data, "
               "or because the genes are not correctly represented in sequencing data")
 
-    gene_list = list(filter(lambda gene: gene not in unrepresented_genes, gene_list))
+    genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
 
     counts = {}
 
-    for combo in combinations(gene_list, num_per_combo):
+    for combo in combinations(genes, num_per_combo):
         db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
         counts[combo] = updated_compute_samples(db,
                                                 mutations = combo,
@@ -248,8 +250,69 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     return MLE[0]
 
-
 def compute_all_lambdas(key, all_counts, save_results=True):
+    """Compute all estimates of the fluxes for the data set `key`
+    iterating over all genes in :const:`gene_list`.in
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+
+    :type all_counts: dict
+    :param all_counts: Dictionary with keys being the results keys,
+        and values being dictionaries that contain the samples per
+        mutation combination as return by :func:`compute_samples` for
+        each of genes in :const:`gene_list`.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with the maximum likelihood estimations and the
+        95% asymptomatic confidence intervals for the fluxes.
+
+    """
+    lambdas_mles = {}
+    lambdas_cis = {}
+
+    counts = all_counts[key]
+
+    for i, combo in enumerate(counts.keys()):
+        samples = counts[combo]
+        if are_all_fluxes_computable(samples):
+            print(f"Running model with {combo} "
+                  f"(combo number {i+1}/{len(counts)}"
+                  f"for {key})")
+
+            print("Estimating fluxes...")
+            mle = lambdas_from_samples(samples)
+            lambdas_mles[combo] = convert_lambdas_to_dict(mle)
+            if save_results:
+                np.save(os.path.join(location_output,
+                                        f"{key}_fluxes_mles.npy"),
+                        lambdas_mles)
+
+            print("Estimating asymptotic confidence intervals...")
+            cis = asymp_CI_lambdas(mle['lambdas'], samples)
+            lambdas_cis[combo] = convert_lambdas_to_dict(cis)
+            if save_results:
+                np.save(os.path.join(location_output,
+                                        f"{key}_fluxes_cis.npy"),
+                        lambdas_cis)
+
+        else:
+            print(f"Skipping estimation for combination {combo} "
+                    "because the fluxes of interest are not "
+                    "computable for that model.")
+
+        print("")
+
+    return lambdas_mles, lambdas_cis
+
+
+def compute_all_lambdas_for_TP53_KRAS_gene_model(key, all_counts, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
 
@@ -566,7 +629,7 @@ def load_mutation_rates(key, method):
             if gene not in ['TP53', 'KRAS']}
         
     else:
-        raise Exception("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
+        raise ValueError("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
 
     
     return mus
@@ -665,7 +728,7 @@ def main(recompute_samples_per_combination=False, save_results=True):
             print(f"Computing number of samples per combination for {key}...")
             all_counts[key] = compute_samples_for_TP53_KRAS_gene_model(key, save_results)
         else:
-            f"Loading counts per combination for {key}..."
+            print(f"Loading counts per combination for {key}...")
             df = pd.read_csv(samples_per_combination_files[key], index_col='third gene')
             all_counts[key] = {gene:np.array(df.loc[gene]) for gene in gene_list[2:]}
         print(f"done computing samples per combination for {key}.")
