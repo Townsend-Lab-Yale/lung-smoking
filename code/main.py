@@ -698,9 +698,64 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
     return gammas_mles, gammas_cis
 
 
+def main(genes = gene_list, num_per_combo = 3, recompute_samples_per_combination=False, save_results=True):
+    """Main method for the estimation of all the fluxes.
+
+    :type recompute_samples_per_combination: bool
+    :param recompute_samples_per_combination: If True force
+        recomputing the samples per combination of each
+        gene. Otherwise (default) try load the respective file if
+        available.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with two dictionaries that contain all the
+        samples per combination and all the fluxes estimated. The keys
+        of the dictionaries are the keys in :const:`results_keys`.
+
+    """
+    all_counts = {}
+    all_lambdas = {}
+    all_gammas = {}
+    for key in results_keys:
+        print("")
+        if (recompute_samples_per_combination
+            or not os.path.exists(samples_per_combination_files[key])):
+            print(f"Computing number of samples per combination for {key}...")
+            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, save_results)
+        else:
+            print(f"Loading counts per combination for {key}...")
+            df = pd.read_csv(samples_per_combination_files[key], index_col='gene combination')
+            all_counts[key] = {combo:np.array(df.loc[combo]) for combo in combinations(genes, num_per_combo)}
+        print(f"done computing samples per combination for {key}.")
+        print("")
+        print("")
+
+        print(f"Estimating all epistatic models for {key}...")
+        print("")
+        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, save_results)
+        all_lambdas[(key, 'mles')] = lambdas_mles
+        all_lambdas[(key, 'cis')] = lambdas_cis
+        print(f"done estimating all epistatic models for {key}.")
+        print("")
+        print("")
+
+        print(f"Computing selection coefficients for {key}...")
+        print("")
+        mus = load_mutation_rates(key, method = "variant")
+        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
+        all_gammas[(key, 'mles')] = gammas_mles
+        all_gammas[(key, 'cis')] = gammas_cis
+        print(f"done computing selection coefficients for {key}.")
+        print("")
+        print("")
 
 
-def main(recompute_samples_per_combination=False, save_results=True):
+    return all_counts, all_lambdas, all_gammas
+
+def estimate_fluxes_TP53_KRAS_gene_model(recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type recompute_samples_per_combination: bool
