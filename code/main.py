@@ -725,7 +725,7 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
     lambdas_cis = all_lambdas[key, 'cis']
 
     for i, combo in enumerate(lambdas_mles.keys()):
-        
+
         combo_length = len(combo)
         # Constructs dictionary of the form:
         # mu_combo = {combo:{(1, 0, 0): mus[combo[0]],
@@ -738,11 +738,11 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
 
         gammas_mles[combo] = compute_gammas(
             lambdas_mles[combo],
-            mu_combo[combo])
+            mu_combo)
 
         gammas_cis[combo] = compute_CI_gamma(
             lambdas_cis[combo],
-            mu_combo[combo])
+            mu_combo)
 
         if save_results:
             np.save(os.path.join(location_output,
