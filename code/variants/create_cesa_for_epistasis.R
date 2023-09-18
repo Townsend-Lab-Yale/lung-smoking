@@ -52,6 +52,10 @@ TSP_maf <- cancereffectsizeR::preload_maf(maf = maf_list$TSP, refset = ces.refse
 TSP_maf <- TSP_maf[is.na(problem)]
 TSP_maf <- TSP_maf[!Unique_Patient_Identifier %in% c("luad_tsp_16929", "luad_tsp_16901", "luad_tsp_16875","luad_tsp_16915")]
 
+NCI_maf <- cancereffectsizeR::preload_maf(maf = maf_list$NCI, refset = ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
+NCI_maf <- NCI_maf[is.na(problem)]
+NCI_maf <- NCI_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
+
 #' EXTRACTING NECESSARY COVERAGE INFORMATION
 
 #READING IN INFORMATION NECESSARY FOR LOADING MAF FILES (EXOME/GENOME AND COVERAGE INTERVALS FOR TGS)
@@ -164,6 +168,7 @@ cesa <- load_maf(cesa, maf = MSK2018_maf$IMPACT410, coverage = 'targeted', cover
 cesa <- load_maf(cesa, maf = MSK2018_maf$IMPACT468, coverage = 'targeted', covered_regions = paste0(location_data,"msk468_targets.bed"), covered_regions_name = 'msk468_regions', covered_regions_padding = 100)
 cesa <- load_maf(cesa, maf = TSP_maf, coverage = 'targeted', covered_regions = paste0(location_data,"tsp_targets.bed"), covered_regions_name = 'tsp_regions', covered_regions_padding = 100)
 cesa <- load_maf(cesa, maf = Broad_maf$WGS, coverage = 'genome')
+cesa <- load_maf(cesa, maf = NCI_maf, coverage = 'genome')
 
 
 #' CALCULATING MUTATIONS RATES (NECESSARY FOR VARIANT_MUTATION_RATE)

@@ -57,7 +57,7 @@ fwrite(gene_df, paste0(location_output,"variant_based_mutation_rates.txt"))
 
 #' Produce MAF for cancer epistasis analysis
 #' Output location: 'data/cesR_maf_for_epistasis_analysis.txt'
-preloaded_maf = rbind(rbindlist(Broad_maf), FMAD_maf, rbindlist(Genie_maf), MSK2015_maf, rbindlist(MSK2017_maf), rbindlist(MSK2018_maf), OncoSG_maf, TCGA_maf, TracerX_maf, TSP_maf, fill = T)
+preloaded_maf = rbind(rbindlist(Broad_maf), FMAD_maf, rbindlist(Genie_maf), MSK2015_maf, rbindlist(MSK2017_maf), rbindlist(MSK2018_maf), OncoSG_maf, TCGA_maf, TracerX_maf, TSP_maf, NCI_maf,fill = T)
 final_maf = construct_maf(cesa, maf_file, preloaded_maf, save_results)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
