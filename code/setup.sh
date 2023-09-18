@@ -62,7 +62,8 @@ declare -a DATASETS=("luad_broad"
                      "luad_oncosg_2020"
                      "luad_mskcc_2015"
                      "nsclc_pd1_msk_2018"
-                     "nsclc_tracerx_2017")
+                     "nsclc_tracerx_2017"
+                     "lung_nci_2022")
 for DATASET in ${DATASETS[@]}; do
     echo "Obtaining data set $DATASET..."
     curl "${URL}${DATASET}${EXTENSION}" | gunzip -dc | tar -xf -
@@ -84,6 +85,9 @@ mv lung_msk_2017/data_mutations.txt lung_msk_2017/data_mutations_extended.txt
 echo "Renaming data/nsclc_pd1_msk_2018/data_mutations.txt to "`
      `"data/nsclc_pd1_msk_2018/data_mutations_extended.txt for consistency."
 mv nsclc_pd1_msk_2018/data_mutations.txt nsclc_pd1_msk_2018/data_mutations_extended.txt
+echo "Renaming data/lung_nci_2022/data_mutations.txt to "`
+     `"data/lung_nci_2022/data_mutations_extended.txt for consistency."
+mv lung_nci_2022/data_mutations.txt lung_nci_2022/data_mutations_extended.txt
 echo ""
 echo "...done downloading cBioPortal data."
 echo ""

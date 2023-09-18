@@ -36,7 +36,8 @@ data_sets_directories = {
     'TCGA':'luad_tcga',
     'TracerX':'nsclc_tracerx_2017',
     'Genie':'genie_9',
-    'FM-AD':'luad_fm-ad'}
+    'FM-AD':'luad_fm-ad',
+    'NCI':'lung_nci_2022'}
 """Location of the directories that contain each data set in the
 `location_data' directory.
 
@@ -103,6 +104,18 @@ full_flux_mle_file_names = {
 full_flux_ci_file_names = {
     key:os.path.join(location_output,
                     f"{key}_fluxes_cis.npy")
+    for key in results_keys
+}
+
+full_selection_mle_file_names = {
+    key:os.path.join(location_output,
+                    f"{key}_selections_mles.npy")
+    for key in results_keys
+}
+
+full_selection_ci_file_names = {
+    key:os.path.join(location_output,
+                    f"{key}_selections_cis.npy")
     for key in results_keys
 }
 

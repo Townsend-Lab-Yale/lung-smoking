@@ -11,7 +11,7 @@ results."""
 
 
 
-files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9"]
+files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9","lung_nci_2022"]
 #files that can be auto-merged
 nm_files = ["tsp.luad.maf.txt"]
 #files that don't need merging
@@ -174,6 +174,18 @@ genie_df['Patient ID'] = genie_df['PATIENT_ID'].str.slice(10)
 genie_df = genie_df[['Patient ID','SAMPLE_ID','Smoker','Stage','Treatment']]
 genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment']
 
+
+nci_df = clinical_files.get('lung_nci_2022')
+non_luad_sample_ids_nci = nci_df[nci_df['HISTOLOGY'] != 'Adenocarcinomas']['SAMPLE_ID']
+nci_df = nci_df[nci_df["HISTOLOGY"] == "Adenocarcinomas"]
+nci_df['Smoker'] = False
+nci_df['Stage'] = nci_df["TUMOR_STAGE"].map(stage_dict).fillna(nci_df["TUMOR_STAGE"])
+nci_df['Overall Survival (Months)'] = nci_df["OS_MONTHS"].fillna("Living")
+nci_df['Treatment'] = False
+nci_df = nci_df[["PATIENT_ID",'SAMPLE_ID','Smoker','Stage','Overall Survival (Months)','Treatment']]
+nci_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Overall Survival (Months)','Treatment']
+
+
 fmad_df = pd.read_csv(os.path.join(location_data,'luad_fm-ad/clinical.tsv'), sep = '\t')
 non_luad_sample_ids_fmad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
 fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
@@ -207,6 +219,6 @@ msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df, nci_df])
 
 all_clinical_df.to_csv(merged_clinical_file_name)

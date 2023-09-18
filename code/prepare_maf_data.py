@@ -16,6 +16,7 @@ from filter_clinical_data import non_luad_sample_ids_msk2015
 from filter_clinical_data import non_luad_sample_ids_msk2018
 from filter_clinical_data import non_luad_sample_ids_tracer
 from filter_clinical_data import non_luad_sample_ids_genie
+from filter_clinical_data import non_luad_sample_ids_nci
 
 
 from locations import full_maf_file_names_lifted as maf_file_names
@@ -49,6 +50,7 @@ and mutations.
             -'TCGA'
             -'TracerX'
             -'Genie'
+            -'NCI'
             -'FM-AD'
 
     :type tumor_col_name: str
@@ -155,6 +157,8 @@ dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(metastatic_sample_id
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(multi_sample_ids_genie)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen18)]
 dfs['Genie'] = dfs['Genie'][~dfs['Genie']['Sample ID'].isin(dup_sample_ids_gen17)]
+
+dfs['NCI'] = dfs['NCI'][~dfs['NCI']['Sample ID'].isin(non_luad_sample_ids_nci)]
 
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(non_luad_sample_ids_fmad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
