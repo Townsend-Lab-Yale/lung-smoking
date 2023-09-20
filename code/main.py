@@ -818,17 +818,17 @@ def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_resu
     return gammas_mles, gammas_cis
 
 
-def main(genes = gene_list, num_per_combo = 3, recompute_samples_per_combination=False, save_results=True):
+def main(genes = gene_list, num_per_combo=3, recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list or NoneType
-    :param genes: List of genes from which gene-set
-        combinations will be made. 
-    
+    :param genes: List of genes from which gene-set combinations will
+        be made.
+
     :type num_per_combo: int
-    :param num_per_combo: How many genes to include in
-        each set of genes
-    
+    :param num_per_combo: How many genes to include in each set of
+        genes
+
     :type recompute_samples_per_combination: bool
     :param recompute_samples_per_combination: If True force
         recomputing the samples per combination of each
@@ -839,9 +839,10 @@ def main(genes = gene_list, num_per_combo = 3, recompute_samples_per_combination
     :param save_results: If True (default) save results.
 
     :rtype: tuple
-    :return: A tuple with two dictionaries that contain all the
-        samples per combination and all the fluxes estimated. The keys
-        of the dictionaries are the keys in :const:`results_keys`.
+    :return: A tuple with three dictionaries that contain all the
+        samples per combination, all the fluxes estimated and all the
+        scaled selection coefficients. The keys of the dictionaries
+        are the keys in :const:`results_keys`.
 
     """
     all_counts = {}
