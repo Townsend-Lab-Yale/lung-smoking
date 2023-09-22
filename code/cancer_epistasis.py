@@ -214,42 +214,49 @@ def estimate_lambdas(samples, upper_bound_prior=3, draws=10000,
 
     M = int(np.log2(len(samples))) # 2^M is the number mutation combinations
 
-    S = build_S_as_array(M)
+    if M == 1 and draws == 1:
+        ## then we have a close formula for the result
+        ## by maximizing the log of the likelihood
+        results = {'lambdas':np.array([np.log(1+samples[1]/samples[0])])}
 
-    positive_lambdas_indices = obtain_pos_lambdas_indices(S)
+    else:
 
-    number_positive_lambdas = np.sum(positive_lambdas_indices)
+        S = build_S_as_array(M)
 
-    number_samples = np.sum(samples)
+        positive_lambdas_indices = obtain_pos_lambdas_indices(S)
 
-    with pm.Model():
+        number_positive_lambdas = np.sum(positive_lambdas_indices)
 
-        ## We set an uninformative prior for the lambdas:
-        positive_lambdas = pm.Uniform(
-            name="lambdas",
-            lower=0,
-            upper=upper_bound_prior,
-            shape=number_positive_lambdas)
+        number_samples = np.sum(samples)
 
-        Ps = compute_Ps_at_T_tens(positive_lambdas)
+        with pm.Model():
 
-        likelihood = pm.Multinomial(name="samples",
-                                    p=Ps,
-                                    n=number_samples,
-                                    observed=samples)
-        if kwargs is None:
-           kwargs = {}
+            ## We set an uninformative prior for the lambdas:
+            positive_lambdas = pm.Uniform(
+                name="lambdas",
+                lower=0,
+                upper=upper_bound_prior,
+                shape=number_positive_lambdas)
 
-        if draws == 1:
-            results = pm.find_MAP(**kwargs)
+            Ps = compute_Ps_at_T_tens(positive_lambdas)
 
-        else:
-            results = pm.sample(int(draws/chains),
-                                cores=chains,
-                                tune=burn,
-                                step=pm.Metropolis(),
-                                random_seed=random_seed,
-                                **kwargs)
+            likelihood = pm.Multinomial(name="samples",
+                                        p=Ps,
+                                        n=number_samples,
+                                        observed=samples)
+            if kwargs is None:
+                kwargs = {}
+
+            if draws == 1:
+                results = pm.find_MAP(**kwargs)
+
+            else:
+                results = pm.sample(int(draws/chains),
+                                    cores=chains,
+                                    tune=burn,
+                                    step=pm.Metropolis(),
+                                    random_seed=random_seed,
+                                    **kwargs)
 
     if save_name is not None:
         if draws == 1:
