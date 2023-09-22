@@ -1,6 +1,7 @@
 .DS_Store
 .Rproj.user
 .Rhistory
+lung-smoking.Rproj
 
 *.rds
 *.bed
@@ -11,6 +12,7 @@ code/test*.py
 code/six_all_but_one.py
 code/variants/.Rlibs
 code/jupyter_notebooks/*
+code/messing_around.py
 
 data/gene_coordinates.csv
 data/genie_9/
@@ -23,6 +25,7 @@ data/luad_tsp/
 data/lung_msk_2017/
 data/nsclc_pd1_msk_2018/
 data/nsclc_tracerx_2017/
+data/lung_nci_2022/
 data/gencode.v38lift37.basic.annotation.gtf
 
 output/*

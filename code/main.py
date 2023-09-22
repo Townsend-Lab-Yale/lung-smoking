@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import multiprocessing as mp
 
 from itertools import combinations
 
@@ -83,6 +84,16 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
     genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
 
     counts = {}
+
+    # TODO: Parallel processing
+    # def filter_and_compute_samples(combo):
+    #     db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
+    #     counts[combo] = updated_compute_samples(db,
+    #                                             mutations = list(combo),
+    #                                             print_info = True)
+        
+    # pool = mp.Pool(processes=8)
+    # mp_results = pool.map(filter_and_compute_samples, combinations(genes, num_per_combo), chunksize=8)
 
     for combo in combinations(genes, num_per_combo):
         db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
@@ -277,6 +288,42 @@ def compute_all_lambdas(key, all_counts, save_results=True):
     lambdas_cis = {}
 
     counts = all_counts[key]
+
+    # TODO: Parallel processing
+    # def compute_lambda_for_combo(combo):
+    #     samples = counts[combo]
+    #     if are_all_fluxes_computable(samples):
+    #         print(f"Running model with {combo} "
+    #               f"(combo number {i+1}/{len(counts)} "
+    #               f"for {key})")
+
+    #         print("Estimating fluxes...")
+    #         mle = lambdas_from_samples(samples)
+    #         lambdas_mles[combo] = convert_lambdas_to_dict(mle)
+    #         if save_results:
+    #             np.save(os.path.join(location_output,
+    #                                     f"{key}_fluxes_mles.npy"),
+    #                     lambdas_mles)
+
+    #         print("Estimating asymptotic confidence intervals...")
+    #         cis = asymp_CI_lambdas(mle['lambdas'], samples)
+    #         lambdas_cis[combo] = convert_lambdas_to_dict(cis)
+    #         if save_results:
+    #             np.save(os.path.join(location_output,
+    #                                     f"{key}_fluxes_cis.npy"),
+    #                     lambdas_cis)
+
+    #     else:
+    #         print(f"Skipping estimation for combination {combo} "
+    #                 "because the fluxes of interest are not "
+    #                 "computable for that model.")
+
+    #     print("")
+
+    # pool = mp.Pool(8)
+    # mp_results = pool.map(compute_lambda_for_combo, counts.keys(), chunksize=8)
+
+
 
     for i, combo in enumerate(counts.keys()):
         samples = counts[combo]
