@@ -18,7 +18,8 @@ builds = {'TCGA':'grch38',
           'MSK2017':'grch37',
           'MSK2018':'grch37',
           'TracerX':'grch37',
-          'Genie':'grch37'
+          'Genie':'grch37',
+          'NCI':'grch37'
           }
 
 

@@ -10,7 +10,7 @@ library(stringr)
 maf_file <- read.csv(paste0(location_output,"merged_luad_maf.txt"))
 colnames(maf_file)[2] <- 'Tumor_Sample_Barcode'
 colnames(maf_file)[7] <- 'Tumor_Allele'
-maf_list <- split(maf_file, maf_file$Source)
+maf_list <- split(maf_file, maf_file$Source) 
 
 liftover_file = paste0(location_data, "hg38ToHg19.over.chain")
 
@@ -23,8 +23,8 @@ Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01
 FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
 FMAD_maf <- FMAD_maf[is.na(problem)]
 
-Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
-Genie_maf <- Genie_maf[is.na(problem)]
+# Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
+# Genie_maf <- Genie_maf[is.na(problem)]
 
 MSK2015_maf <- cancereffectsizeR::preload_maf(maf = maf_list$MSK2015, refset = ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
 MSK2015_maf <- MSK2015_maf[is.na(problem)]
@@ -110,27 +110,27 @@ if(!file.exists(paste0(location_data,"msk468_targets.bed"))){
   export(msk468_gr_clean, paste0(location_data,"msk468_targets.bed"))
 }
 
-#this should be run everytime so that we don't have to save a bunch of grange files
-genie_panel_genes <- fread(paste0(location_data,"genie_9/genomic_information.txt"))[,c('Chromosome', 'Start_Position', 'End_Position', 'Hugo_Symbol', 'Feature_Type', 'SEQ_ASSAY_ID')]
-genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
-seqlevels(genie_granges_list, pruning.mode = "fine") <- c(1:22,'X','Y')
+# #this should be run everytime so that we don't have to save a bunch of grange files
+# genie_panel_genes <- fread(paste0(location_data,"genie_9/genomic_information.txt"))[,c('Chromosome', 'Start_Position', 'End_Position', 'Hugo_Symbol', 'Feature_Type', 'SEQ_ASSAY_ID')]
+# genie_granges_list <- makeGRangesListFromDataFrame(genie_panel_genes, ignore.strand = T, seqnames.field = 'Chromosome', start.field = 'Start_Position', end.field = 'End_Position', split.field = 'SEQ_ASSAY_ID')
+# seqlevels(genie_granges_list, pruning.mode = "fine") <- c(1:22,'X','Y')
 
-#SOME PANELS IN GENIE DON'T COVER TP53 OR KRAS SO THEY MUST BE REMOVED
+# #SOME PANELS IN GENIE DON'T COVER TP53 OR KRAS SO THEY MUST BE REMOVED
 
-genie_panel_genes_2 <- genie_panel_genes[,c('Hugo_Symbol','SEQ_ASSAY_ID')]
-genie_panel_genes_2 <- genie_panel_genes_2[!duplicated(genie_panel_genes_2)]
-genie_panel_genes_list <- split(genie_panel_genes_2$Hugo_Symbol, genie_panel_genes_2$SEQ_ASSAY_ID)
+# genie_panel_genes_2 <- genie_panel_genes[,c('Hugo_Symbol','SEQ_ASSAY_ID')]
+# genie_panel_genes_2 <- genie_panel_genes_2[!duplicated(genie_panel_genes_2)]
+# genie_panel_genes_list <- split(genie_panel_genes_2$Hugo_Symbol, genie_panel_genes_2$SEQ_ASSAY_ID)
 
-Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+# Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
 
-panels_to_remove <- c()
-for(panel in names(genie_panel_genes_list)){
-  if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
-    panels_to_remove <- c(panels_to_remove, panel)
-  }
-}
+# panels_to_remove <- c()
+# for(panel in names(genie_panel_genes_list)){
+#   if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
+#     panels_to_remove <- c(panels_to_remove, panel)
+#   }
+# }
 
-Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
+# Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
 
 #SPLITTING MAF FILES WHEN DIFFERENT SEQUENCING METHODS ARE USED
 Broad_maf <- merge(Broad_maf, broad_exome_or_genome, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
@@ -142,8 +142,8 @@ MSK2017_maf <- split(MSK2017_maf, MSK2017_maf$`Gene Panel`)
 MSK2018_maf <- merge(MSK2018_maf, msk2018_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
 MSK2018_maf <- split(MSK2018_maf, MSK2018_maf$`Gene Panel`)
 
-Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
-Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID.x`)
+# Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
+# Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID.x`)
 
 
 #' LOADING IN MAF FILES INTO CESA OBJECT
@@ -157,9 +157,9 @@ cesa <- load_maf(cesa, maf = TCGA_maf)
 cesa <- load_maf(cesa, maf = TracerX_maf)
 cesa <- load_maf(cesa, maf = FMAD_maf, coverage = 'targeted', covered_regions = paste0(location_data,"fmad_targets.bed"), covered_regions_name = 'fmad_regions', covered_regions_padding = 100) #padding based on 23 variants having distance from interval between 10 and 100.
 
-for(i in 1:length(Genie_maf)){
-  cesa <- load_maf(cesa, maf = Genie_maf[i][[1]], coverage = 'targeted', covered_regions = genie_granges_list[names(Genie_maf)[i]][[1]], covered_regions_name = paste0(names(Genie_maf)[i], '_regions'), covered_regions_padding = 100)
-}
+# for(i in 1:length(Genie_maf)){
+#   cesa <- load_maf(cesa, maf = Genie_maf[i][[1]], coverage = 'targeted', covered_regions = genie_granges_list[names(Genie_maf)[i]][[1]], covered_regions_name = paste0(names(Genie_maf)[i], '_regions'), covered_regions_padding = 100)
+# }
 
 cesa <- load_maf(cesa, maf = MSK2017_maf$IMPACT341, coverage = 'targeted', covered_regions = paste0(location_data,"msk341_targets.bed"), covered_regions_name = 'msk341_regions', covered_regions_padding = 100)
 cesa <- load_maf(cesa, maf = MSK2017_maf$IMPACT410, coverage = 'targeted', covered_regions = paste0(location_data,"msk410_targets.bed"), covered_regions_name = 'msk410_regions', covered_regions_padding = 100)
@@ -183,7 +183,8 @@ signature_exclusions <- suggest_cosmic_signature_exclusions(cancer_type = "LUAD"
 cesa <- trinuc_mutation_rates(cesa,
                               signature_set = ces.refset.hg19$signatures$COSMIC_v3.2,
                               signature_exclusions = signature_exclusions, 
-                              samples = cesa$samples[coverage %in% c('exome','genome'), Unique_Patient_Identifier]
+                              samples = cesa$samples[coverage %in% c('exome','genome'), Unique_Patient_Identifier],
+                              cores=4
 )
 
 #SUBSETTING TO SAMPLES WITH UNBLENDED SIGNATURE WEIGHTS (SEE MESSAGES WITH JEFF MANDELL) AND WITH GREATER THAN 50 SNVS
@@ -191,11 +192,18 @@ bio_weights <- cesa$mutational_signatures$biological_weights
 bio_weights_unblended <- bio_weights[bio_weights$group_avg_blended == F]
 snv_counts <- cesa$maf[variant_type == 'snv', .N, by = "Unique_Patient_Identifier"]
 good_samples <- snv_counts[N > 50, Unique_Patient_Identifier]
+# NSLC_NCI patients will be added to the nonsmoking_samples list
+NSLC_NCI_patients = unique(maf_list$NCI$Tumor_Sample_Barcode)
+good_samples <- good_samples[! good_samples %in% NSLC_NCI_patients]
 good_sample_weights <- bio_weights_unblended[Unique_Patient_Identifier %in% good_samples,]
 #SMOKING SAMPLES ARE ANY SAMPLES WITH >0 SIGNATURE WEIGHTS.
 smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
+# We are confident that these patients are never-smokers, and the publication indicated that they had
+# low smoking signature despite some having a history of secondary smoking.
+nonsmoking_samples <- c(nonsmoking_samples,
+                        NSLC_NCI_patients)
 
 
 #INCLUDING PANEL DATA
