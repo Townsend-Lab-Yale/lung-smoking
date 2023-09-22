@@ -30,9 +30,11 @@ from filter_data import filter_samples_for_genes
 
 
 
-gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
-gene_list = [gene.upper() for gene in gene_list]
-gene_list = gene_list[:103]
+# gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
+# gene_list = [gene.upper() for gene in gene_list]
+# gene_list = gene_list[:103]
+
+gene_list = ["TP53","KRAS","EGFR","CDKN2A.p16INK4a","PIK3CA","BRAF","RB1","STK11","KEAP1"]
 
 
 def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo = 3, save_results=True):
