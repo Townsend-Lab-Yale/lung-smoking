@@ -148,8 +148,13 @@ def positions_landscape(M, positions):
 
 
 
-def plot_landscape(arrows, circles, mutation_names=None,
-                   scale_arrows=0.3, scale_circles=0.5,
+def plot_landscape(arrows, circle_areas,
+                   circle_values=None,
+                   circle_values_min=0,
+                   circle_values_max=1,
+                   circle_values_label="",
+                   mutation_names=None,
+                   scale_arrows=0.3, scale_circle_areas=0.5,
                    include_n_circles=True,
                    positions="out_to_in",
                    subplot_label=None,
@@ -166,12 +171,32 @@ def plot_landscape(arrows, circles, mutation_names=None,
     :type arrows: dict
     :param arrows:
 
-    :type circles: dict
-    :param circles: Areas of the circles to plot. Generally, we are
+    :type circle_areas: dict
+    :param circle_areas: Areas of the circles to plot. Generally, we are
         using this variable for the number of patients in each
         mutation combination, but it could be used to plot something
         else, for example the mus or gammas if the arrows are the
         lambdas.
+
+    :type circle_values: dict or NoneType
+    :param circle_values: Values of the circles to use in a heat map
+        plot. This variable could be used to convey further
+        information by somatic genotype, for example age or overall
+        survival. If None (default), then do not include the heatmap.
+
+    :type circle_values_min: float
+    :param circle_values_min: Minimum value for heat map used to map
+        the `circle_values`. Only has an effect if circle_values is
+        not None.
+
+    :type circle_values_ max: float
+    :param circle_values_max: Maximum value for heat map used to map
+        the `circle_values`. Only has an effect if circle_values is
+        not None.
+
+    :type circle_values_label: str
+    :param circle_values_label: Label to use for the circle
+        values. Only has an effect if circle_values is not None.
 
     :type mutation_names: list or NoneType
     :param mutation_names: List with the names of mutations to be
@@ -286,12 +311,36 @@ def plot_landscape(arrows, circles, mutation_names=None,
                  zorder=3)
 
     ## Draw circles
-    for m, circle in circles.items():
-        ax.add_patch(
-            plt.Circle(pts[m],
-                       scale_circles*np.sqrt(circle),
-                       color="LightGray",
-                       zorder=2))
+    if circle_values is None:
+        for m, circle in circle_areas.items():
+            ax.add_patch(
+                plt.Circle(pts[m],
+                           scale_circle_areas*np.sqrt(circle),
+                           color="LightGray",
+                           zorder=2))
+    else:
+        cmap = 'Reds'
+        for m, circle in circle_areas.items():
+            color = cm.get_cmap(cmap)(
+                ((circle_values[m]-circle_values_min)/
+                 (circle_values_max-circle_values_min)))
+            ax.add_patch(
+                plt.Circle(pts[m],
+                           scale_circle_areas*np.sqrt(circle),
+                           color=color,
+                           alpha=0.9,
+                           zorder=2))
+
+        sm = plt.cm.ScalarMappable(cmap=cmap,
+                                   norm=plt.Normalize(
+                                       vmin=circle_values_min,
+                                       vmax=circle_values_max))
+        sm.set_array([])
+        fig.colorbar(sm, ax=ax,
+                     label=circle_values_label,
+                     shrink=0.8, pad=-0.1)
+
+
 
     ## Set labels for pts
     names = {tuple(Sj):mutation_names_sep.join(
@@ -309,7 +358,7 @@ def plot_landscape(arrows, circles, mutation_names=None,
                 (pts[x][1]+name_y_offsets[x]
                  if name_y_offsets is not None else
                  pts[x][1]),
-                (name + f"\n($n={circles[x]}$)" if include_n_circles
+                (name + f"\n($n={circle_areas[x]}$)" if include_n_circles
                  else name),
                 # color=x if x != (1, 1, 1) else "Black",
                 color="Black",
@@ -331,8 +380,8 @@ def plot_landscape(arrows, circles, mutation_names=None,
     #         xlims = 1.01*np.array([-M, M])
     #         ylims = xlims
     #     else:
-    #         xlims = np.array([-scale_circles*circles[M*(0,)]*3/2,
-    #                           1*M + scale_circles*circles[M*(0,)]*3/2])
+    #         xlims = np.array([-scale_circle_areas*circle_areas[M*(0,)]*3/2,
+    #                           1*M + scale_circle_areas*circle_areas[M*(0,)]*3/2])
     #         ylims = 1.22*np.array([-M/2, M/2])
     # else:
     xlims = [-0.52, 4.1]
