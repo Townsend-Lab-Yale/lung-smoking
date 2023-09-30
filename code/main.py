@@ -36,12 +36,14 @@ from filter_data import filter_samples_for_genes
 
 gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.p16INK4a"]
 
-def filter_and_compute_samples(combo, key):
+n_cores = 8
+
+def filter_and_compute_samples(combo, key, print_info=False):
     print(combo)
-    db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
+    db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=print_info)
     counts = updated_compute_samples(db,
-                                    mutations = list(combo),
-                                    print_info = True)
+                                    mutations=list(combo),
+                                    print_info=print_info)
     return {combo: counts}
     
 
@@ -93,11 +95,11 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
 
     genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
 
-    pool = mp.Pool(processes=8)
+    pool = mp.Pool(processes=n_cores)
     gene_combos = list(combinations(genes, num_per_combo))
     mp_results = pool.starmap(filter_and_compute_samples, 
                               [(gene_combos[i], key) for i in range(len(gene_combos))], 
-                              chunksize=8)
+                              chunksize=n_cores)
     counts = {combo: count_array for result in mp_results for combo, count_array in result.items()}
     # print(counts)
     # for combo in combinations(genes, num_per_combo):
@@ -273,9 +275,35 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     samples = counts[combo]
 
-    if (are_all_fluxes_computable(samples)) or (flexible_last_layer and all_but_last_layer_computable(samples, len(combo))):
+    if are_all_fluxes_computable(samples):
         print(f"Estimating fluxes for {combo}...")
         mle = lambdas_from_samples(samples)
+        combo_lambda_mles = convert_lambdas_to_dict(mle)
+
+        print("Estimating asymptotic confidence intervals...")
+        cis = asymp_CI_lambdas(mle['lambdas'], samples)
+        combo_lambda_cis = convert_lambdas_to_dict(cis)
+
+        return combo, combo_lambda_mles, combo_lambda_cis
+
+    elif flexible_last_layer and all_but_last_layer_computable(samples, len(combo)):
+        print(f"Estimating a limited selection of fluxes for {combo}...")
+        mle = lambdas_from_samples(samples)
+
+        if(mle == 'incomputable'):
+            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
+                incomputable_output_file.write(combo + '\n')
+            return None
+
+        S = build_S_as_array(len(combo))
+        states_with_zero = [tuple(x) for x in S[samples == 0]]
+        indices_with_zero = [order_pos_lambdas(S).index((x, tuple(y)))
+                                for x, y in order_pos_lambdas(S)
+                                if x in states_with_zero]
+        for x in indices_with_zero: mle['lambdas'][x] = np.nan
+
+        # MAYBE SHOULD BE EVEN MORE STRICT AND JUST REMOVE ALL LAMBDAS FROM LAST LAYER
+
         combo_lambda_mles = convert_lambdas_to_dict(mle)
 
         print("Estimating asymptotic confidence intervals...")
@@ -289,6 +317,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
                 "because the fluxes of interest are not "
                 "computable for that model.")
 
+    return None
     
 def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
@@ -319,16 +348,12 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
 
     counts = all_counts[key]
 
-    pool = mp.Pool(processes=8)
+    pool = mp.Pool(processes=n_cores)
     mp_results = pool.starmap(compute_lambda_for_combo, 
                               [(combo, counts, flexible_last_layer) for combo in counts.keys()], 
-                              chunksize=8)
-    print(mp_results)
+                              chunksize=n_cores)
     lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
     lambdas_cis = {result[0]: result[2] for result in mp_results if result is not None}
-
-    print(lambdas_mles)
-    print(lambdas_cis)
 
     if save_results:
         np.save(os.path.join(location_output,
