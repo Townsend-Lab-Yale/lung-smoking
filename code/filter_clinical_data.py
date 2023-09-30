@@ -93,10 +93,11 @@ oncosg_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)", "
 
 msk2015_df = clinical_files.get('luad_mskcc_2015')
 msk2015_df["SMOKING_HISTORY"] = msk2015_df["SMOKING_HISTORY"].apply(lambda x: True if x in ("Current", "Former") else False if x == "Never" else np.NaN)
-#msk2015 does not have stage
-msk2015_df['Stage'] = np.NaN
-#All patients treated with pembrolizumab, no indication of primary/metastasis in paper
+# According to supplementary methods, all patients had stage 4 cancer
+msk2015_df['Stage'] = "4"
 msk2015_df['Treatment'] = True
+# msk2015_df['Treatment'] = False
+# msk2015_df['Treatment'][msk2015_df['Sample ID'] == 'DM123062'] = True
 non_luad_sample_ids_msk2015 = msk2015_df[msk2015_df['HISTOLOGY'] != 'Adenocarcinoma']['SAMPLE_ID']
 msk2015_df = msk2015_df[msk2015_df['HISTOLOGY'] == 'Adenocarcinoma']
 msk2015_df = msk2015_df[["SAMPLE_ID", "Stage", "SMOKING_HISTORY", "PFS_MONTHS", "Treatment"]]
@@ -179,6 +180,7 @@ nci_df = clinical_files.get('lung_nci_2022')
 non_luad_sample_ids_nci = nci_df[nci_df['HISTOLOGY'] != 'Adenocarcinomas']['SAMPLE_ID']
 nci_df = nci_df[nci_df["HISTOLOGY"] == "Adenocarcinomas"]
 nci_df['Smoker'] = False
+# all samples were of primary tumor
 nci_df['Stage'] = nci_df["TUMOR_STAGE"].map(stage_dict).fillna(nci_df["TUMOR_STAGE"])
 nci_df['Overall Survival (Months)'] = nci_df["OS_MONTHS"].fillna("Living")
 nci_df['Treatment'] = False
@@ -212,13 +214,13 @@ dup_patient_ids_gen17 = merged_temp['Patient ID']
 dup_sample_ids_gen17 = genie_df[genie_df['Patient ID'].isin(dup_patient_ids_gen17)]['Sample ID']
 genie_df = genie_df[~genie_df['Patient ID'].isin(dup_patient_ids_gen17)]
 
-genie_df = genie_df.drop(columns='Patient ID')
-msk2017_df = msk2017_df.drop(columns='Patient ID')
-msk2018_df = msk2018_df.drop(columns='Patient ID')
+# genie_df = genie_df.drop(columns='Patient ID')
+# msk2017_df = msk2017_df.drop(columns='Patient ID')
+# msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
 all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df, nci_df])
 
-all_clinical_df.to_csv(merged_clinical_file_name)
+# all_clinical_df.to_csv(merged_clinical_file_name)
