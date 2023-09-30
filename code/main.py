@@ -4,6 +4,7 @@ import numpy as np
 import multiprocessing as mp
 
 from itertools import combinations
+from itertools import chain
 
 from count_combinations import updated_compute_samples
 from count_combinations import convert_samples_to_dict
@@ -38,16 +39,27 @@ gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.
 
 n_cores = 8
 
-def filter_and_compute_samples(combo, key, print_info=False):
-    print(combo)
-    db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=print_info)
-    counts = updated_compute_samples(db,
-                                    mutations=list(combo),
-                                    print_info=print_info)
+def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
+    if pathways:
+        all_genes = list(chain(*combo.values()))
+        db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], print_info=print_info)
+        for pathway, genes in combo.items():
+            db[f'{pathway}']=db[genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x)
+        counts = updated_compute_samples(db, 
+                                         mutations=list(combo.keys()),
+                                         print_info=True)
+        combo = tuple(combo.keys())
+    else:
+        db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=print_info)
+        counts = updated_compute_samples(db,
+                                         mutations=list(combo),
+                                         print_info=print_info)
+
+    
     return {combo: counts}
     
 
-def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo = 3, save_results=True):
+def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, pathways=False, print_info=False, save_results=True):
     """Compute number of patients with each combination of 
     const:`genes`.
 
@@ -83,92 +95,52 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
     if genes is None:
         raise IOError("Please input a list of genes.")
     if num_per_combo < 2 or not isinstance(num_per_combo, int):
-        raise ValueError("The number of genes in each combinations must be an integer greater than 1.")
-    print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes.")
+        raise ValueError("The number of genes in each combination must be an integer greater than 1.")
+    print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes/pathways for {key}...")
 
-    unrepresented_genes = [gene for gene in genes if gene not in key_filtered_dbs[key].columns]
+    if pathways:
+        all_genes = list(chain(*genes.values()))
+    else:
+        all_genes = genes
+
+    unrepresented_genes = [gene for gene in all_genes if gene not in key_filtered_dbs[key].columns]
     if len(unrepresented_genes) > 0:
         print(f"No sample availability information for the following genes: "
               f"{str(unrepresented_genes)}."
               "\nThis may be because there are not mutations in those genes in the data, "
               "or because the genes are not correctly represented in sequencing data")
 
-    genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
+    if pathways:
+        genes = {pathway: list(filter(lambda gene: gene not in unrepresented_genes, pathway_genes))
+                 for pathway, pathway_genes in genes.items()}
+    else:
+        genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
 
     pool = mp.Pool(processes=n_cores)
     gene_combos = list(combinations(genes, num_per_combo))
-    mp_results = pool.starmap(filter_and_compute_samples, 
-                              [(gene_combos[i], key) for i in range(len(gene_combos))], 
-                              chunksize=n_cores)
+
+    if pathways:
+        mp_results = pool.starmap(filter_and_compute_samples, 
+                                  [({pathway: genes[pathway] for pathway in combo},
+                                    key,
+                                    pathways,
+                                    print_info) for combo in gene_combos],
+                                  chunksize=n_cores)
+    else:
+        mp_results = pool.starmap(filter_and_compute_samples,
+                                  [(combo,
+                                    key,
+                                    pathways,
+                                    print_info) for combo in gene_combos],
+                                  chunksize=n_cores)
+
     counts = {combo: count_array for result in mp_results for combo, count_array in result.items()}
-    # print(counts)
-    # for combo in combinations(genes, num_per_combo):
-    #     db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
-    #     counts[combo] = updated_compute_samples(db,
-    #                                             mutations = list(combo),
-    #                                             print_info = True)
-
+    
     if save_results:
         print("Saving results...")
         df = pd.DataFrame.from_dict(counts, orient='index',
-                                    columns=[str(x) for x in build_S_with_tuples(3)])
+                                    columns=[str(x) for x in build_S_with_tuples(num_per_combo)])
         df.index.name = "gene combination"
-        df.to_csv(samples_per_combination_files[key])
-
-        print("done.")
-
-    return counts
-
-def compute_samples_for_TP53_KRAS_gene_model(key=None, save_results=True):
-    """Compute number of patients with each combination of the TP53,
-    KRAS and a third gene, for each third gene in the
-    const:`gene_list`.
-
-    :type key: str or NoneType
-    :param key: What estimates to use. Can be one of:
-        - pan_data (default)
-        - smoking
-        - nonsmoking
-
-    :type save_results: bool
-    :param save_results: If True (default) save results as a csv file.
-
-    :rtype: dict
-    :return: Dictionary with keys being the genes, and values being
-        arrays with number of samples per mutation combination as
-        return by :func:`compute_samples`.
-
-    """
-
-    if key is None:
-        key = "pan_data"
-
-    genes = gene_list[2:]
-
-    unrepresented_genes = []
-
-    counts = {}
-
-    for gene in genes:
-        db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key],print_info=True)
-
-        if gene in db.columns:
-            counts[gene] = updated_compute_samples(db,
-                                        mutations=['TP53', 'KRAS', gene])
-        else:
-            unrepresented_genes.append(gene)
-            counts[gene] = np.repeat(0, 8)
-    if len(unrepresented_genes) > 0:
-        print(f"No sample availability information for the following genes: "
-              f"{str(unrepresented_genes)}."
-              "\nThis may be because there are not mutations in those genes in the data, "
-              "or because the genes are not correctly represented in sequencing data")
-
-    if save_results:
-        print("Saving results...")
-        df = pd.DataFrame.from_dict(counts, orient='index',
-                                    columns=[str(x) for x in build_S_with_tuples(3)])
-        df.index.name = "third gene"
         df.to_csv(samples_per_combination_files[key])
 
         print("done.")
@@ -196,11 +168,6 @@ def are_all_fluxes_computable(samples):
     """
     return np.all(samples[:-1] > 0)
 
-
-def at_least_000_to_001_and_110_to_111(samples):
-    """Return True if the flux from wildtype to only the third gene and
-    the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
-    return np.all(samples[[0,-2]] > 0)
 
 def all_but_last_layer_computable(samples, M):
     S = build_S_as_array(M)
@@ -397,6 +364,274 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
     #     print("")
 
     return lambdas_mles, lambdas_cis
+
+
+
+
+
+def load_mutation_rates(key, method): 
+    """Load the mutation rates in a format that :func:`compute_gammas` uses.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+    
+    :type method: str or NoneType
+    :param method: Which mutation rate calculation method to use. Can be one of:
+        - variant (sum of mutation rate for each variant site in gene)
+        - cesR (gene mutation rate directly from cancereffectsizeR)
+
+    :rtype: dict
+    :return: A dictionary with the genes as keys and the mutation rates as values.
+        - gene: mutation rate
+    """
+    # TODO: Account for when mutation rates are not available for a gene
+    
+    if(method == "variant"):
+        variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
+                                                        'variant_based_mutation_rates.txt'),
+                                                        index_col=0)
+        genes_available = set.intersection(set(gene_list),
+                                           set(variant_based_mutation_rates.index))
+        variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking"
+        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
+
+        if key[-4:] == 'plus':
+            key = key[:-5]
+
+        mus = variant_based_mutation_rates[key]
+
+    elif(method == "cesR"):
+        if key[-4:] == 'plus':
+            final_part_key = 'w_panel'
+        else:
+            final_part_key = key[-4:]
+        mus_df = pd.read_csv(
+            os.path.join(location_output,
+                        f"{key[:-4] + final_part_key}_mutation_rates.txt"),
+            index_col='gene')
+        
+        mus = mus_df["rate_grp_1"].to_dict()
+        
+    else:
+        raise ValueError("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
+
+    
+    return mus
+
+
+def compute_all_gammas(key, all_lambdas, mus, save_results=True):
+    """Compute all estimates of the selection coefficient for the data
+    set `key` iterating over all gene combinations that are present in 
+    the keys of :dict:`all_lambdas`
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+        - smoking_plus
+        - nonsmoking_plus
+
+    :type all_lambdas: dict
+    :param all_lambdas: Dictionary with the results for fluxes as
+        obtained from :func:`compute_all_lambdas`. It is indexed by
+        tuples containing the a key and either 'mles' or 'cis'
+
+    :type mus: dict
+    :param mus: Dictionary with the mutation rates for each gene in
+        data set `key` as obtained from :func:`load_mutation_rates`.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with the maximum likelihood estimations and the
+        95% asymptomatic confidence intervals for the fluxes.
+
+    """
+    gammas_mles = {}
+    gammas_cis = {}
+
+    lambdas_mles = all_lambdas[key, 'mles']
+    lambdas_cis = all_lambdas[key, 'cis']
+
+    for i, combo in enumerate(lambdas_mles.keys()):
+
+        combo_length = len(combo)
+        # Constructs dictionary of the form:
+        # mu_combo = {combo:{(1, 0, 0): mus[combo[0]],
+        #                    (0, 1, 0): mus[combo[1]],
+        #                    (0, 0, 1): mus[combo[2]]}}
+        # if combo_length == 3
+        mu_combo = {tuple([0]*i + [1] + [0]*(combo_length-i-1)):
+                        mus[combo[i]]
+                     for i in range(0,combo_length)}
+
+        gammas_mles[combo] = compute_gammas(
+            lambdas_mles[combo],
+            mu_combo)
+
+        gammas_cis[combo] = compute_CI_gamma(
+            lambdas_cis[combo],
+            mu_combo)
+
+        if save_results:
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_mles.npy"),
+                    gammas_mles)
+            np.save(os.path.join(location_output,
+                                 f"{key}_selections_cis.npy"),
+                    gammas_cis)
+
+    return gammas_mles, gammas_cis
+
+
+def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
+    """Main method for the estimation of all the fluxes.
+
+    :type genes: list or NoneType
+    :param genes: List of genes from which gene-set combinations will
+        be made.
+
+    :type num_per_combo: int
+    :param num_per_combo: How many genes to include in each set of
+        genes
+
+    :type recompute_samples_per_combination: bool
+    :param recompute_samples_per_combination: If True force
+        recomputing the samples per combination of each
+        gene. Otherwise (default) try load the respective file if
+        available.
+
+    :type save_results: bool
+    :param save_results: If True (default) save results.
+
+    :rtype: tuple
+    :return: A tuple with three dictionaries that contain all the
+        samples per combination, all the fluxes estimated and all the
+        scaled selection coefficients. The keys of the dictionaries
+        are the keys in :const:`results_keys`.
+
+    """
+    all_counts = {}
+    all_lambdas = {}
+    all_gammas = {}
+    for key in results_keys:
+        print("")
+        if (recompute_samples_per_combination
+            or not os.path.exists(samples_per_combination_files[key])):
+            print(f"Computing number of samples per combination for {key}...")
+            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, save_results)
+        else:
+            print(f"Loading counts per combination for {key}...")
+            df = pd.read_csv(samples_per_combination_files[key], index_col='gene combination')
+            all_counts[key] = {combo:np.array(df.loc[combo]) for combo in combinations(genes, num_per_combo)}
+        print(f"done computing samples per combination for {key}.")
+        print("")
+        print("")
+
+        print(f"Estimating all epistatic models for {key}...")
+        print("")
+        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, save_results)
+        all_lambdas[(key, 'mles')] = lambdas_mles
+        all_lambdas[(key, 'cis')] = lambdas_cis
+        print(f"done estimating all epistatic models for {key}.")
+        print("")
+        print("")
+
+        print(f"Computing selection coefficients for {key}...")
+        print("")
+        mus = load_mutation_rates(key, method = mu_method)
+        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
+        all_gammas[(key, 'mles')] = gammas_mles
+        all_gammas[(key, 'cis')] = gammas_cis
+        print(f"done computing selection coefficients for {key}.")
+        print("")
+        print("")
+
+
+    return all_counts, all_lambdas, all_gammas
+
+
+
+if __name__ == "__main__":
+    main(recompute_samples_per_combination = True)
+
+
+
+
+
+
+
+
+
+
+def compute_samples_for_TP53_KRAS_gene_model(key=None, save_results=True):
+    """Compute number of patients with each combination of the TP53,
+    KRAS and a third gene, for each third gene in the
+    const:`gene_list`.
+
+    :type key: str or NoneType
+    :param key: What estimates to use. Can be one of:
+        - pan_data (default)
+        - smoking
+        - nonsmoking
+
+    :type save_results: bool
+    :param save_results: If True (default) save results as a csv file.
+
+    :rtype: dict
+    :return: Dictionary with keys being the genes, and values being
+        arrays with number of samples per mutation combination as
+        return by :func:`compute_samples`.
+
+    """
+
+    if key is None:
+        key = "pan_data"
+
+    genes = gene_list[2:]
+
+    unrepresented_genes = []
+
+    counts = {}
+
+    for gene in genes:
+        db = filter_samples_for_genes(gene, dbs_filtered_for_TP53_KRAS[key],print_info=True)
+
+        if gene in db.columns:
+            counts[gene] = updated_compute_samples(db,
+                                        mutations=['TP53', 'KRAS', gene])
+        else:
+            unrepresented_genes.append(gene)
+            counts[gene] = np.repeat(0, 8)
+    if len(unrepresented_genes) > 0:
+        print(f"No sample availability information for the following genes: "
+              f"{str(unrepresented_genes)}."
+              "\nThis may be because there are not mutations in those genes in the data, "
+              "or because the genes are not correctly represented in sequencing data")
+
+    if save_results:
+        print("Saving results...")
+        df = pd.DataFrame.from_dict(counts, orient='index',
+                                    columns=[str(x) for x in build_S_with_tuples(3)])
+        df.index.name = "third gene"
+        df.to_csv(samples_per_combination_files[key])
+
+        print("done.")
+
+    return counts
+
+
+def at_least_000_to_001_and_110_to_111(samples):
+    """Return True if the flux from wildtype to only the third gene and
+    the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
+    return np.all(samples[[0,-2]] > 0)
 
 
 def compute_all_lambdas_for_TP53_KRAS_gene_model(key, all_counts, save_results=True):
@@ -654,60 +889,6 @@ def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_r
     return results
 
 
-def load_mutation_rates(key, method): 
-    """Load the mutation rates in a format that :func:`compute_gammas` uses.
-
-    :type key: str or NoneType
-    :param key: What estimates to use. Can be one of:
-        - pan_data (default)
-        - smoking
-        - nonsmoking
-        - smoking_plus
-        - nonsmoking_plus
-    
-    :type method: str or NoneType
-    :param method: Which mutation rate calculation method to use. Can be one of:
-        - variant (sum of mutation rate for each variant site in gene)
-        - cesR (gene mutation rate directly from cancereffectsizeR)
-
-    :rtype: dict
-    :return: A dictionary with the genes as keys and the mutation rates as values.
-        - gene: mutation rate
-    """
-    # TODO: Account for when mutation rates are not available for a gene
-    
-    if(method == "variant"):
-        variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
-                                                        'variant_based_mutation_rates.txt'),
-                                                        index_col=0)
-        genes_available = set.intersection(set(gene_list),
-                                           set(variant_based_mutation_rates.index))
-        variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking"
-        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
-
-        if key[-4:] == 'plus':
-            key = key[:-5]
-
-        mus = variant_based_mutation_rates[key]
-
-    elif(method == "cesR"):
-        if key[-4:] == 'plus':
-            final_part_key = 'w_panel'
-        else:
-            final_part_key = key[-4:]
-        mus_df = pd.read_csv(
-            os.path.join(location_output,
-                        f"{key[:-4] + final_part_key}_mutation_rates.txt"),
-            index_col='gene')
-        
-        mus = mus_df["rate_grp_1"].to_dict()
-        
-    else:
-        raise ValueError("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
-
-    
-    return mus
-
 def load_mutation_rates_for_TP53_KRAS_gene_model(key, method):
     """Load the mutation rates in a format that :func:`compute_gammas_for_TP53_KRAS_gene_model`
     uses, where we will assume an M=3 model including TP53, KRAS and a third gene.
@@ -775,72 +956,6 @@ def load_mutation_rates_for_TP53_KRAS_gene_model(key, method):
     
     return mus
 
-def compute_all_gammas(key, all_lambdas, mus, save_results=True):
-    """Compute all estimates of the selection coefficient for the data
-    set `key` iterating over all gene combinations that are present in 
-    the keys of :dict:`all_lambdas`
-
-    :type key: str or NoneType
-    :param key: What estimates to use. Can be one of:
-        - pan_data (default)
-        - smoking
-        - nonsmoking
-        - smoking_plus
-        - nonsmoking_plus
-
-    :type all_lambdas: dict
-    :param all_lambdas: Dictionary with the results for fluxes as
-        obtained from :func:`compute_all_lambdas`. It is indexed by
-        tuples containing the a key and either 'mles' or 'cis'
-
-    :type mus: dict
-    :param mus: Dictionary with the mutation rates for each gene in
-        data set `key` as obtained from :func:`load_mutation_rates`.
-
-    :type save_results: bool
-    :param save_results: If True (default) save results.
-
-    :rtype: tuple
-    :return: A tuple with the maximum likelihood estimations and the
-        95% asymptomatic confidence intervals for the fluxes.
-
-    """
-    gammas_mles = {}
-    gammas_cis = {}
-
-    lambdas_mles = all_lambdas[key, 'mles']
-    lambdas_cis = all_lambdas[key, 'cis']
-
-    for i, combo in enumerate(lambdas_mles.keys()):
-
-        combo_length = len(combo)
-        # Constructs dictionary of the form:
-        # mu_combo = {combo:{(1, 0, 0): mus[combo[0]],
-        #                    (0, 1, 0): mus[combo[1]],
-        #                    (0, 0, 1): mus[combo[2]]}}
-        # if combo_length == 3
-        mu_combo = {tuple([0]*i + [1] + [0]*(combo_length-i-1)):
-                        mus[combo[i]]
-                     for i in range(0,combo_length)}
-
-        gammas_mles[combo] = compute_gammas(
-            lambdas_mles[combo],
-            mu_combo)
-
-        gammas_cis[combo] = compute_CI_gamma(
-            lambdas_cis[combo],
-            mu_combo)
-
-        if save_results:
-            np.save(os.path.join(location_output,
-                                 f"{key}_selections_mles.npy"),
-                    gammas_mles)
-            np.save(os.path.join(location_output,
-                                 f"{key}_selections_cis.npy"),
-                    gammas_cis)
-
-    return gammas_mles, gammas_cis
-
 
 def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_results=True):
     """Compute all estimates of the selection coefficient for the data
@@ -905,72 +1020,6 @@ def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_resu
     return gammas_mles, gammas_cis
 
 
-def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
-    """Main method for the estimation of all the fluxes.
-
-    :type genes: list or NoneType
-    :param genes: List of genes from which gene-set combinations will
-        be made.
-
-    :type num_per_combo: int
-    :param num_per_combo: How many genes to include in each set of
-        genes
-
-    :type recompute_samples_per_combination: bool
-    :param recompute_samples_per_combination: If True force
-        recomputing the samples per combination of each
-        gene. Otherwise (default) try load the respective file if
-        available.
-
-    :type save_results: bool
-    :param save_results: If True (default) save results.
-
-    :rtype: tuple
-    :return: A tuple with three dictionaries that contain all the
-        samples per combination, all the fluxes estimated and all the
-        scaled selection coefficients. The keys of the dictionaries
-        are the keys in :const:`results_keys`.
-
-    """
-    all_counts = {}
-    all_lambdas = {}
-    all_gammas = {}
-    for key in results_keys:
-        print("")
-        if (recompute_samples_per_combination
-            or not os.path.exists(samples_per_combination_files[key])):
-            print(f"Computing number of samples per combination for {key}...")
-            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, save_results)
-        else:
-            print(f"Loading counts per combination for {key}...")
-            df = pd.read_csv(samples_per_combination_files[key], index_col='gene combination')
-            all_counts[key] = {combo:np.array(df.loc[combo]) for combo in combinations(genes, num_per_combo)}
-        print(f"done computing samples per combination for {key}.")
-        print("")
-        print("")
-
-        print(f"Estimating all epistatic models for {key}...")
-        print("")
-        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, save_results)
-        all_lambdas[(key, 'mles')] = lambdas_mles
-        all_lambdas[(key, 'cis')] = lambdas_cis
-        print(f"done estimating all epistatic models for {key}.")
-        print("")
-        print("")
-
-        print(f"Computing selection coefficients for {key}...")
-        print("")
-        mus = load_mutation_rates(key, method = mu_method)
-        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
-        all_gammas[(key, 'mles')] = gammas_mles
-        all_gammas[(key, 'cis')] = gammas_cis
-        print(f"done computing selection coefficients for {key}.")
-        print("")
-        print("")
-
-
-    return all_counts, all_lambdas, all_gammas
-
 def estimate_fluxes_TP53_KRAS_gene_model(recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
@@ -1027,11 +1076,6 @@ def estimate_fluxes_TP53_KRAS_gene_model(recompute_samples_per_combination=False
 
 
     return all_counts, all_lambdas, all_gammas
-
-if __name__ == "__main__":
-    main(recompute_samples_per_combination = True)
-
-
 
 # import matplotlib.pyplot as plt
 # from locations import location_figures
