@@ -34,8 +34,16 @@ from filter_data import filter_samples_for_genes
 # gene_list = [gene.upper() for gene in gene_list]
 # gene_list = gene_list[:103]
 
-gene_list = ["TP53","KRAS","EGFR","CDKN2A.p16INK4a","PIK3CA","BRAF","RB1","STK11","KEAP1"]
+gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.p16INK4a"]
 
+def filter_and_compute_samples(combo, key):
+    print(combo)
+    db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
+    counts = updated_compute_samples(db,
+                                    mutations = list(combo),
+                                    print_info = True)
+    return {combo: counts}
+    
 
 def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo = 3, save_results=True):
     """Compute number of patients with each combination of 
@@ -85,23 +93,18 @@ def compute_samples_for_all_combinations(genes = None, key=None, num_per_combo =
 
     genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
 
-    counts = {}
-
-    # TODO: Parallel processing
-    # def filter_and_compute_samples(combo):
+    pool = mp.Pool(processes=8)
+    gene_combos = list(combinations(genes, num_per_combo))
+    mp_results = pool.starmap(filter_and_compute_samples, 
+                              [(gene_combos[i], key) for i in range(len(gene_combos))], 
+                              chunksize=8)
+    counts = {combo: count_array for result in mp_results for combo, count_array in result.items()}
+    # print(counts)
+    # for combo in combinations(genes, num_per_combo):
     #     db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
     #     counts[combo] = updated_compute_samples(db,
     #                                             mutations = list(combo),
     #                                             print_info = True)
-        
-    # pool = mp.Pool(processes=8)
-    # mp_results = pool.map(filter_and_compute_samples, combinations(genes, num_per_combo), chunksize=8)
-
-    for combo in combinations(genes, num_per_combo):
-        db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=True)
-        counts[combo] = updated_compute_samples(db,
-                                                mutations = list(combo),
-                                                print_info = True)
 
     if save_results:
         print("Saving results...")
@@ -262,6 +265,26 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     return MLE[0]
 
+def compute_lambda_for_combo(combo, counts):
+    samples = counts[combo]
+    if are_all_fluxes_computable(samples):
+
+        print(f"Estimating fluxes for {combo}...")
+        mle = lambdas_from_samples(samples)
+        combo_lambda_mles = convert_lambdas_to_dict(mle)
+
+        print("Estimating asymptotic confidence intervals...")
+        cis = asymp_CI_lambdas(mle['lambdas'], samples)
+        combo_lambda_cis = convert_lambdas_to_dict(cis)
+
+        return combo, combo_lambda_mles, combo_lambda_cis
+
+    else:
+        print(f"Skipping estimation for combination {combo} "
+                "because the fluxes of interest are not "
+                "computable for that model.")
+
+    
 def compute_all_lambdas(key, all_counts, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
@@ -291,8 +314,29 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
     counts = all_counts[key]
 
-    # TODO: Parallel processing
-    # def compute_lambda_for_combo(combo):
+    pool = mp.Pool(processes=8)
+    mp_results = pool.starmap(compute_lambda_for_combo, 
+                              [(combo, counts) for combo in counts.keys()], 
+                              chunksize=8)
+    print(mp_results)
+    lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
+    lambdas_cis = {result[0]: result[2] for result in mp_results if result is not None}
+
+    print(lambdas_mles)
+    print(lambdas_cis)
+
+    if save_results:
+        np.save(os.path.join(location_output,
+                                f"{key}_fluxes_mles.npy"),
+                lambdas_mles)
+        np.save(os.path.join(location_output,
+                                f"{key}_fluxes_cis.npy"),
+                lambdas_cis)
+
+
+
+
+    # for i, combo in enumerate(counts.keys()):
     #     samples = counts[combo]
     #     if are_all_fluxes_computable(samples):
     #         print(f"Running model with {combo} "
@@ -321,41 +365,6 @@ def compute_all_lambdas(key, all_counts, save_results=True):
     #                 "computable for that model.")
 
     #     print("")
-
-    # pool = mp.Pool(8)
-    # mp_results = pool.map(compute_lambda_for_combo, counts.keys(), chunksize=8)
-
-
-
-    for i, combo in enumerate(counts.keys()):
-        samples = counts[combo]
-        if are_all_fluxes_computable(samples):
-            print(f"Running model with {combo} "
-                  f"(combo number {i+1}/{len(counts)} "
-                  f"for {key})")
-
-            print("Estimating fluxes...")
-            mle = lambdas_from_samples(samples)
-            lambdas_mles[combo] = convert_lambdas_to_dict(mle)
-            if save_results:
-                np.save(os.path.join(location_output,
-                                        f"{key}_fluxes_mles.npy"),
-                        lambdas_mles)
-
-            print("Estimating asymptotic confidence intervals...")
-            cis = asymp_CI_lambdas(mle['lambdas'], samples)
-            lambdas_cis[combo] = convert_lambdas_to_dict(cis)
-            if save_results:
-                np.save(os.path.join(location_output,
-                                        f"{key}_fluxes_cis.npy"),
-                        lambdas_cis)
-
-        else:
-            print(f"Skipping estimation for combination {combo} "
-                    "because the fluxes of interest are not "
-                    "computable for that model.")
-
-        print("")
 
     return lambdas_mles, lambdas_cis
 
@@ -529,7 +538,6 @@ def compute_TP53_KRAS_model(key='pan_data', save_results=True):
                 results)
 
     return results
-
 
 
 def compute_TP53_KRAS_gene_model(gene, key='pan_data', compute_CIs=False, save_results=True):
