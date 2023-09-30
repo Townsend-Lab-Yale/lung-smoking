@@ -200,6 +200,11 @@ def at_least_000_to_001_and_110_to_111(samples):
     the flux from TP53 + KRAS to TP53 + KRAS + third gene are both computable"""
     return np.all(samples[[0,-2]] > 0)
 
+def all_but_last_layer_computable(samples, M):
+    S = build_S_as_array(M)
+    necessary_pos_ind = np.where(np.sum(S, axis=1) < M-1)
+
+    return np.all(samples[necessary_pos_ind] > 0)
 
 def lambdas_from_samples(samples, max_bound_changes=4):
     """Estimate the fluxes from the samples, varying the bounds if
@@ -265,10 +270,10 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     return MLE[0]
 
-def compute_lambda_for_combo(combo, counts):
+def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     samples = counts[combo]
-    if are_all_fluxes_computable(samples):
 
+    if (are_all_fluxes_computable(samples)) or (flexible_last_layer and all_but_last_layer_computable(samples, len(combo))):
         print(f"Estimating fluxes for {combo}...")
         mle = lambdas_from_samples(samples)
         combo_lambda_mles = convert_lambdas_to_dict(mle)
@@ -285,7 +290,7 @@ def compute_lambda_for_combo(combo, counts):
                 "computable for that model.")
 
     
-def compute_all_lambdas(key, all_counts, save_results=True):
+def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
 
@@ -316,7 +321,7 @@ def compute_all_lambdas(key, all_counts, save_results=True):
 
     pool = mp.Pool(processes=8)
     mp_results = pool.starmap(compute_lambda_for_combo, 
-                              [(combo, counts) for combo in counts.keys()], 
+                              [(combo, counts, flexible_last_layer) for combo in counts.keys()], 
                               chunksize=8)
     print(mp_results)
     lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
@@ -875,7 +880,7 @@ def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_resu
     return gammas_mles, gammas_cis
 
 
-def main(genes = gene_list, num_per_combo=3, recompute_samples_per_combination=False, save_results=True):
+def main(genes = gene_list, num_per_combo=3, flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list or NoneType
@@ -921,7 +926,7 @@ def main(genes = gene_list, num_per_combo=3, recompute_samples_per_combination=F
 
         print(f"Estimating all epistatic models for {key}...")
         print("")
-        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, save_results)
+        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, save_results)
         all_lambdas[(key, 'mles')] = lambdas_mles
         all_lambdas[(key, 'cis')] = lambdas_cis
         print(f"done estimating all epistatic models for {key}.")
