@@ -100,6 +100,8 @@ msk2015_df['Treatment'] = True
 # msk2015_df['Treatment'][msk2015_df['Sample ID'] == 'DM123062'] = True
 non_luad_sample_ids_msk2015 = msk2015_df[msk2015_df['HISTOLOGY'] != 'Adenocarcinoma']['SAMPLE_ID']
 msk2015_df = msk2015_df[msk2015_df['HISTOLOGY'] == 'Adenocarcinoma']
+# keeping only samples from lung tissue, whether primary or metastatic, according to supplrementary table 4
+msk2015_df = msk2015_df[msk2015_df["SAMPLE_ID"].isin(["AU5884","CA9903","GR0134","JB112852","LO5004","MA7027","NI9507","RO3338","SB010944","SC0899","SR070761","TU0428","LO3793","SC6470","VA1330","VA7859","WA7899"])]
 msk2015_df = msk2015_df[["SAMPLE_ID", "Stage", "SMOKING_HISTORY", "PFS_MONTHS", "Treatment"]]
 #using sample_id instead of patient_id because that is what matches with patient_id in the maf file
 msk2015_df.columns = ["Sample ID","Stage","Smoker","Progression Free Survival (months)","Treatment"]
