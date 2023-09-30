@@ -905,7 +905,7 @@ def compute_all_gammas_for_TP53_KRAS_gene_model(key, all_lambdas, mus, save_resu
     return gammas_mles, gammas_cis
 
 
-def main(genes = gene_list, num_per_combo=3, flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
+def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list or NoneType
@@ -960,7 +960,7 @@ def main(genes = gene_list, num_per_combo=3, flexible_last_layer=False, recomput
 
         print(f"Computing selection coefficients for {key}...")
         print("")
-        mus = load_mutation_rates(key, method = "variant")
+        mus = load_mutation_rates(key, method = mu_method)
         gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
