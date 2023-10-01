@@ -175,6 +175,7 @@ def all_but_last_layer_computable(samples, M):
 
     return np.all(samples[necessary_pos_ind] > 0)
 
+
 def lambdas_from_samples(samples, max_bound_changes=4):
     """Estimate the fluxes from the samples, varying the bounds if
     necessary.
@@ -239,6 +240,7 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     return MLE[0]
 
+
 def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     samples = counts[combo]
 
@@ -267,7 +269,8 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         indices_with_zero = [order_pos_lambdas(S).index((x, tuple(y)))
                                 for x, y in order_pos_lambdas(S)
                                 if x in states_with_zero]
-        for x in indices_with_zero: mle['lambdas'][x] = np.nan
+        for x in indices_with_zero:
+            mle['lambdas'][x] = np.nan
 
         # MAYBE SHOULD BE EVEN MORE STRICT AND JUST REMOVE ALL LAMBDAS FROM LAST LAYER
 
@@ -286,6 +289,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
 
     return None
     
+
 def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
@@ -366,9 +370,6 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
     return lambdas_mles, lambdas_cis
 
 
-
-
-
 def load_mutation_rates(key, method): 
     """Load the mutation rates in a format that :func:`compute_gammas` uses.
 
@@ -424,7 +425,7 @@ def load_mutation_rates(key, method):
     return mus
 
 
-def compute_all_gammas(key, all_lambdas, mus, save_results=True):
+def compute_all_gammas(key, all_lambdas, mus, pathways=False, save_results=True):
     """Compute all estimates of the selection coefficient for the data
     set `key` iterating over all gene combinations that are present in 
     the keys of :dict:`all_lambdas`
@@ -460,17 +461,23 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
     lambdas_mles = all_lambdas[key, 'mles']
     lambdas_cis = all_lambdas[key, 'cis']
 
-    for i, combo in enumerate(lambdas_mles.keys()):
+    for combo in lambdas_mles.keys():
 
-        combo_length = len(combo)
+        M = len(combo)
         # Constructs dictionary of the form:
         # mu_combo = {combo:{(1, 0, 0): mus[combo[0]],
         #                    (0, 1, 0): mus[combo[1]],
         #                    (0, 0, 1): mus[combo[2]]}}
-        # if combo_length == 3
-        mu_combo = {tuple([0]*i + [1] + [0]*(combo_length-i-1)):
-                        mus[combo[i]]
-                     for i in range(0,combo_length)}
+        # if M == 3
+
+        if not pathways:
+            mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[combo[i]]
+                for i in range(M)}
+        else:
+            gene_indices = [i for i, included in enumerate(combo.values()) if len(included) == 1]
+            mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[list(combo.values())[i][0]] if i in gene_indices
+                        else sum([mus[gene] for gene in list(combo.values())[i]])
+                    for i in range(M)}
 
         gammas_mles[combo] = compute_gammas(
             lambdas_mles[combo],
@@ -491,12 +498,13 @@ def compute_all_gammas(key, all_lambdas, mus, save_results=True):
     return gammas_mles, gammas_cis
 
 
-def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_layer=False, recompute_samples_per_combination=False, save_results=True):
+def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
     """Main method for the estimation of all the fluxes.
 
-    :type genes: list or NoneType
-    :param genes: List of genes from which gene-set combinations will
-        be made.
+    :type genes: list, dict, or NoneType
+    :param genes: Either a list of genes from which gene-set combinations will
+        be made or a dictionary with the genes or pathways as keys and the gene
+        or the genes in the pathway, respectively, as values.
 
     :type num_per_combo: int
     :param num_per_combo: How many genes to include in each set of
@@ -521,12 +529,23 @@ def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_
     all_counts = {}
     all_lambdas = {}
     all_gammas = {}
+
+    if isinstance(genes, list):
+        pathways = False
+    elif isinstance(genes, dict):
+        pathways = True
+        if not all([isinstance(entry, list) for entry in combo.values()]):
+            raise ValueError("When including pathways, all entries in `genes` must be lists, not strings, even if there is only gene for the pathway")
+    else:
+        raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
+
     for key in results_keys:
         print("")
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
-            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, save_results)
+            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo,
+                                                                   pathways, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
             df = pd.read_csv(samples_per_combination_files[key], index_col='gene combination')
@@ -547,7 +566,7 @@ def main(genes = gene_list, num_per_combo=3, mu_method="variant", flexible_last_
         print(f"Computing selection coefficients for {key}...")
         print("")
         mus = load_mutation_rates(key, method = mu_method)
-        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, save_results)
+        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
         print(f"done computing selection coefficients for {key}.")
