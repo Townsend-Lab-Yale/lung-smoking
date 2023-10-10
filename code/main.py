@@ -35,9 +35,47 @@ from filter_data import filter_samples_for_genes
 # gene_list = [gene.upper() for gene in gene_list]
 # gene_list = gene_list[:103]
 
-gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.p16INK4a"]
+# gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.p16INK4a"]
 
-n_cores = 8
+gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
+             "KEAP1","STK11","ATM","PIK3CA","RBM10",
+             "SMARCA4","SMAD4","GNAS","ALK",
+             "NTRK","APC","MET","RB1"] #"NRAS","ROS1","RET","U2AF1"
+
+# hm_df = pd.read_csv("../data/gene_sets/hallmark_pathway_df.csv")
+
+# #HALLMARK_TNFA_SIGNALING_VIA_NFKB = list(hm_df[hm_df["pathway"]=="HALLMARK_TNFA_SIGNALING_VIA_NFKB"]["genes"])[0].split("|")
+# HALLMARK_HYPOXIA = list(hm_df[hm_df["pathway"]=="HALLMARK_HYPOXIA"]["genes"])[0].split("|")
+# HALLMARK_WNT_BETA_CATENIN_SIGNALING = list(hm_df[hm_df["pathway"]=="HALLMARK_WNT_BETA_CATENIN_SIGNALING"]["genes"])[0].split("|")
+# HALLMARK_DNA_REPAIR = list(hm_df[hm_df["pathway"]=="HALLMARK_DNA_REPAIR"]["genes"])[0].split("|")
+# HALLMARK_G2M_CHECKPOINT = list(hm_df[hm_df["pathway"]=="HALLMARK_G2M_CHECKPOINT"]["genes"])[0].split("|")
+
+# HALLMARK_PI3K_AKT_MTOR_SIGNALING = list(hm_df[hm_df["pathway"]=="HALLMARK_PI3K_AKT_MTOR_SIGNALING"]["genes"])[0].split("|")
+# HALLMARK_MYC_TARGETS_V2 = list(hm_df[hm_df["pathway"]=="HALLMARK_MYC_TARGETS_V2"]["genes"])[0].split("|")
+# HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION = list(hm_df[hm_df["pathway"]=="HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION"]["genes"])[0].split("|")
+# HALLMARK_INFLAMMATORY_RESPONSE = list(hm_df[hm_df["pathway"]=="HALLMARK_INFLAMMATORY_RESPONSE"]["genes"])[0].split("|")
+# HALLMARK_METABOLISM = list(hm_df[hm_df["pathway"]=="HALLMARK_OXIDATIVE_PHOSPHORYLATION"]["genes"])[0].split("|") + list(hm_df[hm_df["pathway"]=="HALLMARK_GLYCOLYSIS"]["genes"])[0].split("|")
+
+# HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY = list(hm_df[hm_df["pathway"]=="HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY"]["genes"])[0].split("|")
+# HALLMARK_P53_PATHWAY = list(hm_df[hm_df["pathway"]=="HALLMARK_P53_PATHWAY"]["genes"])[0].split("|")
+# HALLMARK_ANGIOGENESIS = list(hm_df[hm_df["pathway"]=="HALLMARK_ANGIOGENESIS"]["genes"])[0].split("|")
+# HALLMARK_KRAS = list(hm_df[hm_df["pathway"]=="HALLMARK_KRAS_SIGNALING_UP"]["genes"])[0].split("|") + list(hm_df[hm_df["pathway"]=="HALLMARK_KRAS_SIGNALING_DN"]["genes"])[0].split("|")
+
+# gene_list = {"HALLMARK_HYPOXIA":HALLMARK_HYPOXIA,
+#              "HALLMARK_WNT_BETA_CATENIN_SIGNALING":HALLMARK_WNT_BETA_CATENIN_SIGNALING,
+#              "HALLMARK_DNA_REPAIR":HALLMARK_DNA_REPAIR,
+#              "HALLMARK_G2M_CHECKPOINT":HALLMARK_G2M_CHECKPOINT,
+#              "HALLMARK_PI3K_AKT_MTOR_SIGNALING":HALLMARK_PI3K_AKT_MTOR_SIGNALING,
+#              "HALLMARK_MYC_TARGETS_V2":HALLMARK_MYC_TARGETS_V2,
+#              "HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION":HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION,
+#              "HALLMARK_INFLAMMATORY_RESPONSE":HALLMARK_INFLAMMATORY_RESPONSE,
+#              "HALLMARK_METABOLISM":HALLMARK_METABOLISM,
+#              "HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY":HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY,
+#              "HALLMARK_P53_PATHWAY":HALLMARK_P53_PATHWAY,
+#              "HALLMARK_ANGIOGENESIS":HALLMARK_ANGIOGENESIS,
+#              "HALLMARK_KRAS":HALLMARK_KRAS}
+
+n_cores = 12
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -534,7 +572,7 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
         pathways = False
     elif isinstance(genes, dict):
         pathways = True
-        if not all([isinstance(entry, list) for entry in combo.values()]):
+        if not all([isinstance(entry, list) for entry in gene_list.values()]):
             raise ValueError("When including pathways, all entries in `genes` must be lists, not strings, even if there is only gene for the pathway")
     else:
         raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
@@ -579,7 +617,10 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 
 
 if __name__ == "__main__":
-    main(recompute_samples_per_combination = True)
+    main(recompute_samples_per_combination = True,
+         flexible_last_layer=False,
+         pathways=True,
+         num_per_combo=3)
 
 
 
