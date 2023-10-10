@@ -132,8 +132,8 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         key = "pan_data"
     if genes is None:
         raise IOError("Please input a list of genes.")
-    if num_per_combo < 2 or not isinstance(num_per_combo, int):
-        raise ValueError("The number of genes in each combination must be an integer greater than 1.")
+    if not isinstance(num_per_combo, int):
+        raise ValueError("The number of genes in each combination must be an integer.")
     print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes/pathways for {key}...")
 
     if pathways:
