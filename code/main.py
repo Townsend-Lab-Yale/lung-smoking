@@ -303,14 +303,13 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
             return None
 
         S = build_S_as_array(len(combo))
-        states_with_zero = [tuple(x) for x in S[samples == 0]]
+        # Remove fluxes from second-to-last layer (all but 1 mutation) to last layer (all mutations)
+        states_with_zero = [tuple(x) for x in S[np.where(np.sum(S, axis=1) >= len(combo)-1)]]
         indices_with_zero = [order_pos_lambdas(S).index((x, tuple(y)))
                                 for x, y in order_pos_lambdas(S)
                                 if x in states_with_zero]
         for x in indices_with_zero:
             mle['lambdas'][x] = np.nan
-
-        # MAYBE SHOULD BE EVEN MORE STRICT AND JUST REMOVE ALL LAMBDAS FROM LAST LAYER
 
         combo_lambda_mles = convert_lambdas_to_dict(mle)
 
@@ -358,8 +357,8 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
     counts = all_counts[key]
 
     pool = mp.Pool(processes=n_cores)
-    mp_results = pool.starmap(compute_lambda_for_combo, 
-                              [(combo, counts, flexible_last_layer) for combo in counts.keys()], 
+    mp_results = pool.starmap(compute_lambda_for_combo,
+                              [(combo, counts, flexible_last_layer) for combo in counts.keys()],
                               chunksize=n_cores)
     lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
     lambdas_cis = {result[0]: result[2] for result in mp_results if result is not None}
@@ -371,39 +370,6 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
         np.save(os.path.join(location_output,
                                 f"{key}_fluxes_cis.npy"),
                 lambdas_cis)
-
-
-
-
-    # for i, combo in enumerate(counts.keys()):
-    #     samples = counts[combo]
-    #     if are_all_fluxes_computable(samples):
-    #         print(f"Running model with {combo} "
-    #               f"(combo number {i+1}/{len(counts)} "
-    #               f"for {key})")
-
-    #         print("Estimating fluxes...")
-    #         mle = lambdas_from_samples(samples)
-    #         lambdas_mles[combo] = convert_lambdas_to_dict(mle)
-    #         if save_results:
-    #             np.save(os.path.join(location_output,
-    #                                     f"{key}_fluxes_mles.npy"),
-    #                     lambdas_mles)
-
-    #         print("Estimating asymptotic confidence intervals...")
-    #         cis = asymp_CI_lambdas(mle['lambdas'], samples)
-    #         lambdas_cis[combo] = convert_lambdas_to_dict(cis)
-    #         if save_results:
-    #             np.save(os.path.join(location_output,
-    #                                     f"{key}_fluxes_cis.npy"),
-    #                     lambdas_cis)
-
-    #     else:
-    #         print(f"Skipping estimation for combination {combo} "
-    #                 "because the fluxes of interest are not "
-    #                 "computable for that model.")
-
-    #     print("")
 
     return lambdas_mles, lambdas_cis
 
