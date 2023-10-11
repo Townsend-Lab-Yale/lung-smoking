@@ -135,6 +135,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
     if not isinstance(num_per_combo, int):
         raise ValueError("The number of genes in each combination must be an integer.")
     print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes/pathways for {key}...")
+    print("\n")
 
     if pathways:
         all_genes = list(chain(*genes.values()))
@@ -153,14 +154,16 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
               f"{str(no_mutation_rate_genes)}."
               "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
     genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
-
+    print("\n")
     if pathways:
         pathway_prop_missing = {pathway: len(set.intersection(set(pathway_genes), genes_to_remove)) / len(pathway_genes) # proportion of missing genes in each pathway
          for pathway, pathway_genes in genes.items()}
         print(f"Proportion of genes in each pathway for which we can't calculate fluxes: {pathway_prop_missing}")
         pathways_to_remove = [pathway for pathway, prop_missing in pathway_prop_missing.items() if prop_missing > 0.05]
-        print(f"Dropping the following pathways because more than 5% of genes have incalculable fluxes: "
-              f"{pathways_to_remove}")
+        if len(pathways_to_remove) > 0:
+            print("\n")
+            print(f"Dropping the following pathways because more than 5% of genes have incalculable fluxes: "
+                f"{pathways_to_remove}")
         
         for pathway in pathways_to_remove:
             genes.pop(pathway)
@@ -193,7 +196,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         print("Saving results...")
         df = pd.DataFrame.from_dict(counts, orient='index',
                                     columns=[str(x) for x in build_S_with_tuples(num_per_combo)])
-        df.index.name = "gene combination"
+        df.index.name = "gene_combination"
         df.to_csv(samples_per_combination_files[key])
 
         print("done.")
@@ -562,7 +565,7 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
     else:
         raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
 
-    for key in results_keys:
+    for key in ["nonsmoking_plus","smoking_plus"]:
         print("")
 
         mus = load_mutation_rates(key, method = mu_method)
@@ -573,7 +576,7 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
                                                                    pathways, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
-            df = pd.read_csv(samples_per_combination_files[key], index_col='gene combination')
+            df = pd.read_csv(samples_per_combination_files[key], index_col='gene_combination')
             all_counts[key] = {combo:np.array(df.loc[combo]) for combo in combinations(genes, num_per_combo)}
         print(f"done computing samples per combination for {key}.")
         print("")
@@ -606,14 +609,14 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 
 
 if __name__ == "__main__":
-    # main(recompute_samples_per_combination=True,
-    #      flexible_last_layer=False,
-    #      pathways=True,
-    #      num_per_combo=3)
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
-         pathways=False,
-         num_per_combo=1)
+         pathways=True,
+         num_per_combo=4)
+    # main(recompute_samples_per_combination=True,
+    #      flexible_last_layer=False,
+    #      pathways=False,
+    #      num_per_combo=1)
 
 
 
