@@ -97,7 +97,7 @@ def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     return {combo: counts}
     
 
-def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, pathways=False, print_info=False, save_results=True):
+def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, mus_keys=None, pathways=False, print_info=False, save_results=True):
     """Compute number of patients with each combination of 
     const:`genes`.
 
@@ -147,12 +147,17 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
               f"{str(unrepresented_genes)}."
               "\nThis may be because there are not mutations in those genes in the data, "
               "or because the genes are not correctly represented in sequencing data")
+    no_mutation_rate_genes = [gene for gene in all_genes if gene not in mus_keys]
+    if len(no_mutation_rate_genes) > 0:
+        print(f"No mutation rate available for the following genes: "
+              f"{str(no_mutation_rate_genes)}."
+              "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
 
     if pathways:
-        genes = {pathway: list(filter(lambda gene: gene not in unrepresented_genes, pathway_genes))
+        genes = {pathway: list(filter(lambda gene: gene not in set(unrepresented_genes + no_mutation_rate_genes), pathway_genes))
                  for pathway, pathway_genes in genes.items()}
     else:
-        genes = list(filter(lambda gene: gene not in unrepresented_genes, genes))
+        genes = list(filter(lambda gene: gene not in set(unrepresented_genes + no_mutation_rate_genes), genes))
 
     pool = mp.Pool(processes=n_cores)
     gene_combos = list(combinations(genes, num_per_combo))
@@ -400,8 +405,6 @@ def load_mutation_rates(key, method):
         variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
                                                         'variant_based_mutation_rates.txt'),
                                                         index_col=0)
-        genes_available = set.intersection(set(gene_list),
-                                           set(variant_based_mutation_rates.index))
         variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking"
         variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
@@ -429,7 +432,7 @@ def load_mutation_rates(key, method):
     return mus
 
 
-def compute_all_gammas(key, all_lambdas, mus, pathways=False, save_results=True):
+def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict=None, save_results=True):
     """Compute all estimates of the selection coefficient for the data
     set `key` iterating over all gene combinations that are present in 
     the keys of :dict:`all_lambdas`
@@ -478,9 +481,10 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, save_results=True)
             mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[combo[i]]
                 for i in range(M)}
         else:
-            gene_indices = [i for i, included in enumerate(combo.values()) if len(included) == 1]
-            mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[list(combo.values())[i][0]] if i in gene_indices
-                        else sum([mus[gene] for gene in list(combo.values())[i]])
+            pathway_genes_dict = {pathway:pathway_genes_dict[pathway] for pathway in combo}
+            gene_indices = [i for i, included in enumerate(pathway_genes_dict.values()) if len(included) == 1]
+            mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[list(pathway_genes_dict.values())[i][0]] if i in gene_indices
+                        else sum([mus[gene] for gene in list(pathway_genes_dict.values())[i]])
                     for i in range(M)}
 
         gammas_mles[combo] = compute_gammas(
@@ -545,10 +549,12 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 
     for key in results_keys:
         print("")
+
+        mus = load_mutation_rates(key, method = mu_method)
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
-            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo,
+            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
                                                                    pathways, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
@@ -569,8 +575,10 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 
         print(f"Computing selection coefficients for {key}...")
         print("")
-        mus = load_mutation_rates(key, method = mu_method)
-        gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results)
+        if pathways:
+            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, genes, save_results)
+        else: # if just genes
+            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
         print(f"done computing selection coefficients for {key}.")
