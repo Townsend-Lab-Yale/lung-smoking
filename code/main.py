@@ -258,10 +258,15 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     bounds = 1
     print(f"Bounds for fluxes: {bounds}")
-    MLE = estimate_lambdas(samples, draws=1,
+    draws = 1
+    MLE = estimate_lambdas(samples, draws=draws,
                            upper_bound_prior=bounds,
                            kwargs={'return_raw':True})
-    print(f"MLE: {MLE[0]['lambdas']}")
+    if len(samples) == 2 and draws == 1: # M=1 model with one draw
+        print(f"MLE: {MLE['lambdas']}")
+        return MLE
+    else:
+        print(f"MLE: {MLE[0]['lambdas']}")
 
     bound_changes = 0
     while MLE[1].fun < -1e+20:
@@ -601,10 +606,14 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 
 
 if __name__ == "__main__":
-    main(recompute_samples_per_combination = True,
+    # main(recompute_samples_per_combination=True,
+    #      flexible_last_layer=False,
+    #      pathways=True,
+    #      num_per_combo=3)
+    main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
-         pathways=True,
-         num_per_combo=3)
+         pathways=False,
+         num_per_combo=1)
 
 
 
