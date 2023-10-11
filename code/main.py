@@ -152,12 +152,22 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         print(f"No mutation rate available for the following genes: "
               f"{str(no_mutation_rate_genes)}."
               "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
+    genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
 
     if pathways:
-        genes = {pathway: list(filter(lambda gene: gene not in set(unrepresented_genes + no_mutation_rate_genes), pathway_genes))
+        pathway_prop_missing = {pathway: len(set.intersection(set(pathway_genes), genes_to_remove)) / len(pathway_genes) # proportion of missing genes in each pathway
+         for pathway, pathway_genes in genes.items()}
+        print(f"Proportion of genes in each pathway for which we can't calculate fluxes: {pathway_prop_missing}")
+        pathways_to_remove = [pathway for pathway, prop_missing in pathway_prop_missing.items() if prop_missing > 0.05]
+        print(f"Dropping the following pathways because more than 5% of genes have incalculable fluxes: "
+              f"{pathways_to_remove}")
+        
+        for pathway in pathways_to_remove:
+            genes.pop(pathway)
+        genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
                  for pathway, pathway_genes in genes.items()}
     else:
-        genes = list(filter(lambda gene: gene not in set(unrepresented_genes + no_mutation_rate_genes), genes))
+        genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
 
     pool = mp.Pool(processes=n_cores)
     gene_combos = list(combinations(genes, num_per_combo))
