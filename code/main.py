@@ -29,6 +29,7 @@ from filter_data import key_filtered_dbs
 from filter_data import dbs_filtered_for_TP53_KRAS
 from filter_data import filter_samples_for_genes
 
+from pymc3.exceptions import SamplingError
 
 
 # gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
@@ -259,7 +260,9 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     """
 
-    bounds = 1
+    bounds = 1 
+    bound_maxes = np.array([bounds])
+
     print(f"Bounds for fluxes: {bounds}")
     draws = 1
     MLE = estimate_lambdas(samples, draws=draws,
@@ -272,6 +275,34 @@ def lambdas_from_samples(samples, max_bound_changes=4):
         print(f"MLE: {MLE[0]['lambdas']}")
 
     bound_changes = 0
+
+    # if any of the fluxes reach the upper bound, common for pathway analysis
+    if any(x in bound_maxes for x in MLE[0]['lambdas']):
+        M = int(np.log2(len(samples)))
+        num_fluxes = M*2**(M-1) # formula for number of fluxes
+        bounds = np.array([bounds]*num_fluxes)
+        increment = 1
+    while any(x in bound_maxes for x in MLE[0]['lambdas']):
+        if bound_changes == max_bound_changes:
+            print(f"We have changed the bounds {bound_changes} times already, "
+                  "and the algorithm has not converged. Concluding that these "
+                  "samples are incomputable.")
+            return "incomputable"
+        print(f"Upper bound hit for one or more fluxes, increasing bounds...")
+        bound_changes += 1
+        to_increase = [i for i in range(num_fluxes) if MLE[0]['lambdas'][i] in bound_maxes]
+        bounds = [bounds[i]+increment if i in to_increase else bounds[i] for i in range(num_fluxes)]
+        bound_maxes = np.append(bound_maxes, bound_maxes[-1]+increment)
+
+        print(f"Proposed bounds: {bounds}")
+        try:
+            MLE = estimate_lambdas(samples, draws=draws,
+                                upper_bound_prior=bounds,
+                                kwargs={'return_raw':True})
+        except SamplingError:
+            return "incomputable"
+        print(f"MLE: {MLE[0]['lambdas']}")
+
     while MLE[1].fun < -1e+20:
         if bound_changes == max_bound_changes:
             print(f"We have changed the bounds {bound_changes} times already, "
@@ -280,24 +311,18 @@ def lambdas_from_samples(samples, max_bound_changes=4):
             return "incomputable"
         print(f"Algorithm did not converge changing bounds...")
         bound_changes += 1
-        bounds = np.array(
-            [1/(2**bound_changes),  # (0, 0, 0) -> (0, 0, 1)
-             1,                     # (0, 0, 0) -> (0, 1, 0)
-             1,                     # (0, 0, 1) -> (0, 1, 1)
-             1/(2**bound_changes),  # (0, 1, 0) -> (0, 1, 1)
-             1,                     # (0, 0, 0) -> (1, 0, 0)
-             1,                     # (0, 0, 1) -> (1, 0, 1)
-             1/(2**bound_changes),  # (1, 0, 0) -> (1, 0, 1)
-             1,                     # (0, 1, 0) -> (1, 1, 0)
-             1,                     # (1, 0, 0) -> (1, 1, 0)
-             1,                     # (0, 1, 1) -> (1, 1, 1)
-             1,                     # (1, 0, 1) -> (1, 1, 1)
-             1/(2**bound_changes)]) # (1, 1, 0) -> (1, 1, 1)
+
+        # when the flux is below an arbitarily chosen value, lower the upper bound to optimize the search
+        to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)
+        bounds = [bounds[i]/2 if i in to_decrease else bounds[i] for i in range(num_fluxes)]
+
         print(f"Proposed bounds: {bounds}")
-        MLE = estimate_lambdas(samples, draws=1,
+        MLE = estimate_lambdas(samples, draws=draws,
                                upper_bound_prior=bounds,
                                kwargs={'return_raw':True})
         print(f"MLE: {MLE[0]['lambdas']}")
+
+    print("")
 
     return MLE[0]
 
@@ -308,6 +333,12 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     if are_all_fluxes_computable(samples):
         print(f"Estimating fluxes for {combo}...")
         mle = lambdas_from_samples(samples)
+
+        if(mle == 'incomputable'):
+            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
+                incomputable_output_file.write(str(combo) + '\n')
+            return None
+
         combo_lambda_mles = convert_lambdas_to_dict(mle)
 
         print("Estimating asymptotic confidence intervals...")
@@ -322,7 +353,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
 
         if(mle == 'incomputable'):
             with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
-                incomputable_output_file.write(combo + '\n')
+                incomputable_output_file.write(str(combo) + '\n')
             return None
 
         S = build_S_as_array(len(combo))
@@ -346,6 +377,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         print(f"Skipping estimation for combination {combo} "
                 "because the fluxes of interest are not "
                 "computable for that model.")
+    print("")
 
     return None
     
