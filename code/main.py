@@ -524,7 +524,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
     return gammas_mles, gammas_cis
 
 
-def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
+def main(genes=gene_list, num_per_combo=3, keys=results_keys, mu_method="cesR", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list, dict, or NoneType
@@ -565,7 +565,7 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
     else:
         raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
 
-    for key in ["nonsmoking_plus","smoking_plus"]:
+    for key in keys:
         print("")
 
         mus = load_mutation_rates(key, method = mu_method)
@@ -577,7 +577,7 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
         else:
             print(f"Loading counts per combination for {key}...")
             df = pd.read_csv(samples_per_combination_files[key], index_col='gene_combination')
-            all_counts[key] = {combo:np.array(df.loc[combo]) for combo in combinations(genes, num_per_combo)}
+            all_counts[key] = {combo:np.array(df.loc[str(combo)]) for combo in df.index}
         print(f"done computing samples per combination for {key}.")
         print("")
         print("")
@@ -611,8 +611,10 @@ def main(genes=gene_list, num_per_combo=3, mu_method="variant", pathways=False, 
 if __name__ == "__main__":
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
-         pathways=True,
-         num_per_combo=4)
+         pathways=False,
+         num_per_combo=3,
+         mu_method="cesR",
+         keys = results_keys)
     # main(recompute_samples_per_combination=True,
     #      flexible_last_layer=False,
     #      pathways=False,
