@@ -502,7 +502,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
             subset_pathway_genes_dict = {pathway:pathway_genes_dict[pathway] for pathway in combo}
             gene_indices = [i for i, included in enumerate(subset_pathway_genes_dict.values()) if len(included) == 1]
             mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[list(subset_pathway_genes_dict.values())[i][0]] if i in gene_indices
-                        else sum([mus[gene] for gene in list(subset_pathway_genes_dict.values())[i]])
+                        else sum([mus[gene] for gene in list(subset_pathway_genes_dict.values())[i] if gene in mus.keys()])
                     for i in range(M)}
 
         gammas_mles[combo] = compute_gammas(
