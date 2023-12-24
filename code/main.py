@@ -40,8 +40,8 @@ from pymc3.exceptions import SamplingError
 
 gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
              "KEAP1","STK11","ATM","PIK3CA","RBM10",
-             "SMARCA4","SMAD4","GNAS","ALK",
-             "NTRK","APC","MET","RB1"] #"NRAS","ROS1","RET","U2AF1"
+             "SMARCA4","SMAD4","GNAS","ALK", "NTRK",
+             "APC","MET","RB1"] #"NRAS","ROS1","RET","U2AF1"
 
 # hm_df = pd.read_csv("../data/gene_sets/hallmark_pathway_df.csv")
 
@@ -76,7 +76,7 @@ gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
 #              "HALLMARK_ANGIOGENESIS":HALLMARK_ANGIOGENESIS,
 #              "HALLMARK_KRAS":HALLMARK_KRAS}
 
-n_cores = 12
+n_cores = 20
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -276,13 +276,14 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     bound_changes = 0
 
-    # if any of the fluxes reach the upper bound, common for pathway analysis
-    if any(x in bound_maxes for x in MLE[0]['lambdas']):
+    # conditions necessitating change of bounds
+    if any(x in bound_maxes for x in MLE[0]['lambdas']) or MLE[1].fun < -1e+20:
         M = int(np.log2(len(samples)))
         num_fluxes = M*2**(M-1) # formula for number of fluxes
-        bounds = np.array([bounds]*num_fluxes)
-        increment = 1
+        bounds = np.array([bounds]*num_fluxes, dtype='float')
+    # if any of the fluxes reach the upper bound, common for pathway analysis
     while any(x in bound_maxes for x in MLE[0]['lambdas']):
+        increment = 1
         if bound_changes == max_bound_changes:
             print(f"We have changed the bounds {bound_changes} times already, "
                   "and the algorithm has not converged. Concluding that these "
@@ -313,8 +314,10 @@ def lambdas_from_samples(samples, max_bound_changes=4):
         bound_changes += 1
 
         # when the flux is below an arbitarily chosen value, lower the upper bound to optimize the search
-        to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)
-        bounds = [bounds[i]/2 if i in to_decrease else bounds[i] for i in range(num_fluxes)]
+        to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)[0]
+        for i in to_decrease:
+           bounds[i] = bounds[i]/2
+        # bounds = [bounds[i]/2 if i in to_decrease else bounds[i] for i in range(num_fluxes)]
 
         print(f"Proposed bounds: {bounds}")
         MLE = estimate_lambdas(samples, draws=draws,
@@ -641,6 +644,7 @@ def main(genes=gene_list, num_per_combo=3, keys=results_keys, mu_method="cesR", 
 
 
 if __name__ == "__main__":
+    print('Running main...')
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
@@ -651,7 +655,7 @@ if __name__ == "__main__":
     #      flexible_last_layer=False,
     #      pathways=False,
     #      num_per_combo=1)
-
+    print('Done running main.')
 
 
 
