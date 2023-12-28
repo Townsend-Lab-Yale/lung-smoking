@@ -57,7 +57,7 @@ load_M1_results = function(){
 
 
 # Plot all information
-plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_legend=TRUE, show_x_axis_title=TRUE){
+plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_legend=TRUE, show_genes=TRUE){
 
     plotting_df = df %>% filter(key == dataset_key, method == mu_method)
 
@@ -79,23 +79,24 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
                         legend.background = element_rect(fill = "white"))
     } else {
         if (var_to_plot == "gamma") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, -gamma_mle), y=gamma_mle)) + 
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) + 
                 geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0) +
-                labs(x = "Gene", y = "Selection Intensity", color="Mutation frequency")
+                labs(x = "Gene", y = "Selection Intensity")
         } else if (var_to_plot == "flux") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, -gamma_mle), y=flux_mle)) + 
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=flux_mle)) + 
                 geom_errorbar(aes(ymin = flux_ci_low, ymax = flux_ci_high), width=0) +
-                labs(x = "Gene", y = "Fixation Rate", color="Mutation frequency")
+                labs(x = "Gene", y = "Fixation Rate")
         } else if (var_to_plot == "mu") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, -gamma_mle), y=mu)) + 
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) + 
                 geom_errorbar(aes(ymin = mu_ci_low, ymax = mu_ci_high), width=0) +
-                labs(x = "Gene", y = "Mutation Rate", color="Mutation frequency")
+                labs(x = "Gene", y = "Mutation Rate")
         } else {stop("var_to_plot must be gamma (selection intensity), flux (mutation acquisition rate), mu (mutation rate), or freq (mutation frequency)")}
 
         plot = plot + 
             geom_point(aes(size=freq, color=freq)) + 
             scale_color_viridis_c() +
             scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+            guides(color=guide_legend(), size = guide_legend()) +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 18),
@@ -105,12 +106,13 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
                 axis.text.x = element_text(angle = 90),
                 axis.text = element_text(size = 14),
                 plot.title = element_text(size = 18, hjust=0.5),
+                panel.grid.major.y = element_line(color="gray",linewidth = 0.5, linetype=3),
                 #legend.position = c(0.9,0.8)
-                legend.position = "bottom"
+                legend.position = "bottom",
             ) + 
             coord_flip()
         
-        if(!show_x_axis_title){plot = plot + theme(axis.title.x = element_blank())}
+        if(!show_genes){plot = plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank())}
         if(!show_freq_legend){plot = plot + theme(legend.position="none")}
     }
 
@@ -118,30 +120,41 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
     return(plot)
 }
 
-get_genes_with_gxe_effects = function(df, mu_method){
+get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
+    if(include_panel_data){keys = c("smoking_plus","nonsmoking_plus")}
+    else{keys = c("smoking","nonsmoking")}
+
     gxe_effects = 
         df %>%
             filter(method == mu_method,
-                    key %in% c("smoking_plus","nonsmoking_plus")) %>%
+                    key %in% keys) %>%
             pivot_wider(
                 names_from = key,
                 id_cols = c(method, gene),
                 values_from  = c(gamma_mle, gamma_ci_low, gamma_ci_high)
-            ) %>%
-            filter((gamma_ci_low_nonsmoking_plus > gamma_ci_high_smoking_plus) | (gamma_ci_low_smoking_plus > gamma_ci_high_nonsmoking_plus)) %>%
-            pull(gene)
+            ) 
+
+    if(include_panel_data){
+         gxe_effects =  gxe_effects %>%
+            filter((gamma_ci_low_nonsmoking_plus > gamma_ci_high_smoking_plus) | (gamma_ci_low_smoking_plus > gamma_ci_high_nonsmoking_plus))
+    } else{gxe_effects =  gxe_effects %>% filter((gamma_ci_low_nonsmoking > gamma_ci_high_smoking) | (gamma_ci_low_smoking > gamma_ci_high_nonsmoking))}
+    
+    gxe_effects = gxe_effects %>% pull(gene)
     
     return(gxe_effects)
 }
 
-plot_GxE_results = function(df, mu_method){
+plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=TRUE){
     ranked_genes = df %>% filter(key == "pan_data", method==mu_method) %>% arrange(desc(gamma_mle)) %>% pull(gene)
     
-    gxe_effects = get_genes_with_gxe_effects(df, mu_method)
+    gxe_effects = get_genes_with_gxe_effects(df, mu_method, include_panel_data)
+
+    if(include_panel_data){keys = c("smoking_plus","nonsmoking_plus")}
+    else{keys = c("smoking","nonsmoking")}
 
     plotting_df = 
         df %>%
-            filter(key %in% c("smoking_plus","nonsmoking_plus")) %>%
+            filter(key %in% keys) %>%
             filter(method == mu_method) %>%
             mutate(signif = ifelse(gene %in% gxe_effects, "Significant", "Not significant"),
                     signif_mark = ifelse(signif == "Significant", "*", ""),
@@ -149,14 +162,14 @@ plot_GxE_results = function(df, mu_method){
 
     raw_gamma_plot = 
         plotting_df %>%
-            mutate(key = ifelse(key == "smoking_plus", "Ever-Smokers", ifelse(key == "nonsmoking_plus","Never-Smokers",""))) %>%
+            mutate(key = ifelse(str_detect(key,"nonsmoking"), "Never-Smokers", ifelse(str_detect(key,"smoking"),"Ever-Smokers",""))) %>%
             ggplot(aes(x = gene, y = gamma_mle, group=key)) +
             geom_col(aes(fill = key), alpha = 0.7, position="dodge", width = 0.75) +
             geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), position="dodge", width = 0.75) +
             # geom_point(data = df %>% filter(key=="pan_data", method == mu_method), aes(x=reorder(gene, -gamma_mle),y=gamma_mle)) + 
             # geom_errorbar(data = df %>% filter(key=="pan_data", method == mu_method), aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0.5) +
 
-            labs(x = "Gene", y = "Selection Intensity (Gamma)", title = "Average selection intensity for SNVs between ever- and never-smoker LUAD", fill = "Smoker Status") +
+            labs(x = "Gene", y = "Scaled Selection Coefficient", title = "Average selection intensity for SNVs between ever- and never-smoker LUAD", fill = "Smoker Status") +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 18),
@@ -170,17 +183,28 @@ plot_GxE_results = function(df, mu_method){
                 plot.title = element_text(size = 20, hjust=0.5)
             ) + 
             geom_text(aes(label=signif_mark, x=gene), y=log10(0), size = 10)
-    
+
+    if(!ratio_plot){return(raw_gamma_plot)}
+
     comparison_df = plotting_df %>%
         pivot_wider(
             names_from = key,
             id_cols = c(gene, signif),
             values_from = c(gamma_mle, flux_mle, mu, freq)
-        ) %>%
-        mutate(ratio = gamma_mle_smoking_plus/gamma_mle_nonsmoking_plus,
-                ratio = ifelse(ratio < 1, 1/ratio, ratio)) %>%
-        mutate(which_greater = ifelse(gamma_mle_smoking_plus > gamma_mle_nonsmoking_plus, "Greater in Ever-Smokers", 
-                                ifelse(!(is.na(gamma_mle_smoking_plus) | is.na(gamma_mle_nonsmoking_plus)), "Greater in Never-Smokers", "null")))
+        )
+    if(include_panel_data){
+        comparison_df = comparison_df %>%
+                        mutate(ratio = gamma_mle_smoking_plus/gamma_mle_nonsmoking_plus,
+                                ratio = ifelse(ratio < 1, 1/ratio, ratio)) %>%
+                        mutate(which_greater = ifelse(gamma_mle_smoking_plus > gamma_mle_nonsmoking_plus, "Greater in Ever-Smokers", 
+                                                ifelse(!(is.na(gamma_mle_smoking_plus) | is.na(gamma_mle_nonsmoking_plus)), "Greater in Never-Smokers", "null")))
+    } else{
+        comparison_df = comparison_df %>%
+                        mutate(ratio = gamma_mle_smoking/gamma_mle_nonsmoking,
+                                ratio = ifelse(ratio < 1, 1/ratio, ratio)) %>%
+                        mutate(which_greater = ifelse(gamma_mle_smoking > gamma_mle_nonsmoking, "Greater in Ever-Smokers", 
+                                                ifelse(!(is.na(gamma_mle_smoking) | is.na(gamma_mle_nonsmoking)), "Greater in Never-Smokers", "null")))
+    }
 
     ratio_plot = 
         comparison_df %>%
@@ -574,13 +598,34 @@ pairwise_comparisons = function(data){
     return(all_comparisons)
 }
 
-plot_interactions = function(data, interactions_to_plot=NULL, custom_order=FALSE, n_interactions=10, synergy_or_antagonism = "synergy", include_higher_order=FALSE,log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE){
+get_interaction_df = function(data){
     gammas_df_list = 
         data %>% 
         select(key, gene_set, from_gt, mutated_gene, gamma_ci_low, gamma_mle, gamma_ci_high, to_count) %>%
         split(data %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
-    
     interaction_df = rbindlist(lapply(gammas_df_list, pairwise_comparisons))
+    interaction_df = interaction_df %>%
+                        group_by(tested_combo, epistatic_gt) %>%
+                        mutate(combo_name = sapply(tested_combo, 
+                                                function(combo){tmp = str_split(combo,'_')[[1]]; 
+                                                                        glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")}),
+                                median_ratio = median(ratio))
+                                
+    interaction_df = interaction_df %>% ungroup() %>% 
+        mutate(order = ifelse(epistatic_gt!="WT",median(gamma_mle),NA), .by = c(tested_combo, epistatic_gt)) %>% 
+        mutate(order = ifelse(epistatic_gt=="WT",median(order,na.rm=T),order), .by=tested_combo) %>%
+        rowwise() %>% mutate(other_genes = lapply(gene_set, 
+                        function(x){genes = str_split(gene_set,'_')[[1]]; 
+                                    genes[!(genes %in% c(str_split(epistatic_gt,'_')[[1]], mutated_gene))]})) %>% ungroup()                                
+    return(interaction_df)
+}
+
+
+
+
+plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, n_interactions=10, synergy_or_antagonism = "synergy", include_higher_order=FALSE,log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE, minimal_labels=TRUE){
+    interaction_df = df
+    
     if(is.null(interactions_to_plot)){
         interactions_to_plot = interaction_df %>% 
                                 filter(if(!include_higher_order) str_count(tested_combo,'_')<2 else TRUE) %>% 
@@ -595,17 +640,9 @@ plot_interactions = function(data, interactions_to_plot=NULL, custom_order=FALSE
     interaction_df = interaction_df %>%
                         group_by(tested_combo, epistatic_gt) %>%
                         mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
-                                combo_name = sapply(tested_combo, 
-                                                function(tested_combo){tmp = str_split(tested_combo,'_')[[1]]; 
-                                                                        glue("{tmp[length(tmp)]} [{tmp[-length(tmp)]}]")}),
                                 combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
                                                 function(combo){tmp = str_split(combo,'_')[[1]]; 
-                                                                        glue("{tmp[length(tmp)]} [{tmp[-length(tmp)]}]")})),
-                                median_ratio = median(ratio)) 
-    interaction_df = interaction_df %>% ungroup() %>% 
-        mutate(order = ifelse(epistatic_gt!="WT",median(gamma_mle),NA), .by = c(tested_combo, epistatic_gt)) %>% 
-        mutate(order = ifelse(epistatic_gt=="WT",median(order,na.rm=T),order), .by=tested_combo) %>%
-        rowwise() %>% mutate(other_genes = lapply(gene_set, function(x){genes = str_split(gene_set,'_')[[1]]; genes[!(genes %in% c(epistatic_gt, mutated_gene))]})) %>% ungroup() 
+                                                                        glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")})))
 
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
 
@@ -655,99 +692,14 @@ plot_interactions = function(data, interactions_to_plot=NULL, custom_order=FALSE
                                             aes(label=other_genes),
                                             position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
                                             size = 3,
-                                            max.overlaps = 20)
+                                            max.overlaps = ifelse(minimal_labels,6,20))
         }
         if(!log_scale){
             plot = plot + geom_hline(yintercept = 1, color="grey", lty=2)
         }
 
-    return(list("plot" = plot, "df" = interaction_df))
+    return(plot)
 }
-
-
-plot_gge_interactions = function(data, n_interactions=10, synergy_or_antagonism = "synergy", include_higher_order=FALSE,log_scale=FALSE,spread=2/3,title="default"){
-    gammas_df_list = 
-        data %>% 
-        select(gene_set, from_gt, mutated_gene, gamma_ci_low, gamma_mle, gamma_ci_high, to_count) %>%
-        split(data %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
-    
-    interaction_df = rbindlist(lapply(gammas_df_list, pairwise_comparisons))
-    interactions_to_plot = interaction_df %>% 
-                            filter(if(!include_higher_order) str_count(tested_combo,'_')<2 else TRUE) %>% 
-                            arrange(desc(ratio)) %>%
-                            pull(tested_combo) %>% unique()
-    if(synergy_or_antagonism %in% c("s","synergy")) {interactions_to_plot = interactions_to_plot %>% head(n_interactions)}
-    else if(synergy_or_antagonism %in% c("a","antagonism")){interactions_to_plot = interactions_to_plot %>% tail(n_interactions)}
-    else if(synergy_or_antagonism %in% c("b","both")){interactions_to_plot = c(interactions_to_plot %>% head(n_interactions/2),  interactions_to_plot %>% tail(n_interactions/2))}
-    else{stop("`synergy_or_antagonism` can only take on character values `synergy` or `antagonism` or `both`.")}
-                            
-    interaction_df = interaction_df %>% filter(tested_combo %in% interactions_to_plot)
-    interaction_df = interaction_df %>%
-                        group_by(tested_combo, epistatic_gt) %>%
-                        mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
-                                combo_name = sapply(tested_combo, 
-                                                function(tested_combo){tmp = str_split(tested_combo,'_')[[1]]; 
-                                                                        glue("{tmp[length(tmp)]} [{tmp[-length(tmp)]}]")}),
-                                median_ratio = median(ratio)) 
-    interaction_df = interaction_df %>% ungroup() %>% 
-        mutate(order = ifelse(epistatic_gt!="WT",median(gamma_mle),NA), .by = c(tested_combo, epistatic_gt)) %>% 
-        mutate(order = ifelse(epistatic_gt=="WT",median(order,na.rm=T),order), .by=tested_combo) %>%
-        rowwise() %>% mutate(other_genes = lapply(gene_set, function(x){genes = str_split(gene_set,'_')[[1]]; genes[!(genes %in% c(epistatic_gt, mutated_gene))]})) %>% ungroup() 
-
-    alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
-
-    if(log_scale) {interaction_df = interaction_df %>% mutate(across(starts_with("gamma"), log10))} 
-
-    plot = interaction_df %>%
-        ggplot(aes(x=reorder(combo_name, order), y=gamma_mle, size=to_count, alpha=signif)) + 
-            geom_errorbar(data=interaction_df %>% filter(epistatic_gt=="WT"),
-                        aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
-                        position=position_nudge(interaction_df %>% filter(epistatic_gt=="WT") %>% pull(nudge_dist)),
-                        width=0,
-                        linewidth=0.2) + 
-            geom_point(data=interaction_df %>% filter(epistatic_gt=="WT"),
-                        position=position_nudge(interaction_df %>% filter(epistatic_gt=="WT") %>% pull(nudge_dist)),
-                        shape=21, color="black",fill="maroon") + 
-            geom_errorbar(data=interaction_df %>% filter(epistatic_gt!="WT"),
-                        aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
-                        position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
-                        width=0,
-                        linewidth=0.2) + 
-            geom_point(data=interaction_df %>% filter(epistatic_gt!="WT"), 
-                        aes(fill=ratio),
-                        shape=21, color="black",
-                        position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist))) + 
-            ggrepel::geom_text_repel(data=interaction_df %>% filter(epistatic_gt!="WT"), 
-                        aes(label=other_genes),
-                        position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
-                        size = 3,
-                        max.overlaps = 20) +
-            labs(x="Epistatic Pair\nMutated Gene [Genetic Context]", y=if(log_scale){expression(paste(log[10],"(Scaled Selection Coefficient)"))}else{"Scaled Selection Coefficient"}, title=if(title=="default"){"Epistatic interactions in LUAD"}else{title},
-                    size="Sample count") +
-            scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
-            scale_fill_viridis_c(name="Ratio of Selection") +
-            theme_classic() +
-            theme(plot.title = element_text(size = 24, hjust=0.5),
-                    axis.title = element_text(size = 20),
-                    axis.text = element_text(size = 16),
-                    axis.ticks.x = element_blank(),
-                    legend.position = c(0.8,0.2),
-                    legend.direction="horizontal",
-                    legend.key.size = unit(1.5, 'cm'),
-                    legend.text = element_text(size = 16),
-                    legend.title = element_text(size = 20),
-                    panel.grid.major.y = element_line(color="gray",linewidth=0.75, linetype=3)) +
-            guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5),
-                    size = guide_legend(title.position="top", title.hjust = 0.5),
-                    alpha = "none")+#guide_legend(title.position="top", title.hjust = 0.5)) + 
-            coord_flip()
-        if(!log_scale){
-            plot = plot + geom_hline(yintercept = 1, color="grey", lty=2)
-        }
-
-    return(list("plot" = plot, "df" = interaction_df))
-}
-
 
 
 add_default_theme = function(p){
