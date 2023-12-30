@@ -1,13 +1,13 @@
 import os
-import pandas as pd
-import numpy as np
 import multiprocessing as mp
 
 from itertools import combinations
 from itertools import chain
 
+import pandas as pd
+import numpy as np
+
 from count_combinations import updated_compute_samples
-from count_combinations import convert_samples_to_dict
 
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
@@ -26,7 +26,6 @@ from locations import results_keys
 from locations import samples_per_combination_files
 
 from filter_data import key_filtered_dbs
-from filter_data import dbs_filtered_for_TP53_KRAS
 from filter_data import filter_samples_for_genes
 
 from pymc3.exceptions import SamplingError
@@ -34,9 +33,6 @@ from pymc3.exceptions import SamplingError
 
 # gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 # gene_list = [gene.upper() for gene in gene_list]
-# gene_list = gene_list[:103]
-
-# gene_list = ["TP53","KRAS","PIK3CA","BRAF","RB1","STK11","KEAP1","EGFR","CDKN2A.p16INK4a"]
 
 gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
              "KEAP1","STK11","ATM","PIK3CA","RBM10",
@@ -290,7 +286,7 @@ def lambdas_from_samples(samples, max_bound_changes=4):
                   "and the algorithm has not converged. Concluding that these "
                   "samples are incomputable.")
             return "incomputable"
-        print(f"Upper bound hit for one or more fluxes, increasing bounds...")
+        print("Upper bound hit for one or more fluxes, increasing bounds...")
         bound_changes += 1
         to_increase = [i for i in range(num_fluxes) if MLE[0]['lambdas'][i] in bound_maxes]
         bounds = [bounds[i]+increment if i in to_increase else bounds[i] for i in range(num_fluxes)]
@@ -311,13 +307,13 @@ def lambdas_from_samples(samples, max_bound_changes=4):
                   "and the algorithm has not converged. Concluding that these "
                   "samples are incomputable.")
             return "incomputable"
-        print(f"Algorithm did not converge changing bounds...")
+        print("Algorithm did not converge changing bounds...")
         bound_changes += 1
 
         # when the flux is below an arbitarily chosen value, lower the upper bound to optimize the search
         to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)[0]
         for i in to_decrease:
-           bounds[i] = bounds[i]/2
+            bounds[i] = bounds[i]/2
         # bounds = [bounds[i]/2 if i in to_decrease else bounds[i] for i in range(num_fluxes)]
 
         print(f"Proposed bounds: {bounds}")
@@ -339,7 +335,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         mle = lambdas_from_samples(samples)
 
         if(mle == 'incomputable'):
-            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
+            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a', encoding='utf-8') as incomputable_output_file:
                 incomputable_output_file.write(str(combo) + '\n')
             return None
 
@@ -356,7 +352,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         mle = lambdas_from_samples(samples)
 
         if(mle == 'incomputable'):
-            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a') as incomputable_output_file:
+            with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a', encoding='utf-8') as incomputable_output_file:
                 incomputable_output_file.write(str(combo) + '\n')
             return None
 
@@ -453,7 +449,6 @@ def load_mutation_rates(key, method):
     :return: A dictionary with the genes as keys and the mutation rates as values.
         - gene: mutation rate
     """
-    # TODO: Account for when mutation rates are not available for a gene
     
     if(method == "variant"):
         variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
@@ -560,7 +555,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
     return gammas_mles, gammas_cis
 
 
-def main(genes=gene_list, num_per_combo=3, keys=results_keys, mu_method="cesR", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
+def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list, dict, or NoneType
@@ -592,11 +587,21 @@ def main(genes=gene_list, num_per_combo=3, keys=results_keys, mu_method="cesR", 
     all_lambdas = {}
     all_gammas = {}
 
+    if genes is None:
+        genes = gene_list
+    if keys is None:
+        keys = results_keys
+
     if isinstance(genes, list):
+        if pathways:
+            raise Warning("A list was detected even though `pathways` was set to true."
+                          "If you are evaluating pathways, please provide a dictionary,"
+                          "with the pathway names as keys and the genes in the pathways"
+                          "as values")
         pathways = False
     elif isinstance(genes, dict):
         pathways = True
-        if not all([isinstance(entry, list) for entry in gene_list.values()]):
+        if not all([isinstance(entry, list) for entry in genes.values()]):
             raise ValueError("When including pathways, all entries in `genes` must be lists, not strings, even if there is only gene for the pathway")
     else:
         raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
@@ -605,6 +610,7 @@ def main(genes=gene_list, num_per_combo=3, keys=results_keys, mu_method="cesR", 
         print("")
 
         mus = load_mutation_rates(key, method = mu_method)
+        
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
