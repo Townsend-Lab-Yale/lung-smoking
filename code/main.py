@@ -81,7 +81,7 @@ def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
         db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], print_info=print_info)
         for pathway, genes in combo.items():
             db[f'{pathway}']=db[genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x)
-        counts = updated_compute_samples(db, 
+        counts = updated_compute_samples(db,
                                          mutations=list(combo.keys()),
                                          print_info=True)
         combo = tuple(combo.keys())
@@ -91,18 +91,18 @@ def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
                                          mutations=list(combo),
                                          print_info=print_info)
 
-    
+
     return {combo: counts}
-    
+
 
 def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, mus_keys=None, pathways=False, print_info=False, save_results=True):
-    """Compute number of patients with each combination of 
+    """Compute number of patients with each combination of
     const:`genes`.
 
     :type genes: list or NoneType
     :param genes: List of genes from which gene-set
-        combinations will be made. 
-    
+        combinations will be made.
+
 
     :type key: str or NoneType
     :param key: What estimates to use. Can be one of:
@@ -111,7 +111,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         - nonsmoking
         - smoking_plus (includes panel data)
         - nonsmoking_plus (includes panel data)
-    
+
     :type num_per_combo: int
     :param num_per_combo: How many genes to include in
         each set of genes
@@ -162,7 +162,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
             print("\n")
             print(f"Dropping the following pathways because more than 5% of genes have incalculable fluxes: "
                 f"{pathways_to_remove}")
-        
+
         for pathway in pathways_to_remove:
             genes.pop(pathway)
         genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
@@ -174,7 +174,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
     gene_combos = list(combinations(genes, num_per_combo))
 
     if pathways:
-        mp_results = pool.starmap(filter_and_compute_samples, 
+        mp_results = pool.starmap(filter_and_compute_samples,
                                   [({pathway: genes[pathway] for pathway in combo},
                                     key,
                                     pathways,
@@ -189,7 +189,7 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
                                   chunksize=n_cores)
 
     counts = {combo: count_array for result in mp_results for combo, count_array in result.items()}
-    
+
     if save_results:
         print("Saving results...")
         df = pd.DataFrame.from_dict(counts, orient='index',
@@ -257,7 +257,7 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     """
 
-    bounds = 1 
+    bounds = 1
     bound_maxes = np.array([bounds])
 
     print(f"Bounds for fluxes: {bounds}")
@@ -380,7 +380,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     print("")
 
     return None
-    
+
 
 def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
@@ -429,7 +429,7 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
     return lambdas_mles, lambdas_cis
 
 
-def load_mutation_rates(key, method): 
+def load_mutation_rates(key, method):
     """Load the mutation rates in a format that :func:`compute_gammas` uses.
 
     :type key: str or NoneType
@@ -439,7 +439,7 @@ def load_mutation_rates(key, method):
         - nonsmoking
         - smoking_plus
         - nonsmoking_plus
-    
+
     :type method: str or NoneType
     :param method: Which mutation rate calculation method to use. Can be one of:
         - variant (sum of mutation rate for each variant site in gene)
@@ -449,7 +449,7 @@ def load_mutation_rates(key, method):
     :return: A dictionary with the genes as keys and the mutation rates as values.
         - gene: mutation rate
     """
-    
+
     if(method == "variant"):
         variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
                                                         'variant_based_mutation_rates.txt'),
@@ -471,19 +471,19 @@ def load_mutation_rates(key, method):
             os.path.join(location_output,
                         f"{key[:-4] + final_part_key}_mutation_rates.txt"),
             index_col='gene')
-        
+
         mus = mus_df["rate_grp_1"].to_dict()
-        
+
     else:
         raise ValueError("The only options for gene mutation rates are variant-sum-based (variant) or directly from cancereffectsizeR (cesR)")
 
-    
+
     return mus
 
 
 def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict=None, save_results=True):
     """Compute all estimates of the selection coefficient for the data
-    set `key` iterating over all gene combinations that are present in 
+    set `key` iterating over all gene combinations that are present in
     the keys of :dict:`all_lambdas`
 
     :type key: str or NoneType
@@ -610,7 +610,7 @@ def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=Fals
         print("")
 
         mus = load_mutation_rates(key, method = mu_method)
-        
+
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
@@ -651,15 +651,30 @@ def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=Fals
 
 
 if __name__ == "__main__":
-    print('Running main...')
+    print("Running main...")
+    print("")
+    print("Computing all models with M=2...")
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
          num_per_combo=3,
          mu_method="cesR",
          keys = results_keys)
+    print("Done with all models with M=2.")
+    print("")
+    print("")
+
+    print("Computing all models with M=3...")
+    main(recompute_samples_per_combination=True,
+         flexible_last_layer=False,
+         pathways=False,
+         num_per_combo=3,
+         mu_method="cesR",
+         keys = results_keys)
+    print("Done with all models with M=3.")
     # main(recompute_samples_per_combination=True,
     #      flexible_last_layer=False,
     #      pathways=False,
     #      num_per_combo=1)
+    print("")
     print('Done running main.')
