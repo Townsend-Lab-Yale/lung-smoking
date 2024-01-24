@@ -591,7 +591,15 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
     return gammas_mles, gammas_cis
 
 
-def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=False, flexible_last_layer=False, recompute_samples_per_combination=False, print_info=True, save_results=True):
+def main(genes=None,
+         num_per_combo=[1,2,3],
+         keys=None,
+         mu_method="cesR",
+         pathways=False,
+         flexible_last_layer=False,
+         recompute_samples_per_combination=False,
+         print_info=True,
+         save_results=True):
     """Main method for the estimation of all the fluxes.
 
     :type genes: list, dict, or NoneType
@@ -638,9 +646,12 @@ def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=Fals
     elif isinstance(genes, dict):
         pathways = True
         if not all([isinstance(entry, list) for entry in genes.values()]):
-            raise ValueError("When including pathways, all entries in `genes` must be lists, not strings, even if there is only gene for the pathway")
+            raise ValueError("When including pathways, all entries in "
+                             "`genes` must be lists, not strings, "
+                             "even if there is only gene for the pathway")
     else:
-        raise IOError("`genes` must be either a list of genes or a dictionary of genes and pathways.")
+        raise IOError("`genes` must be either a list of genes "
+                      "or a dictionary of genes and pathways.")
 
     for key in keys:
         print("")
@@ -689,28 +700,11 @@ def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=Fals
 if __name__ == "__main__":
     print("Running main...")
     print("")
-    print("Computing all models with M=2...")
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
-         num_per_combo=3,
+         num_per_combo=[1, 2, 3],
          mu_method="cesR",
          keys = results_keys)
-    print("Done with all models with M=2.")
-    print("")
-    print("")
-
-    print("Computing all models with M=3...")
-    main(recompute_samples_per_combination=True,
-         flexible_last_layer=False,
-         pathways=False,
-         num_per_combo=3,
-         mu_method="cesR",
-         keys = results_keys)
-    print("Done with all models with M=3.")
-    # main(recompute_samples_per_combination=True,
-    #      flexible_last_layer=False,
-    #      pathways=False,
-    #      num_per_combo=1)
     print("")
     print('Done running main.')
