@@ -95,7 +95,14 @@ def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     return {combo: counts}
 
 
-def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, mus_keys=None, pathways=False, print_info=False, save_results=True):
+def compute_samples_for_all_combinations(genes=None,
+                                         key=None,
+                                         num_per_combo=3,
+                                         mus_keys=None,
+                                         pathways=False,
+                                         print_info=False,
+                                         save_results=True):
+
     """Compute number of patients with each combination of
     const:`genes`.
 
@@ -112,17 +119,17 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         - smoking_plus (includes panel data)
         - nonsmoking_plus (includes panel data)
 
-    :type num_per_combo: int
+    :type num_per_combo: int or list
     :param num_per_combo: How many genes to include in
-        each set of genes
+        each set of genes. It can also be list with integers.
 
     :type save_results: bool
     :param save_results: If True (default) save results as a csv file.
 
     :rtype: dict
-    :return: Dictionary with keys being the gene-sets, and values being
-        arrays with number of samples per mutation combination as
-        return by :func:`compute_samples`.
+    :return: Dictionary with keys being the gene-sets, and values
+        being arrays with number of samples per mutation combination,
+        ordered as in :func:`build_S_with_tuples`.
 
     """
 
@@ -130,72 +137,101 @@ def compute_samples_for_all_combinations(genes=None, key=None, num_per_combo=3, 
         key = "pan_data"
     if genes is None:
         raise IOError("Please input a list of genes.")
-    if not isinstance(num_per_combo, int):
-        raise ValueError("The number of genes in each combination must be an integer.")
-    print(f"Computing samples for all combinations of {num_per_combo} from {len(genes)} genes/pathways for {key}...")
-    print("\n")
 
     if pathways:
-        all_genes = list(chain(*genes.values()))
+        counts = list(chain(*genes.values()))
     else:
-        all_genes = genes
+        counts = genes
 
-    unrepresented_genes = [gene for gene in all_genes if gene not in key_filtered_dbs[key].columns]
-    if len(unrepresented_genes) > 0:
-        print(f"No sample availability information for the following genes: "
-              f"{str(unrepresented_genes)}."
-              "\nThis may be because there are not mutations in those genes in the data, "
-              "or because the genes are not correctly represented in sequencing data")
-    no_mutation_rate_genes = [gene for gene in all_genes if gene not in mus_keys]
-    if len(no_mutation_rate_genes) > 0:
-        print(f"No mutation rate available for the following genes: "
-              f"{str(no_mutation_rate_genes)}."
-              "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
-    genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
-    print("\n")
-    if pathways:
-        pathway_prop_missing = {pathway: len(set.intersection(set(pathway_genes), genes_to_remove)) / len(pathway_genes) # proportion of missing genes in each pathway
-         for pathway, pathway_genes in genes.items()}
-        print(f"Proportion of genes in each pathway for which we can't calculate fluxes: {pathway_prop_missing}")
-        pathways_to_remove = [pathway for pathway, prop_missing in pathway_prop_missing.items() if prop_missing > 0.05]
-        if len(pathways_to_remove) > 0:
-            print("\n")
-            print(f"Dropping the following pathways because more than 5% of genes have incalculable fluxes: "
-                f"{pathways_to_remove}")
+    if isinstance(num_per_combo, list):
+        counts = {}
+        for M in num_per_combo:
+            print(f"Computing all samples with M={M}...")
+            counts.update(compute_samples_for_all_combinations(
+                genes=genes,
+                key=key,
+                num_per_combo=M,
+                mus_keys=mus_keys,
+                pathways=pathways,
+                print_info=print_info,
+                save_results=False)) # results will be saved at the
+                                     # end but in a single dictionary
 
-        for pathway in pathways_to_remove:
-            genes.pop(pathway)
-        genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
-                 for pathway, pathway_genes in genes.items()}
+            print("")
+            print("")
+
+
     else:
-        genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
 
-    pool = mp.Pool(processes=n_cores)
-    gene_combos = list(combinations(genes, num_per_combo))
+        if not isinstance(num_per_combo, int):
+            raise ValueError("The number of genes in each combination must be an integer.")
+        print("Computing samples for all combinations of "
+              f"{num_per_combo} from {len(genes)} genes/pathways for {key}...")
+        print("\n")
+        unrepresented_genes = [gene for gene in genes if gene not in key_filtered_dbs[key].columns]
+        if len(unrepresented_genes) > 0:
+            print(f"No sample availability information for the following genes: "
+                  f"{str(unrepresented_genes)}."
+                  "\nThis may be because there are not mutations in those genes in the data, "
+                  "or because the genes are not correctly represented in sequencing data")
+        no_mutation_rate_genes = [gene for gene in genes if gene not in mus_keys]
+        if len(no_mutation_rate_genes) > 0:
+            print(f"No mutation rate available for the following genes: "
+                  f"{str(no_mutation_rate_genes)}."
+                  "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
+        genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
+        print("\n")
 
-    if pathways:
-        mp_results = pool.starmap(filter_and_compute_samples,
-                                  [({pathway: genes[pathway] for pathway in combo},
-                                    key,
-                                    pathways,
-                                    print_info) for combo in gene_combos],
-                                  chunksize=n_cores)
-    else:
-        mp_results = pool.starmap(filter_and_compute_samples,
-                                  [(combo,
-                                    key,
-                                    pathways,
-                                    print_info) for combo in gene_combos],
-                                  chunksize=n_cores)
+        if pathways:
+            pathway_prop_missing = {
+                pathway: (len(set.intersection(set(pathway_genes), genes_to_remove))
+                          / len(pathway_genes)) # proportion of missing genes in each pathway
+                for pathway, pathway_genes in genes.items()}
+            print("Proportion of genes in each "
+                  f"pathway for which we can't calculate fluxes: {pathway_prop_missing}")
+            pathways_to_remove = [pathway for pathway, prop_missing in pathway_prop_missing.items()
+                                  if prop_missing > 0.05]
+            if len(pathways_to_remove) > 0:
+                print("\n")
+                print("Dropping the following pathways "
+                      "because more than 5% of genes have incalculable fluxes: "
+                      f"{pathways_to_remove}")
 
-    counts = {combo: count_array for result in mp_results for combo, count_array in result.items()}
+            for pathway in pathways_to_remove:
+                genes.pop(pathway)
+                genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
+                         for pathway, pathway_genes in genes.items()}
+        else:
+            genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
+
+        pool = mp.Pool(processes=n_cores)
+        gene_combos = list(combinations(genes, num_per_combo))
+
+        if pathways:
+            mp_results = pool.starmap(filter_and_compute_samples,
+                                      [({pathway: genes[pathway] for pathway in combo},
+                                        key,
+                                        pathways,
+                                        print_info) for combo in gene_combos],
+                                      chunksize=n_cores)
+        else:
+            mp_results = pool.starmap(filter_and_compute_samples,
+                                      [(combo,
+                                        key,
+                                        pathways,
+                                        print_info) for combo in gene_combos],
+                                      chunksize=n_cores)
+
+        counts = {combo: count_array
+                  for result in mp_results
+                  for combo, count_array in result.items()}
+
 
     if save_results:
         print("Saving results...")
-        df = pd.DataFrame.from_dict(counts, orient='index',
-                                    columns=[str(x) for x in build_S_with_tuples(num_per_combo)])
-        df.index.name = "gene_combination"
-        df.to_csv(samples_per_combination_files[key])
+        np.save(os.path.join(location_output,
+                             samples_per_combination_files[key]),
+                counts)
 
         print("done.")
 
@@ -618,8 +654,8 @@ def main(genes=None, num_per_combo=3, keys=None, mu_method="cesR", pathways=Fals
                                                                    pathways, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
-            df = pd.read_csv(samples_per_combination_files[key], index_col='gene_combination')
-            all_counts[key] = {combo:np.array(df.loc[str(combo)]) for combo in df.index}
+            all_counts[key] = np.load(samples_per_combination_files[key],
+                                      allow_pickle=True).item()
         print(f"done computing samples per combination for {key}.")
         print("")
         print("")
