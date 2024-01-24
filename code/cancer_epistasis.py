@@ -268,6 +268,30 @@ def estimate_lambdas(samples, upper_bound_prior=3, draws=10000,
     return results
 
 
+def convert_samples_to_dict(samples):
+    """Convert a samples array to a dictionary.
+
+    :type samples: list
+    :param samples: Number of patients in each mutation combination
+        (as returned by :func:`count_pts_per_combination`).
+
+    :rtype: dict
+    :return: Dictionary with the samples, indexed by tuples of 1's and
+        0's representing whether the mutation occur fot the gene or
+        not.
+
+    """
+
+    M = int(np.log2(len(samples))) # 2^M is the number mutation combinations
+
+    S = build_S_as_array(M)
+
+    results_as_dict = {tuple(x):value
+                       for x, value in zip(S, samples)}
+
+    return results_as_dict
+
+
 def convert_lambdas_to_dict(results):
     """Convert a fluxes array to a dictionary.
 
