@@ -32,25 +32,25 @@ gene_df[,gene := toupper(gene)]
 #' gene_df = gene_df[1:103,]
 
 #' Calculate trinucleotide mutation proportions across the whole genome in preparation for calculating variant mutation rates
-# genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf)
-smoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in% 
+genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf)
+smoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
                                                                                              c(smoking_samples, panel_smoking_samples)])
-nonsmoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in% 
+nonsmoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
                                                                                              c(nonsmoking_samples, panel_nonsmoking_samples)])
 
 #' Calculate variant level mutation rates
 #' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
-gene_df[, pan_data_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x, 
-                                                                                        cesa, 
-                                                                                        genome_trinucleotide_mutation_proportions, 
+gene_df[, pan_data_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x,
+                                                                                        cesa,
+                                                                                        genome_trinucleotide_mutation_proportions,
                                                                                         samples = cesa$samples$Unique_Patient_Identifier)))]
-gene_df[, smoking_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x, 
+gene_df[, smoking_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x,
                                                                                        cesa_smoking_w_panel,
-                                                                                       smoking_genome_trinucleotide_mutation_proportions, 
+                                                                                       smoking_genome_trinucleotide_mutation_proportions,
                                                                                        samples = c(smoking_samples, panel_smoking_samples))))]
-gene_df[, nonsmoking_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x, 
+gene_df[, nonsmoking_mutation_rates := lapply(gene, function(x) sum(variant_mutation_rate(x,
                                                                                           cesa_nonsmoking_w_panel,
-                                                                                          nonsmoking_genome_trinucleotide_mutation_proportions, 
+                                                                                          nonsmoking_genome_trinucleotide_mutation_proportions,
                                                                                           samples = c(nonsmoking_samples, panel_nonsmoking_samples))))]
 
 fwrite(gene_df, paste0(location_output,"variant_based_mutation_rates.txt"))
