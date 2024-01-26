@@ -38,23 +38,39 @@ echo ""
 
 echo "Downloading GENIE data..."
 echo ""
-echo -e "GENIE requires a username and password, "`
-     `"because you have to accept their terms to "`
-     `"download the data set first. If you do not "`
-     `"have done so yet, go to:\r\n"`
-     `"https://www.synapse.org/#!Synapse:syn24179660\r\n"`
-     `"to register."
-source .venv/bin/activate
-python get_synapse_data.py
-deactivate
+# echo -e "GENIE requires a username and password, "`
+#      `"because you have to accept their terms to "`
+#      `"download the data set first. If you do not "`
+#      `"have done so yet, go to:\r\n"`
+#      `"https://www.synapse.org/#!Synapse:syn24179660\r\n"`
+#      `"to register."
+# source .venv/bin/activate
+# python get_synapse_data.py
+# deactivate
+# echo "...done downloading GENIE data."
+# echo ""
+# echo ""
+
+
+cd ../data # keep this line if using synapse (above), it is required
+           # for the downloading other files to the proper directory
+## GENIE does not allow to download previous versions of data, so we
+## provide it from our website:
+mkdir genie_9
+wget https://misc.cidma.us/data/genie_9/data_clinical_patient.txt
+wget https://misc.cidma.us/data/genie_9/data_clinical_sample.txt
+wget https://misc.cidma.us/data/genie_9/data_mutations_extended_lifted.txt
+wget https://misc.cidma.us/data/genie_9/data_mutations_extended.txt
+wget https://misc.cidma.us/data/genie_9/genomic_information.txt
+cd ..
 echo "...done downloading GENIE data."
 echo ""
 echo ""
+## TODO: Update to latest genie data
 
 
 echo "Downloading cBioPortal data..."
 echo ""
-cd ../data
 URL="https://cbioportal-datahub.s3.amazonaws.com/"
 EXTENSION=".tar.gz"
 declare -a DATASETS=("luad_broad"
