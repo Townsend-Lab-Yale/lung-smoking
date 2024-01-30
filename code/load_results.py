@@ -19,7 +19,7 @@ def load_mutation_rates(key, method):
         - smoking_plus
         - nonsmoking_plus
 
-    :type method: str or NoneType
+    :type method: str
     :param method: Which mutation rate calculation method to use. Can be one of:
         - variant (sum of mutation rate for each variant site in gene)
         - cesR (gene mutation rate directly from cancereffectsizeR)
@@ -62,3 +62,51 @@ def load_mutation_rates(key, method):
 
 
     return mus
+
+
+
+def load_results(result_type, which=None):
+    """Load the results.
+
+    :type result_type: str
+    :param result_type: What type of result to load. Can be one of:
+        - 'samples'
+        - 'fluxes'
+        - 'selections'
+
+    :type which: str or NoneType
+    :param which: What estimates to use.
+        - if `result_type` is 'fluxes' or 'selections, it can be one of:
+            + 'mles' (default), to load the MLE
+            + 'cis', to load the 95% confidence intervals
+        - if `result_type` is 'mutations', it can be one of:
+            + 'variant' (default), to load the MLE
+            + 'cesR', to load the 95% confidence intervals
+        - if `result_type` is 'samples' it does not have an effect
+
+
+    :rtype: dict
+    :return: A dictionary the fluxes results indexed by the keys as in
+        :const:`results_keys`.
+
+    """
+
+    if result_type == 'mutations':
+        results = {key: load_mutation_rates(key, which)
+                   for key in results_keys}
+    else:
+        if which is None:
+            which = 'mles'
+
+        file_names = {key: f"{key}_{result_type}" +
+                           (f"_{which}" if result_type != 'samples'
+                            else "") +
+                           ".npy"
+                      for key in results_keys}
+
+        results = {key: np.load(os.path.join(location_output,
+                                             file_name),
+                                allow_pickle=True).item()
+                   for key,file_name in file_names.items()}
+
+    return results
