@@ -60,7 +60,7 @@ def build_S_as_array(M):
     :type M: int
     :param M: Number of mutations.
 
-    :rtype: numpy.ndarray
+    :rtype S: numpy.ndarray
     :return: S as a numpy array of 0s and 1s.
 
     """
@@ -76,8 +76,8 @@ def obtain_pos_lambdas_indices(S):
     S[i]] > 0, just by the definition of the lambdas, in other words
     if S[i] is equal S[j] plus one more mutation.
 
-    :type: numpy.ndarray
-    :param: S as a numpy array of 0s and 1s.
+    :type S: numpy.ndarray
+    :param S: S as a numpy array of 0s and 1s.
 
     :rtype: numpy.ndarray
     :return: A numpy array of booleans.
@@ -117,8 +117,8 @@ def order_pos_lambdas(S):
          for i, j in positive_lambdas_ordered]
 
 
-    :type: numpy.ndarray
-    :param: S as a numpy array of 0s and 1s.
+    :type S: numpy.ndarray
+    :param S: S as a numpy array of 0s and 1s.
 
     :rtype: list
     :return: A list with the lambda tuples numpy array of booleans.
