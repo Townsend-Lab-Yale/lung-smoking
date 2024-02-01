@@ -25,8 +25,10 @@ from theano.compile.ops import as_op
 
 from theory import numbers_positive_lambdas
 from theory import build_S_as_array
+from theory import build_S_with_tuples
 from theory import obtain_pos_lambdas_indices
 from theory import order_pos_lambdas
+from theory import generate_paths
 
 from scipy.stats import chi2
 
@@ -474,3 +476,61 @@ def asymp_CI_lambdas(lambdas_mle, samples, ci=0.95, tol=10**(-6),
                                    tol=tol))
 
     return CIs
+
+
+## * Probability of each trajectory
+
+def compute_probability_paths(lambdas,
+                              destiny='all'):
+
+    """Compute the probability of each possible sequence of mutations
+    to lead to a specific somatic genotype.
+
+    :type lambdas: dict
+    :param lambdas: A dictionary with the fluxes estimates with keys
+        being tuples representing the somatic genotypes from and to of
+        the respective flux (as for example the output of
+        :func:`estimate_lambdas` with draws=1).
+
+    :type destiny: tuple or str
+    :param destiny: The destination somatic genotype as a tuple, or
+        'all' (default) which would give results for each of the
+        possible destination somatic genotypes.
+
+    :rtype: dict
+    :return: Dictionary indexed by the paths with values equal to
+        their respective probability of ending up a the somatic
+        genotype specified by `destiny`. If `destiny` is 'all', then a
+        meta dictionary indexed by every somatic genotype with more
+        than two mutated genes.
+
+    """
+
+    if destiny == 'all':
+
+        M = len(next(iter(lambdas))[0]) # any tuple of any tuple in
+                                        # the keys of lambdas has
+                                        # exactly M entries
+
+        S_except_trivial = [x for x in build_S_with_tuples(M)
+                            if np.sum(x) > 1]
+
+        S_except_trivial = sorted(S_except_trivial, key=sum)
+
+        return {x:compute_probability_paths(lambdas=lambdas,
+                                            destiny=x)
+                for x in S_except_trivial}
+
+    else:
+
+        paths = generate_paths(destiny)
+
+        prod_lambdas = {tuple(path):np.prod([lambdas[xy] for xy in path])
+                        for path in paths}
+
+        sum_prod_lambdas = np.sum(list(prod_lambdas.values()))
+
+        probs = {path:value/sum_prod_lambdas
+                 for path, value in prod_lambdas.items()}
+
+        return probs

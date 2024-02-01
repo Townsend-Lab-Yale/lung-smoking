@@ -166,3 +166,48 @@ def human_order_paths(n):
         if valid_path:
             all_paths.append(path)
     return all_paths[::-1]
+
+
+def generate_paths(target):
+    """For a final `target' somatic genotype destination give all
+    possible paths of somatic genotypes that lead there.
+
+    :type target: tuple
+    :param target: A destination somatic genotype as a tuple.
+
+    :rtype: list
+    :return: A list with the paths. Each path is represented by a list
+        that has pairs representing each jump in path, for example,
+        [(x1,x2), (x2, x3), (x3, x4)] would represent a path to the
+        target x4, where the first jump is from x1 to x2, then to x3
+        and finally to x4. The first entry of the first tuple in each
+        path (x1, in the example) is always the normal genotype.
+
+    """
+    M = len(target)
+    initial_state = tuple([0] * M)
+
+    # Function to generate next states from a given state
+    def next_states(state):
+        return [state[:i] + (1,) + state[i+1:]
+                for i in range(M)
+                if state[i] == 0]
+
+    # Recursive function to generate paths
+    def recursive_paths(state):
+        if state == target:
+            return [[state]]
+        paths = []
+        for next_state in next_states(state):
+            for path in recursive_paths(next_state):
+                paths.append([state] + path)
+        return paths
+
+    all_paths = recursive_paths(initial_state)
+
+    # Organize paths as pairs
+    organized_paths = []
+    for path in all_paths:
+        organized_paths.append(list(zip(path[:-1], path[1:])))
+
+    return organized_paths
