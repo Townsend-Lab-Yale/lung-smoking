@@ -25,7 +25,7 @@ from locations import location_output
 from locations import results_keys
 from locations import samples_per_combination_files
 
-from load_results import load_mutation_rates
+from load_results import load_results
 
 from filter_data import key_filtered_dbs
 from filter_data import filter_samples_for_genes
@@ -486,8 +486,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
         tuples containing the a key and either 'mles' or 'cis'
 
     :type mus: dict
-    :param mus: Dictionary with the mutation rates for each gene in
-        data set `key` as obtained from :func:`load_mutation_rates`.
+    :param mus: Dictionary with the mutation rates for each gene.
 
     :type save_results: bool
     :param save_results: If True (default) save results.
@@ -606,7 +605,7 @@ def main(genes=None,
     for key in keys:
         print("")
 
-        mus = load_mutation_rates(key, method = mu_method)
+        mus = load_results('mutations', mu_method)[key]
 
         if (recompute_samples_per_combination
             or not os.path.exists(samples_per_combination_files[key])):
