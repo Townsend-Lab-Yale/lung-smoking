@@ -117,9 +117,8 @@ def plot_probs_per_path(lambdas,
 
         yticks.append(yticks[-1]+3)
 
-    ax.text(1.04, yticks[-1], "Resulting somatic genotype", va="center")
-    ax.text(0, yticks[-1], "Evolutionary trajectory", va="center", ha="right")
-
+    ax.text(1.04, yticks[-1]-1, "Resulting somatic genotype", va="center")
+    ax.text(0, yticks[-1]-1, "Evolutionary trajectory", va="center", ha="right")
 
     ax.set_yticks(yticks[:-1])
     ax.set_yticklabels(ytick_labels)
