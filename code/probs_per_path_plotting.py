@@ -15,6 +15,14 @@ plt.rcParams['text.usetex'] = True # If getting an error about ! LaTeX
                                    # sudo apt install cm-super
 
 
+def path_to_string(path, genes, joiner, before, after):
+    jumps = [xy[1] for xy in path]
+    jumps = ([list(jumps[0])] +
+             [list(np.array(y)-np.array(x))
+              for x, y in zip(jumps[:-1], jumps[1:])])
+    gene_jumps = [before + genes[jump.index(1)] + after
+                  for jump in jumps]
+    return joiner.join(gene_jumps)
 
 
 
@@ -63,16 +71,6 @@ def plot_probs_per_path(lambdas,
                      for destination, probs in all_probs.items()}
 
     ## Convert paths into strings with arrows
-    def path_to_string(path, genes, joiner, before, after):
-        jumps = [xy[1] for xy in path]
-        jumps = ([list(jumps[0])] +
-                 [list(np.array(y)-np.array(x))
-                  for x, y in zip(jumps[:-1], jumps[1:])])
-        gene_jumps = [before + genes[jump.index(1)] + after
-                      for jump in jumps]
-        return joiner.join(gene_jumps)
-
-
     all_probs = {destination:{path_to_string(path,
                                              genes,
                                              joiner=r"\; $\rightarrow$ ",
@@ -150,15 +148,25 @@ def plot_probs_per_path(lambdas,
 
 
 
-## Example of how to use the code
+## * Example of how to use the code
 
 # from load_results import load_results
-# all_lambas_ = load_results('fluxes', 'mles')
+# all_lambdas_ = load_results('fluxes', 'mles')
 
 # genes_= ('TP53', 'EGFR', 'KEAP1')
-# key_ = 'nonsmoking'
+# key_ = 'smoking'
 
-# plot_probs_per_path(all_lambdas_[key_][genes_],
-#                     genes=genes_,
-#                     tolerance_to_not_show_path=10**(-20),
-#                     save_fig_name=f"probs_per_path_{key_}_" + "_".join(genes_))
+# fig_ = plot_probs_per_path(all_lambdas_[key_][genes_],
+#                            genes=genes_,
+#                            tolerance_to_not_show_path=10**(-20),
+#                            save_fig_name=f"probs_per_path_{key_}_" + "_".join(genes_))
+
+
+# ## If you want the actual values you can do
+
+# probs_per_path_ = compute_probability_paths(all_lambdas_[key_][genes_])
+
+# ## and for the keys to be easier to read:
+# probs_per_path_ = {genotype:{path_to_string_(path, genes_, "->", "", ""):probs
+#                              for path,probs in value.items()}
+#                    for genotype, value in probs_per_path_.items()}
