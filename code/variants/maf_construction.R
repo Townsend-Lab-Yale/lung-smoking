@@ -3,10 +3,10 @@
 library(cancereffectsizeR)
 library(data.table)
 
-construct_maf = function(cesa, original_maf, preloaded_maf, save_results = TRUE){
+construct_maf = function(cesa_maf, original_maf, preloaded_maf, save_results = TRUE){
   #' Assigning a single gene to each variant
-  cesa@maf = cesa$maf[lengths(genes) == 1 & is.na(top_gene), top_gene := genes]
-  cesa_maf_variants = cesa$maf[variant_type == 'snv', .(Unique_Patient_Identifier, variant_id)]
+  cesa_maf = cesa_maf[lengths(genes) == 1 & !is.na(genes) & is.na(top_gene), top_gene := genes]
+  cesa_maf_variants = cesa_maf[variant_type == 'snv', .(Unique_Patient_Identifier, variant_id)]
   
   preload_maf_variants = preloaded_maf[variant_type == 'snv' & is.na(problem) & Variant_Classification != 'Silent', .(Unique_Patient_Identifier, variant_id)]
   
@@ -14,7 +14,7 @@ construct_maf = function(cesa, original_maf, preloaded_maf, save_results = TRUE)
   variants_to_keep = merge(cesa_maf_variants, preload_maf_variants) 
   
   #' Keeping desired variants and removing extraneous columns
-  filtered_maf = merge(cesa$maf, variants_to_keep, by = c('Unique_Patient_Identifier','variant_id'))
+  filtered_maf = merge(cesa_maf, variants_to_keep, by = c('Unique_Patient_Identifier','variant_id'))
   filtered_maf = filtered_maf[,-c('prelift_chr', 'prelift_start', 'liftover_strand_flip','variant_type', 'genes', 'top_consequence')]
 
   #' Adding source information to all of the TGS samples
