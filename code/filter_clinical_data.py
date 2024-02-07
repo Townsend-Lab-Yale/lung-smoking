@@ -73,6 +73,7 @@ tcga_df["tumor_stage"] = tcga_df["tumor_stage"].str.upper().map(stage_dict).fill
 tcga_df = tcga_df[tcga_df['treatment_type'] == 'Pharmaceutical Therapy, NOS']
 #adding treatment column
 #at least for now, temporarily making treatment column NaN because we are unsure whether patients are treatment naive or not/when treatments were applied.
+# Update: most patients have no prior treatment (see prior_treatment column. 3 received some form of prior treatment, not sure what kind)
 tcga_df['Treatment'] = np.NaN #tcga_df['treatment_or_therapy'].apply(lambda x: True if x == 'yes' else False if x == 'no' else np.NaN)
 tcga_df = tcga_df[["case_id","pack_years_smoked","tumor_stage", "months_to_death", "Treatment"]]
 tcga_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)","Treatment"]

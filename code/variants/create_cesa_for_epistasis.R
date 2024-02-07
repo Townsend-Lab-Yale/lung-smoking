@@ -126,14 +126,14 @@ genie_panel_genes_list <- split(genie_panel_genes_2$Hugo_Symbol, genie_panel_gen
 
 Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
 
-panels_to_remove <- c()
-for(panel in names(genie_panel_genes_list)){
-  if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
-    panels_to_remove <- c(panels_to_remove, panel)
-  }
-}
-
-Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
+# panels_to_remove <- c()
+# for(panel in names(genie_panel_genes_list)){
+#   if(!('TP53' %in% genie_panel_genes_list[[panel]]) | !('KRAS' %in% genie_panel_genes_list[[panel]])){
+#     panels_to_remove <- c(panels_to_remove, panel)
+#   }
+# }
+# 
+# Genie_maf <- Genie_maf[!'Sequence Assay ID' %in% panels_to_remove]
 
 #SPLITTING MAF FILES WHEN DIFFERENT SEQUENCING METHODS ARE USED
 Broad_maf <- merge(Broad_maf, broad_exome_or_genome, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
@@ -148,6 +148,8 @@ MSK2018_maf <- split(MSK2018_maf, MSK2018_maf$`Gene Panel`)
 Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifier', by.y = 'Sample Identifier')
 Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID.x`)
 
+
+preloaded_maf = rbind(rbindlist(Broad_maf), FMAD_maf, rbindlist(Genie_maf), MSK2015_maf, rbindlist(MSK2017_maf), rbindlist(MSK2018_maf), OncoSG_maf, TCGA_maf, TracerX_maf, TSP_maf, NCI_maf,fill = T)
 
 #' LOADING IN MAF FILES INTO CESA OBJECT
 
@@ -215,7 +217,7 @@ panel_smoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][
 panel_nonsmoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == F, `Sample ID`])
 
 #CALCULATING MUTATION RATES FOR SMOKERS AND NONSMOKERS
-## mutation rates of only WES/wGS
+## mutation rates of only WES/WGS
 cesa_smoking = clear_gene_rates(cesa)
 cesa_smoking = gene_mutation_rates(cesa_smoking, covariates = 'lung', 
                                    samples = cesa_smoking$samples[Unique_Patient_Identifier %in% smoking_samples, Unique_Patient_Identifier])
@@ -236,6 +238,8 @@ cesa_nonsmoking_w_panel = gene_mutation_rates(cesa_nonsmoking_w_panel, covariate
 
 if(save_results){
   save_cesa(cesa, paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
+  
+  fwrite(preloaded_maf, paste0(location_data, 'all_preloaded_mafs.txt'))
   
   fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
   fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
