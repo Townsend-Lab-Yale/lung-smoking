@@ -141,9 +141,9 @@ def compute_samples_for_all_combinations(genes=None,
         raise IOError("Please input a list of genes.")
 
     if pathways:
-        counts = list(chain(*genes.values()))
+        all_genes = list(chain(*genes.values()))
     else:
-        counts = genes
+        all_genes = genes
 
     if isinstance(num_per_combo, list):
         counts = {}
@@ -170,13 +170,13 @@ def compute_samples_for_all_combinations(genes=None,
         print("Computing samples for all combinations of "
               f"{num_per_combo} from {len(genes)} genes/pathways for {key}...")
         print("\n")
-        unrepresented_genes = [gene for gene in genes if gene not in key_filtered_dbs[key].columns]
+        unrepresented_genes = [gene for gene in all_genes if gene not in key_filtered_dbs[key].columns]
         if len(unrepresented_genes) > 0:
             print(f"No sample availability information for the following genes: "
                   f"{str(unrepresented_genes)}."
                   "\nThis may be because there are not mutations in those genes in the data, "
                   "or because the genes are not correctly represented in sequencing data")
-        no_mutation_rate_genes = [gene for gene in genes if gene not in mus_keys]
+        no_mutation_rate_genes = [gene for gene in all_genes if gene not in mus_keys]
         if len(no_mutation_rate_genes) > 0:
             print(f"No mutation rate available for the following genes: "
                   f"{str(no_mutation_rate_genes)}."
@@ -201,8 +201,8 @@ def compute_samples_for_all_combinations(genes=None,
 
             for pathway in pathways_to_remove:
                 genes.pop(pathway)
-                genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
-                         for pathway, pathway_genes in genes.items()}
+            genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
+                        for pathway, pathway_genes in genes.items()}
         else:
             genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
 
