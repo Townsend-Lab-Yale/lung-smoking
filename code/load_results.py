@@ -5,7 +5,6 @@ import numpy as np
 
 from locations import location_output
 from locations import results_keys
-from locations import samples_per_combination_files
 
 
 def load_mutation_rates(key, method):
@@ -33,15 +32,13 @@ def load_mutation_rates(key, method):
         variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
                                                         'variant_based_mutation_rates.txt'),
                                                         index_col=0)
-        ## TODO: Fix the availability of pan_data (and rerun main.R)
-        # variant_based_mutation_rates.columns = "pan_data","smoking","nonsmoking" pan_data is not available
-        variant_based_mutation_rates.columns = "smoking", "nonsmoking"
         variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
         if key[-4:] == 'plus':
             key = key[:-5]
 
         mus = variant_based_mutation_rates[key]
+        mus = {gene: mu for gene, mu in mus.items() if not np.isnan(mu)}
 
     elif(method == "cesR"):
         if key[-4:] == 'plus':
