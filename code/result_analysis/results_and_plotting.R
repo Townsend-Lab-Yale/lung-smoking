@@ -1,17 +1,23 @@
+library(repr)
+
 library(data.table)
+library(tidyr)
+library(dplyr)
+
 library(ggplot2)
 library(ggrepel)
+library(ggbreak)
 library(scales)
-library(dplyr)
-library(tidyr)
-library(glue)
-library(repr)
 library(cowplot)
+
+library(glue)
 library(stringr)
 
-location_output = "../../output/"
-location_cesR_output = glue("{location_output}/output_for_transfer/genes/cesR/")
-location_variant_output = glue("{location_output}/output_for_transfer/genes/variant/")
+
+# location_output = "../../output/"
+# location_variant_output = glue("{location_output}/output_for_transfer/genes/cesR/")
+# location_variant_output = glue("{location_output}/output_for_transfer/genes/variant/")
+location_variant_output = glue("variant_results/")
 
 # M = 1
 
@@ -21,15 +27,15 @@ load_M1_results = function(){
     M1_fluxes = fread("M1_gene_fluxes.csv", header = T)
 
     # mutation frequencies for each gene (note that it doesn't matter which mutation rate method is used)
-    samples_per_combo_pd = fread(glue("{location_cesR_output}/M1/samples_per_combination_pan_data.csv"))
+    samples_per_combo_pd = fread(glue("{location_variant_output}/M1/samples_per_combination_pan_data.csv"))
     samples_per_combo_pd$key = "pan_data"
-    samples_per_combo_s = fread(glue("{location_cesR_output}/M1/samples_per_combination_smoking.csv"))
+    samples_per_combo_s = fread(glue("{location_variant_output}/M1/samples_per_combination_smoking.csv"))
     samples_per_combo_s$key = "smoking"
-    samples_per_combo_ns = fread(glue("{location_cesR_output}/M1/samples_per_combination_nonsmoking.csv"))
+    samples_per_combo_ns = fread(glue("{location_variant_output}/M1/samples_per_combination_nonsmoking.csv"))
     samples_per_combo_ns$key = "nonsmoking"
-    samples_per_combo_sp = fread(glue("{location_cesR_output}/M1/samples_per_combination_smoking_plus.csv"))
+    samples_per_combo_sp = fread(glue("{location_variant_output}/M1/samples_per_combination_smoking_plus.csv"))
     samples_per_combo_sp$key = "smoking_plus"
-    samples_per_combo_nsp = fread(glue("{location_cesR_output}/M1/samples_per_combination_nonsmoking_plus.csv"))
+    samples_per_combo_nsp = fread(glue("{location_variant_output}/M1/samples_per_combination_nonsmoking_plus.csv"))
     samples_per_combo_nsp$key = "nonsmoking_plus"
     samples_per_combo = bind_rows(samples_per_combo_pd, samples_per_combo_s, samples_per_combo_ns, samples_per_combo_sp, samples_per_combo_nsp)
     colnames(samples_per_combo) = c("gene","0","1","key")
@@ -78,32 +84,32 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
                         legend.position = c(0.6, 0.8),
                         legend.background = element_rect(fill = "white"))
     } else {
-        if (var_to_plot == "gamma") {
+        if (var_to_plot == "selection") {
             plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) + 
                 geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0) +
-                labs(x = "Gene", y = "Selection Intensity")
-        } else if (var_to_plot == "flux") {
+                labs(x = "Gene", y = "Selection intensity")
+        } else if (var_to_plot == "fixation") {
             plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=flux_mle)) + 
                 geom_errorbar(aes(ymin = flux_ci_low, ymax = flux_ci_high), width=0) +
-                labs(x = "Gene", y = "Fixation Rate")
-        } else if (var_to_plot == "mu") {
+                labs(x = "Gene", y = "Fixation rate")
+        } else if (var_to_plot == "mutation") {
             plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) + 
                 geom_errorbar(aes(ymin = mu_ci_low, ymax = mu_ci_high), width=0) +
-                labs(x = "Gene", y = "Mutation Rate")
-        } else {stop("var_to_plot must be gamma (selection intensity), flux (mutation acquisition rate), mu (mutation rate), or freq (mutation frequency)")}
+                labs(x = "Gene", y = "Mutation rate")
+        } else {stop("var_to_plot must be selection (selection intensity), fixation (mutation acquisition rate), mutation (mutation rate), or freq (mutation frequency)")}
 
         plot = plot + 
             geom_point(aes(size=freq, color=freq)) + 
             scale_color_viridis_c() +
-            scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
-            guides(color=guide_legend(), size = guide_legend()) +
+            scale_y_continuous(labels = ifelse(var_to_plot == "fixation", function(x)format(x, scientific=F), fancy_scientific)) +
+            guides(color=guide_legend(title="Frequency"), size = guide_legend(title="Frequency")) +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 18),
                 axis.title.x = element_text(size = 18),
-                axis.ticks.x = element_blank(),
+                axis.ticks.y = element_blank(),
                 axis.text.y = element_text(size = 16),
-                axis.text.x = element_text(angle = 90),
+                #axis.text.x = element_text(angle = 90),
                 axis.text = element_text(size = 14),
                 plot.title = element_text(size = 18, hjust=0.5),
                 panel.grid.major.y = element_line(color="gray",linewidth = 0.5, linetype=3),
@@ -144,8 +150,9 @@ get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
     return(gxe_effects)
 }
 
+get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2])}
+
 plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=TRUE){
-    ranked_genes = df %>% filter(key == "pan_data", method==mu_method) %>% arrange(desc(gamma_mle)) %>% pull(gene)
     
     gxe_effects = get_genes_with_gxe_effects(df, mu_method, include_panel_data)
 
@@ -157,19 +164,32 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
             filter(key %in% keys) %>%
             filter(method == mu_method) %>%
             mutate(signif = ifelse(gene %in% gxe_effects, "Significant", "Not significant"),
-                    signif_mark = ifelse(signif == "Significant", "*", ""),
-                    gene = factor(gene, levels = ranked_genes))
+                    signif_mark = ifelse(signif == "Significant", "*", ""))
+
+    ranked_genes = plotting_df %>% 
+        pivot_wider(
+            names_from = key,
+            id_cols = gene,
+            values_from = gamma_mle
+        ) %>%
+        rowwise() %>% mutate(diff_ns = ifelse(include_panel_data, nonsmoking_plus - smoking_plus, nonsmoking-smoking), max_sel = ifelse(include_panel_data, max(nonsmoking_plus, smoking_plus), max(nonsmoking, smoking))) %>%
+        arrange(diff_ns<0, ifelse(diff_ns>0, desc(max_sel), max_sel)) %>%
+        pull(gene)
+
+    plotting_df = plotting_df %>% mutate(gene = factor(gene, levels = ranked_genes))
 
     raw_gamma_plot = 
         plotting_df %>%
-            mutate(key = ifelse(str_detect(key,"nonsmoking"), "Never-Smokers", ifelse(str_detect(key,"smoking"),"Ever-Smokers",""))) %>%
+            mutate(key = ifelse(str_detect(key,"nonsmoking"), "Never-smoker", ifelse(str_detect(key,"smoking"),"Ever-smoker","")),
+                    key = factor(key, levels = c("Never-smoker","Ever-smoker"))) %>%
             ggplot(aes(x = gene, y = gamma_mle, group=key)) +
             geom_col(aes(fill = key), alpha = 0.7, position="dodge", width = 0.75) +
-            geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), position="dodge", width = 0.75) +
+            geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), position=position_dodge(width=0.75), width = 0) +
             # geom_point(data = df %>% filter(key=="pan_data", method == mu_method), aes(x=reorder(gene, -gamma_mle),y=gamma_mle)) + 
             # geom_errorbar(data = df %>% filter(key=="pan_data", method == mu_method), aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0.5) +
-
-            labs(x = "Gene", y = "Scaled Selection Coefficient", title = "Average selection intensity for SNVs between ever- and never-smoker LUAD", fill = "Smoker Status") +
+            scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
+            scale_y_continuous(labels = fancy_scientific) +
+            labs(x = "Gene", y = "Scaled selection coefficient", title = "Selection intensity for SNVs in ever-smoker and never-smoker LUAD", fill = "Smoker status") +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 18),
@@ -246,32 +266,48 @@ find_mutated_gene = function(mutation_indices){
 
 get_Mk_samples_per_combination = function(k){
     # consider switching to loading all availables samples per combo files in future
-    pd_spc = fread(glue("{location_cesR_output}/M{k}/samples_per_combination_pan_data.csv"))
-    s_plus_spc = fread(glue("{location_cesR_output}/M{k}/samples_per_combination_smoking_plus.csv"))
-    ns_plus_spc = fread(glue("{location_cesR_output}/M{k}/samples_per_combination_nonsmoking_plus.csv"))
+    pd_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_pan_data.csv"))
+    s_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_smoking.csv"))
+    s_plus_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_smoking_plus.csv"))
+    ns_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_nonsmoking.csv"))
+    ns_plus_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_nonsmoking_plus.csv"))
 
     pd_spc = pd_spc %>% 
                     pivot_longer(cols=starts_with("("),
                                     names_to = "state",
                                     values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state)) %>% 
-                    mutate(key = "pan_data")
+                    mutate(state = gsub("[()]","",state),
+                            key = "pan_data")
+
+    s_spc = s_spc %>% 
+                    pivot_longer(cols=starts_with("("),
+                                    names_to = "state",
+                                    values_to = "count") %>%
+                    mutate(state = gsub("[()]","",state),
+                            key = "smoking")
 
     s_plus_spc = s_plus_spc %>% 
                     pivot_longer(cols=starts_with("("),
                                     names_to = "state",
                                     values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state)) %>% 
-                    mutate(key = "smoking_plus")
+                    mutate(state = gsub("[()]","",state),
+                            key = "smoking_plus")
+
+    ns_spc = ns_spc %>% 
+                    pivot_longer(cols=starts_with("("),
+                                    names_to = "state",
+                                    values_to = "count") %>%
+                    mutate(state = gsub("[()]","",state),
+                            key = "nonsmoking")
 
     ns_plus_spc = ns_plus_spc %>% 
                     pivot_longer(cols=starts_with("("),
                                     names_to = "state",
                                     values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state)) %>%
-                    mutate(key = "nonsmoking_plus")
+                    mutate(state = gsub("[()]","",state),
+                            key = "nonsmoking_plus")
 
-    samples_per_combination = bind_rows(pd_spc, s_plus_spc, ns_plus_spc)
+    samples_per_combination = bind_rows(pd_spc, s_spc, s_plus_spc, ns_spc, ns_plus_spc)
 
     samples_per_combination = samples_per_combination %>%
         mutate(gene_set = gsub(" ","_",
@@ -281,10 +317,10 @@ get_Mk_samples_per_combination = function(k){
     return(samples_per_combination)
 }
 
-
-load_M3_results = function(){
+# @param lower_bound: lower bound on gamma values
+# Note that the exact value of the lower bound has no practical significance, at least with these results
+load_M3_results = function(lower_bound = 1e-2){
     samples_per_combination = get_Mk_samples_per_combination(k=3)
-    lower_bound = 1e-2 # Note that the exact value of the lower bound has no practical significance, at least with these results
 
     gammas = fread("M3_gene_gammas.csv")
     gammas_df = gammas %>%
@@ -559,6 +595,7 @@ plot_all_epistatic_interactions_for_one_gene = function(mg, gt_base, df, condens
 }
 
 pairwise_comparisons = function(data){
+    data = as.data.table(data)
     WT_row = data[from_gt == "WT"]
     mutant_rows = data[from_gt != "WT"]
     mutated_gene = WT_row$mutated_gene
@@ -620,12 +657,8 @@ get_interaction_df = function(data){
     return(interaction_df)
 }
 
-
-
-
-plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, n_interactions=10, synergy_or_antagonism = "synergy", include_higher_order=FALSE,log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE, minimal_labels=TRUE){
+process_interaction_df = function(df, interactions_to_plot=NULL, n_interactions=10, synergy_or_antagonism = "both", include_higher_order=FALSE, spread=2/3){
     interaction_df = df
-    
     if(is.null(interactions_to_plot)){
         interactions_to_plot = interaction_df %>% 
                                 filter(if(!include_higher_order) str_count(tested_combo,'_')<2 else TRUE) %>% 
@@ -643,10 +676,16 @@ plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, 
                                 combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
                                                 function(combo){tmp = str_split(combo,'_')[[1]]; 
                                                                         glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")})))
+    return(interaction_df)
+}
 
+plot_interactions_from_df = function(df, custom_order=FALSE, log_scale=FALSE,title="default", add_annotations=TRUE, minimal_labels=TRUE){
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
+    interaction_df = df
 
     if(log_scale) {interaction_df = interaction_df %>% mutate(across(starts_with("gamma"), log10))} 
+
+    max_gamma = interaction_df %>% pull(gamma_ci_high) %>% max(.,na.rm=T)
 
     plot = interaction_df %>%
         ggplot(aes(x=if(custom_order){combo_name}else{reorder(combo_name, order)}, y=gamma_mle, size=to_count, alpha=signif)) + 
@@ -667,10 +706,11 @@ plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, 
                         aes(fill=ratio),
                         shape=21, color="black",
                         position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist))) + 
-            labs(x="Epistatic Pair\nMutated Gene [Genetic Context]", y=if(log_scale){expression(paste(log[10],"(Scaled Selection Coefficient)"))}else{"Scaled Selection Coefficient"}, title=if(title=="default"){"Epistatic interactions in LUAD"}else{title},
+            labs(x="Epistatic pair\nMutated gene [genetic context]", y=if(log_scale){expression(paste(log[10],"(Scaled selection coefficient)"))}else{"Scaled selection coefficient"}, title=if(title=="default"){"Epistatic interactions in LUAD"}else{title},
                     size="Sample count") +
             scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
             scale_fill_viridis_c(name="Ratio of Selection") +
+            scale_y_continuous(labels = fancy_scientific) +
             theme_classic() +
             theme(plot.title = element_text(size = 24, hjust=0.5),
                     axis.title = element_text(size = 20),
@@ -691,7 +731,7 @@ plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, 
                     ggrepel::geom_text_repel(data=interaction_df %>% filter(epistatic_gt!="WT"), 
                                             aes(label=other_genes),
                                             position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
-                                            size = 3,
+                                            size = 5,
                                             max.overlaps = ifelse(minimal_labels,6,20))
         }
         if(!log_scale){
@@ -701,6 +741,225 @@ plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, 
     return(plot)
 }
 
+plot_interactions = function(df, interactions_to_plot=NULL, n_interactions=10, synergy_or_antagonism = "both", include_higher_order=FALSE, custom_order=FALSE, log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE, minimal_labels=TRUE){
+    processed_interaction_df = process_interaction_df(df, interactions_to_plot, n_interactions, synergy_or_antagonism, include_higher_order, spread)
+    plot_interactions_from_df(processed_interaction_df, custom_order, log_scale, title, add_annotations, minimal_labels)
+}
+
+plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labels=c("Environment 1","Environment 2"), log_scale=FALSE,spread=2/3, add_annotations=TRUE, minimal_labels=TRUE){
+    env1_df = env1_df %>% filter(tested_combo %in% interactions_to_plot)
+    env2_df = env2_df %>% filter(tested_combo %in% interactions_to_plot)
+    env1_missing = setdiff(env2_df %>% pull(tested_combo), env1_df %>% pull(tested_combo))
+    env2_missing = setdiff(env1_df %>% pull(tested_combo), env2_df %>% pull(tested_combo))
+
+    if(length(env1_missing) > 0){
+        env1_rows_to_add = data.table(combo_name = sapply(env1_missing, function(combo){tmp = str_split(combo,'_')[[1]]; 
+                                               glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")}),
+                                 epistatic_gt = rep("WT",length(env1_missing)))
+        env1_df = env1_df %>% bind_rows(env1_rows_to_add)
+    }
+    if(length(env2_missing) > 0){
+        env2_rows_to_add = data.table(combo_name = sapply(env2_missing, function(combo){tmp = str_split(combo,'_')[[1]]; 
+                                               glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")}),
+                                 epistatic_gt = rep("WT",length(env2_missing)))
+        env2_df = env2_df %>% bind_rows(env2_rows_to_add)
+    }
+
+    interactions_to_plot = env1_df %>% 
+        filter(ifelse(median_ratio>1, epistatic_gt != "WT", epistatic_gt == "WT")) %>%
+        group_by(tested_combo) %>%
+        summarize(mean_max_gamma = mean(gamma_mle), median_ratio = median(median_ratio)) %>%
+        arrange(median_ratio<1, ifelse(median_ratio>1,desc(mean_max_gamma), mean_max_gamma)) %>%
+        pull(tested_combo) %>%
+        rev
+
+    env1_df = env1_df %>%
+                group_by(tested_combo, epistatic_gt) %>%
+                mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
+                        combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
+                                        function(combo){tmp = str_split(combo,'_')[[1]]; 
+                                                                glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")}))) %>%
+                ungroup()
+    env2_df = env2_df %>%
+                group_by(tested_combo, epistatic_gt) %>%
+                mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
+                        combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
+                                        function(combo){tmp = str_split(combo,'_')[[1]]; 
+                                                                glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")}))) %>%
+                ungroup()
+    
+    fill_range = range(c(env1_df %>% pull(ratio), env2_df %>% pull(ratio)), na.rm=T)
+    fill_scale = scale_fill_viridis_c(limits = fill_range, name="Ratio of Selection")
+    # size_range = range(c(env1_df %>% pull(to_count), env2_df %>% pull(to_count)), na.rm=T)
+    # size_scale = scale_size(range = size_range/c(size_range[1], size_range[2]/6))
+
+    # to_count_table = bind_rows(env1_df %>% mutate(key="env1") %>% select(key, to_count), env2_df %>% mutate(key="env2") %>% select(key, to_count)) %>% 
+    #                 mutate(to_count = rescale(to_count, size_range))
+    # env1_df = env1_df %>% mutate(to_count = to_count_table %>% filter(key=="env1") %>% pull(to_count))
+    # env2_df = env2_df %>% mutate(to_count = to_count_table %>% filter(key=="env2") %>% pull(to_count))
+
+    gamma_ceiling_env1 = (env1_df %>% pull(gamma_ci_high) %>% max(.,na.rm=T) / 1e5) %>% ceiling * 1e5
+    gamma_mle_ceiling_env1 = (env1_df %>% pull(gamma_mle) %>% max(.,na.rm=T) / 1e5) %>% ceiling * 1e5
+    gamma_ceiling_env2 = (env2_df %>% pull(gamma_ci_high) %>% max(.,na.rm=T) / 1e5) %>% ceiling * 1e5
+    gamma_mle_ceiling_env2 = (env2_df %>% pull(gamma_mle) %>% max(.,na.rm=T) / 1e5) %>% ceiling * 1e5
+
+    # TODO: let order be custom, env1, or env2
+    env1_plot = plot_interactions_from_df(env1_df, custom_order=TRUE, log_scale, title=labels[1], add_annotations, minimal_labels) +
+                    fill_scale + 
+                    guides(fill = "none") + 
+                    theme(axis.text.y=element_text(size=18, hjust=0.5), axis.title.y=element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank(), 
+                        axis.ticks.x = element_line(colour = "grey50", linewidth=2)) +
+                    scale_y_continuous(labels = fancy_scientific, limits = c(0, gamma_mle_ceiling_env2), breaks = seq(0, gamma_mle_ceiling_env2, by = 1e5), 
+                                expand=expand_scale(mult = c(0, 0),add = c(0, 2e4)))
+                    
+    env1_legend = get_legend(env1_plot)
+    env1_plot = env1_plot + theme(legend.position="none")
+
+    env2_plot = plot_interactions_from_df(env2_df, custom_order=TRUE, log_scale, title=labels[2], add_annotations, minimal_labels) +
+                    fill_scale + 
+                    theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank(),
+                        legend.box = "horizontal") + 
+                    scale_y_break(c(gamma_mle_ceiling_env2 + 1e5, gamma_ceiling_env2-2e5), space=2, expand=FALSE) +
+                    scale_y_reverse(labels = fancy_scientific, limits = c (gamma_ceiling_env2,0), breaks = seq(0, gamma_ceiling_env2, by = 1e5),
+                                    expand = c(0, 0)) + 
+                    theme(
+                        axis.text.x.top = element_blank(),
+                        axis.line.x.top = element_blank(),
+                        axis.ticks.x.top = element_blank(),
+                        axis.ticks.x.bottom = element_line(colour = "grey50", linewidth=2)
+                    )
+
+    env2_legend = get_legend(env2_plot)
+    env2_plot = env2_plot + theme(legend.position="none")
+
+    aplot::plot_list(env2_plot, env1_plot, env1_legend, env2_legend, nrow=2, heights = c(1,0.05))
+}
+
+
+plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
+    smoking_df %>% bind_rows(nonsmoking_df, .id="key") %>% filter(tested_combo == paste0(gt,"_",mg)) %>%
+    mutate(key = ifelse(key==1, "Ever-smoker","Never-smoker")) %>%
+    mutate(nudge_dist = scale((1:n())/n()**(1/.6), scale=FALSE), .by = c(key, epistatic_gt),
+            x_label = ifelse(epistatic_gt == "WT", "Wild-\ntype", paste0(epistatic_gt,"-\nmutant")),
+            x_label = ifelse(key == "Ever-smoker", paste0(x_label," "), x_label),
+            x_label = factor(x_label, levels = c("Wild-\ntype ", paste0(gt,"-\nmutant "),"Wild-\ntype", paste0(gt,"-\nmutant")))) %>% {#levels=c("Ever-smoker WT",paste0("Ever-smoker ",gt),"Never-smoker WT", paste0("Never-smoker ",gt)))) %>% {
+        ggplot(.,aes(x=x_label, y = gamma_mle)) + 
+            geom_errorbar(aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
+                            width=0,linewidth=0.3,
+                            position=position_nudge(.$nudge_dist)) + 
+            geom_point(aes(fill=key, size=to_count),
+                            color="black",
+                            shape=21, 
+                            position=position_nudge(.$nudge_dist)) + 
+            geom_vline(xintercept = 2.5, lty=2,col="grey") +
+            scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
+            scale_y_continuous(labels=fancy_scientific) +
+            # scale_size_continuous() +
+            #scale_size_binned(n.breaks = 2) +
+            labs(y="Scaled selection coefficient", title= paste(mg,'[',gt,']'), size="Sample count") +
+            guides(fill = "none", size=guide_legend(nrow=1)) +
+            theme_classic() +
+            theme(axis.title.x = element_blank(),
+                plot.title = element_text(size = 20, hjust=0.5),
+                axis.text = element_text(size = 12), 
+                axis.title.y = element_text(size = 20),
+                legend.position = "bottom")
+    }
+}
+
+# With modification from https://groups.google.com/g/ggplot2/c/a_xhMoQyxZ4
+fancy_scientific = function(l) {
+    l = format(l, scientific = TRUE)
+    l = gsub("^0(.*)e(.*)", "0", l) # Just show 0 when is 0e...
+    l = gsub("^(.*)e", "'\\1'e", l)
+    l = gsub("\\+","",l) # modification to remove unnecessary pluses
+    l = gsub("e", "%*%10^", l)
+    return(parse(text=l))
+}
+
+log_labels = function(l) {
+    l = format(l, scientific = TRUE)
+    l = gsub("\\+","",l)
+    l = gsub("^1e", "10^", l)
+    return(parse(text=l))
+}
+
+# plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE, minimal_labels=TRUE){
+#     interaction_df = df
+#     if(is.null(interactions_to_plot)){
+#         interactions_to_plot = interaction_df %>% 
+#                                 filter(if(!include_higher_order) str_count(tested_combo,'_')<2 else TRUE) %>% 
+#                                 arrange(desc(ratio)) %>%
+#                                 pull(tested_combo) %>% unique()
+#         if(synergy_or_antagonism %in% c("s","synergy")) {interactions_to_plot = interactions_to_plot %>% head(n_interactions)}
+#         else if(synergy_or_antagonism %in% c("a","antagonism")){interactions_to_plot = interactions_to_plot %>% tail(n_interactions)}
+#         else if(synergy_or_antagonism %in% c("b","both")){interactions_to_plot = c(interactions_to_plot %>% head(n_interactions/2),  interactions_to_plot %>% tail(n_interactions/2))}
+#         else{stop("`synergy_or_antagonism` can only take on character values `synergy` or `antagonism` or `both`.")}
+#     }                        
+#     interaction_df = interaction_df %>% filter(tested_combo %in% interactions_to_plot)
+#     interaction_df = interaction_df %>%
+#                         group_by(tested_combo, epistatic_gt) %>%
+#                         mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
+#                                 combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
+#                                                 function(combo){tmp = str_split(combo,'_')[[1]]; 
+#                                                                         glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")})))
+
+#     alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
+
+#     if(log_scale) {interaction_df = interaction_df %>% mutate(across(starts_with("gamma"), log10))} 
+
+#     plot = interaction_df %>%
+#         ggplot(aes(x=if(custom_order){combo_name}else{reorder(combo_name, order)}, y=gamma_mle, size=to_count, alpha=signif)) + 
+#             geom_errorbar(data=interaction_df %>% filter(epistatic_gt=="WT"),
+#                         aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
+#                         position=position_nudge(interaction_df %>% filter(epistatic_gt=="WT") %>% pull(nudge_dist)),
+#                         width=0,
+#                         linewidth=0.2) + 
+#             geom_point(data=interaction_df %>% filter(epistatic_gt=="WT"),
+#                         position=position_nudge(interaction_df %>% filter(epistatic_gt=="WT") %>% pull(nudge_dist)),
+#                         shape=21, color="black",fill="maroon") + 
+#             geom_errorbar(data=interaction_df %>% filter(epistatic_gt!="WT"),
+#                         aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
+#                         position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
+#                         width=0,
+#                         linewidth=0.2) + 
+#             geom_point(data=interaction_df %>% filter(epistatic_gt!="WT"), 
+#                         aes(fill=ratio),
+#                         shape=21, color="black",
+#                         position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist))) + 
+#             labs(x="Epistatic Pair\nMutated Gene [Genetic Context]", y=if(log_scale){expression(paste(log[10],"(Scaled Selection Coefficient)"))}else{"Scaled Selection Coefficient"}, title=if(title=="default"){"Epistatic interactions in LUAD"}else{title},
+#                     size="Sample count") +
+#             scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
+#             scale_fill_viridis_c(name="Ratio of Selection") +
+#             theme_classic() +
+#             theme(plot.title = element_text(size = 24, hjust=0.5),
+#                     axis.title = element_text(size = 20),
+#                     axis.text = element_text(size = 16),
+#                     axis.ticks.x = element_blank(),
+#                     legend.position = c(0.8,0.2),
+#                     legend.direction="horizontal",
+#                     legend.key.size = unit(1.5, 'cm'),
+#                     legend.text = element_text(size = 16),
+#                     legend.title = element_text(size = 20),
+#                     panel.grid.major.y = element_line(color="gray",linewidth=0.75, linetype=3)) +
+#             guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5),
+#                     size = guide_legend(title.position="top", title.hjust = 0.5),
+#                     alpha = "none")+#guide_legend(title.position="top", title.hjust = 0.5)) + 
+#             coord_flip()
+#         if(add_annotations){
+#             plot = plot + 
+#                     ggrepel::geom_text_repel(data=interaction_df %>% filter(epistatic_gt!="WT"), 
+#                                             aes(label=other_genes),
+#                                             position=position_nudge(interaction_df %>% filter(epistatic_gt!="WT") %>% pull(nudge_dist)),
+#                                             size = 3,
+#                                             max.overlaps = ifelse(minimal_labels,6,20))
+#         }
+#         if(!log_scale){
+#             plot = plot + geom_hline(yintercept = 1, color="grey", lty=2)
+#         }
+
+#     return(plot)
+# }
 
 add_default_theme = function(p){
     p = p + 
@@ -709,10 +968,25 @@ add_default_theme = function(p){
                 plot.title = element_text(size = 20, hjust = 0.5))
 }
 
+sym_diff = function(s1,s2){unique(c(setdiff(s1,s2), setdiff(s2,s1)))}
+
+t_test = function(mu1, mu2, sd1, sd2, n1, n2, mu0 = 0, detailed=F){
+    t_stat = (mu1 - mu2 - mu0) / sqrt((sd1^2/n1) + (sd2^2/n2))
+    df = ((sd1^2/n1 + sd2^2/n2)^2) / ((sd1^4/(n1^2*(n1 - 1))) + (sd2^4/(n2^2*(n2 - 1))))
+    p_val = 2 * pt(-abs(t_stat), df)
+
+    if(!detailed){
+        return(p_val)
+    } else{
+        return(list(t_stat, p_val))
+    }
+    
+}
+
+head_and_tail = function(df, n=6, n_head=n, n_tail=n){rbind(head(df, n_head),tail(df, n_tail))}
 
 
 # Miscellaneous functions
-
 
 load_M1_all_results = function(){
     # Average fluxes and selection intensities across genetic backgrounds (M=1 model)
@@ -720,11 +994,11 @@ load_M1_all_results = function(){
     M1_all_fluxes = fread("M1_all_gene_fluxes.csv", header = T)
 
     # mutation frequencies for each gene (note that it doesn't matter which mutation rate method is used)
-    samples_per_combo_pd = fread(glue("{location_cesR_output}/M1_all/samples_per_combination_pan_data.csv"))
+    samples_per_combo_pd = fread(glue("{location_variant_output}/M1_all/samples_per_combination_pan_data.csv"))
     samples_per_combo_pd$key = "pan_data"
-    samples_per_combo_sp = fread(glue("{location_cesR_output}/M1_all/samples_per_combination_smoking_plus.csv"))
+    samples_per_combo_sp = fread(glue("{location_variant_output}/M1_all/samples_per_combination_smoking_plus.csv"))
     samples_per_combo_sp$key = "smoking_plus"
-    samples_per_combo_nsp = fread(glue("{location_cesR_output}/M1_all/samples_per_combination_nonsmoking_plus.csv"))
+    samples_per_combo_nsp = fread(glue("{location_variant_output}/M1_all/samples_per_combination_nonsmoking_plus.csv"))
     samples_per_combo_nsp$key = "nonsmoking_plus"
     samples_per_combo = bind_rows(samples_per_combo_pd, samples_per_combo_sp, samples_per_combo_nsp)
     colnames(samples_per_combo) = c("gene","0","1","key")
@@ -750,34 +1024,15 @@ load_M1_all_results = function(){
     return(M1_results)
 }
 
-load_M2_results = function(){
-    get_M2_samples_per_combination = function(){
-        s_plus_spc = fread(glue("{location_cesR_output}/M2/samples_per_combination_smoking_plus.csv"))
-
-        s_plus_spc = s_plus_spc %>% 
-                        pivot_longer(cols=starts_with("("),
-                                        names_to = "state",
-                                        values_to = "count") %>%
-                        mutate(state = gsub("[()]","",state)) %>% 
-                        mutate(key = "smoking_plus")
-
-        samples_per_combination = bind_rows(s_plus_spc)
-
-        samples_per_combination = samples_per_combination %>%
-            mutate(gene_set = gsub(" ","_",
-                                gsub("['\\)\\(\\,]","",gene_combination)),
-                    gene_combination = NULL) 
-
-        return(samples_per_combination)
-    }
-    samples_per_combination = get_M2_samples_per_combination()
+load_M2_results = function(lower_bound = 1e-2){
+    samples_per_combination = get_Mk_samples_per_combination(k=2)
 
     gammas = fread("M2_gene_gammas.csv")
     gammas_df = gammas %>%
         # Put a lower bound on gamma because distinctions between strengths of negative selections are impractical to accurately infer
-        mutate(gamma_ci_low = ifelse(gamma_ci_low < 1e-1, 1e-1, gamma_ci_low),
-                gamma_ci_high = ifelse(gamma_ci_high < 1e-1, 1e-1, gamma_ci_high),
-                gamma_mle = ifelse(gamma_mle < 1e-1, 1e-1, gamma_mle)) %>%
+        mutate(gamma_ci_low = ifelse(gamma_ci_low < lower_bound, lower_bound, gamma_ci_low),
+                gamma_ci_high = ifelse(gamma_ci_high < lower_bound, lower_bound, gamma_ci_high),
+                gamma_mle = ifelse(gamma_mle < lower_bound, lower_bound, gamma_mle)) %>%
 
         # Information on mutated genes
         mutate(gene_set = paste0(first_gene, "_", second_gene)) %>%
