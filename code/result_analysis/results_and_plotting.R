@@ -18,44 +18,30 @@ library(stringr)
 # location_variant_output = glue("{location_output}/output_for_transfer/genes/cesR/")
 # location_variant_output = glue("{location_output}/output_for_transfer/genes/variant/")
 location_variant_output = glue("variant_results/")
+location_cesR_output = glue("cesR_results/")
 
 # M = 1
 
-load_M1_results = function(){
+load_M1_results = function(mu_method){
+    if(mu_method == "cesR"){location_output = location_cesR_output}
+    else if (mu_method == "variant") {location_output = location_variant_output}
+
     # Average fluxes and selection intensities across genetic backgrounds (M=1 model)
-    M1_gammas = fread("M1_gene_gammas.csv", header = T)
-    M1_fluxes = fread("M1_gene_fluxes.csv", header = T)
+    M1_gammas = fread(glue(location_output,'M1_gene_gammas.csv', header = T))
+    M1_fluxes = fread(glue(location_output,'M1_gene_fluxes.csv', header = T))
 
     # mutation frequencies for each gene (note that it doesn't matter which mutation rate method is used)
-    samples_per_combo_pd = fread(glue("{location_variant_output}/M1/samples_per_combination_pan_data.csv"))
-    samples_per_combo_pd$key = "pan_data"
-    samples_per_combo_s = fread(glue("{location_variant_output}/M1/samples_per_combination_smoking.csv"))
-    samples_per_combo_s$key = "smoking"
-    samples_per_combo_ns = fread(glue("{location_variant_output}/M1/samples_per_combination_nonsmoking.csv"))
-    samples_per_combo_ns$key = "nonsmoking"
-    samples_per_combo_sp = fread(glue("{location_variant_output}/M1/samples_per_combination_smoking_plus.csv"))
-    samples_per_combo_sp$key = "smoking_plus"
-    samples_per_combo_nsp = fread(glue("{location_variant_output}/M1/samples_per_combination_nonsmoking_plus.csv"))
-    samples_per_combo_nsp$key = "nonsmoking_plus"
-    samples_per_combo = bind_rows(samples_per_combo_pd, samples_per_combo_s, samples_per_combo_ns, samples_per_combo_sp, samples_per_combo_nsp)
-    colnames(samples_per_combo) = c("gene","0","1","key")
-    samples_per_combo = 
-        samples_per_combo %>%
-        mutate(gene = gsub("[\\(\\)',]","",gene),
-                freq = `1` / (`0` + `1`))
+    samples_per_combo = fread(glue(location_output,'M1_samples_per_combination.csv'), header=T)
+    samples_per_combo = samples_per_combo %>% mutate(freq = `(1,)` / (`(0,)` + `(1,)`))
 
     # load mutation rates
-    mus = fread("mutation_rates.csv", header = T)
-    tmp = mus %>% filter(key %in% c("smoking","nonsmoking"))
-    tmp = tmp %>% mutate(key = glue("{key}_plus")) 
-    mus = mus %>% bind_rows(tmp)
+    mus = fread(glue(location_output,'mutation_rates.csv'), header = T)
 
     # combine all information (gammas, fluxes, mus, mutation frequencies)
     M1_results = 
         M1_gammas %>%
-        left_join(M1_fluxes, by=c("method","key","gene")) %>%
+        left_join(M1_fluxes, by=c("key","gene")) %>%
         left_join(mus, by=c("method","key","gene")) %>%
-        rename(mu = rate, mu_ci_low = rate_ci_low, mu_ci_high = rate_ci_high) %>%
         left_join(samples_per_combo %>% select(key, gene, freq), by=c("key","gene"))
 
     return(M1_results)
@@ -63,7 +49,7 @@ load_M1_results = function(){
 
 
 # Plot all information
-plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_legend=TRUE, show_genes=TRUE){
+plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_legend=TRUE, show_genes=TRUE, include_mu_error=FALSE){
 
     plotting_df = df %>% filter(key == dataset_key, method == mu_method)
 
@@ -85,17 +71,17 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
                         legend.background = element_rect(fill = "white"))
     } else {
         if (var_to_plot == "selection") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) + 
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) +
                 geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0) +
                 labs(x = "Gene", y = "Selection intensity")
         } else if (var_to_plot == "fixation") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=flux_mle)) + 
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=flux_mle)) +
                 geom_errorbar(aes(ymin = flux_ci_low, ymax = flux_ci_high), width=0) +
                 labs(x = "Gene", y = "Fixation rate")
         } else if (var_to_plot == "mutation") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) + 
-                geom_errorbar(aes(ymin = mu_ci_low, ymax = mu_ci_high), width=0) +
+            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) +
                 labs(x = "Gene", y = "Mutation rate")
+            if (include_mu_error) {plot = plot + geom_errorbar(aes(ymin = mu_ci_low, ymax = mu_ci_high), width=0)}
         } else {stop("var_to_plot must be selection (selection intensity), fixation (mutation acquisition rate), mutation (mutation rate), or freq (mutation frequency)")}
 
         plot = plot + 
@@ -265,64 +251,27 @@ find_mutated_gene = function(mutation_indices){
 }
 
 get_Mk_samples_per_combination = function(k){
-    # consider switching to loading all availables samples per combo files in future
-    pd_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_pan_data.csv"))
-    s_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_smoking.csv"))
-    s_plus_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_smoking_plus.csv"))
-    ns_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_nonsmoking.csv"))
-    ns_plus_spc = fread(glue("{location_variant_output}/M{k}/samples_per_combination_nonsmoking_plus.csv"))
-
-    pd_spc = pd_spc %>% 
-                    pivot_longer(cols=starts_with("("),
-                                    names_to = "state",
-                                    values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state),
-                            key = "pan_data")
-
-    s_spc = s_spc %>% 
-                    pivot_longer(cols=starts_with("("),
-                                    names_to = "state",
-                                    values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state),
-                            key = "smoking")
-
-    s_plus_spc = s_plus_spc %>% 
-                    pivot_longer(cols=starts_with("("),
-                                    names_to = "state",
-                                    values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state),
-                            key = "smoking_plus")
-
-    ns_spc = ns_spc %>% 
-                    pivot_longer(cols=starts_with("("),
-                                    names_to = "state",
-                                    values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state),
-                            key = "nonsmoking")
-
-    ns_plus_spc = ns_plus_spc %>% 
-                    pivot_longer(cols=starts_with("("),
-                                    names_to = "state",
-                                    values_to = "count") %>%
-                    mutate(state = gsub("[()]","",state),
-                            key = "nonsmoking_plus")
-
-    samples_per_combination = bind_rows(pd_spc, s_spc, s_plus_spc, ns_spc, ns_plus_spc)
-
-    samples_per_combination = samples_per_combination %>%
-        mutate(gene_set = gsub(" ","_",
-                            gsub("['\\)\\(\\,]","",gene_combination)),
-                gene_combination = NULL) 
+    samples_per_combination = fread(glue('{location_variant_output}/M{k}_samples_per_combination.csv', header = T))
+    if(k==2){samples_per_combination = samples_per_combination %>% mutate(gene_set = glue("{first_gene}_{second_gene}"))}
+    else if(k==3){samples_per_combination = samples_per_combination %>% mutate(gene_set = glue("{first_gene}_{second_gene}_{third_gene}"))}
+    else{stop("k must be 2 or 3")}
 
     return(samples_per_combination)
 }
 
 # @param lower_bound: lower bound on gamma values
 # Note that the exact value of the lower bound has no practical significance, at least with these results
-load_M3_results = function(lower_bound = 1e-2){
-    samples_per_combination = get_Mk_samples_per_combination(k=3)
+load_M3_results = function(mu_method, lower_bound = 1e-2){
+    if(mu_method == "cesR"){location_output = location_cesR_output}
+    else if (mu_method == "variant") {location_output = location_variant_output}
 
-    gammas = fread("M3_gene_gammas.csv")
+    samples_per_combination = get_Mk_samples_per_combination(k=3)
+    colnames(samples_per_combination) = trimws(colnames(samples_per_combination),"both","[\\(\\)]")
+    samples_per_combination = samples_per_combination %>% 
+                                select(key, gene_set, starts_with(c("0","1"))) %>%
+                                pivot_longer(starts_with(c("0","1")), names_to = "state", values_to = "count")
+
+    gammas = fread(glue(location_output,'M3_gene_gammas.csv', header = T))
     gammas_df = gammas %>%
         # Put a lower bound on gamma because distinctions between strengths of negative selections are impractical to accurately infer
         mutate(gamma_ci_low = ifelse(gamma_ci_low < lower_bound, lower_bound, gamma_ci_low),
@@ -988,46 +937,41 @@ head_and_tail = function(df, n=6, n_head=n, n_tail=n){rbind(head(df, n_head),tai
 
 # Miscellaneous functions
 
-load_M1_all_results = function(){
+load_M1_all_results = function(mu_method){
+    if(mu_method == "cesR"){location_output = location_cesR_output}
+    else if (mu_method == "variant") {location_output = location_variant_output}
     # Average fluxes and selection intensities across genetic backgrounds (M=1 model)
-    M1_all_gammas = fread("M1_all_gene_gammas.csv", header = T)
-    M1_all_fluxes = fread("M1_all_gene_fluxes.csv", header = T)
+    M1_gammas = fread(glue(location_output,'M1_all_gene_gammas.csv', header = T))
+    M1_fluxes = fread(glue(location_output,'M1_all_gene_fluxes.csv', header = T))
 
     # mutation frequencies for each gene (note that it doesn't matter which mutation rate method is used)
-    samples_per_combo_pd = fread(glue("{location_variant_output}/M1_all/samples_per_combination_pan_data.csv"))
-    samples_per_combo_pd$key = "pan_data"
-    samples_per_combo_sp = fread(glue("{location_variant_output}/M1_all/samples_per_combination_smoking_plus.csv"))
-    samples_per_combo_sp$key = "smoking_plus"
-    samples_per_combo_nsp = fread(glue("{location_variant_output}/M1_all/samples_per_combination_nonsmoking_plus.csv"))
-    samples_per_combo_nsp$key = "nonsmoking_plus"
-    samples_per_combo = bind_rows(samples_per_combo_pd, samples_per_combo_sp, samples_per_combo_nsp)
-    colnames(samples_per_combo) = c("gene","0","1","key")
-    samples_per_combo = 
-        samples_per_combo %>%
-        mutate(gene = gsub("[\\(\\)',]","",gene),
-                freq = `1` / (`0` + `1`))
+    samples_per_combo = fread(glue(location_output,'M1_all_samples_per_combination.csv'), header=T)
+    samples_per_combo = samples_per_combo %>% mutate(freq = `(1,)` / (`(0,)` + `(1,)`))
 
     # load mutation rates
-    mus = fread("mutation_rates.csv", header = T)
-    tmp = mus %>% filter(key %in% c("smoking","nonsmoking"))
-    tmp = tmp %>% mutate(key = glue("{key}_plus")) 
-    mus = mus %>% bind_rows(tmp)
+    mus = fread(glue(location_output,'mutation_rates.csv'), header = T)
 
     # combine all information (gammas, fluxes, mus, mutation frequencies)
     M1_results = 
-        M1_all_gammas %>%
-        left_join(M1_all_fluxes, by=c("method","key","gene")) %>%
+        M1_gammas %>%
+        left_join(M1_fluxes, by=c("key","gene")) %>%
         left_join(mus, by=c("method","key","gene")) %>%
-        rename(mu = rate, mu_ci_low = rate_ci_low, mu_ci_high = rate_ci_high) %>%
         left_join(samples_per_combo %>% select(key, gene, freq), by=c("key","gene"))
 
     return(M1_results)
 }
 
-load_M2_results = function(lower_bound = 1e-2){
-    samples_per_combination = get_Mk_samples_per_combination(k=2)
+load_M2_results = function(mu_method, lower_bound = 1e-2){
+    if(mu_method == "cesR"){location_output = location_cesR_output}
+    else if (mu_method == "variant") {location_output = location_variant_output}
 
-    gammas = fread("M2_gene_gammas.csv")
+    samples_per_combination = get_Mk_samples_per_combination(k=2)
+    colnames(samples_per_combination) = trimws(colnames(samples_per_combination),"both","[\\(\\)]")
+    samples_per_combination = samples_per_combination %>% 
+                                select(key, gene_set, starts_with(c("0","1"))) %>%
+                                pivot_longer(starts_with(c("0","1")), names_to = "state", values_to = "count")
+
+    gammas = fread(glue(location_output,'M2_gene_gammas.csv', header = T))
     gammas_df = gammas %>%
         # Put a lower bound on gamma because distinctions between strengths of negative selections are impractical to accurately infer
         mutate(gamma_ci_low = ifelse(gamma_ci_low < lower_bound, lower_bound, gamma_ci_low),
