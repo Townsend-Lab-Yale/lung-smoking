@@ -7,7 +7,7 @@ from locations import location_output
 from locations import results_keys
 
 
-def load_mutation_rates(key, method):
+def load_mutation_rates(key, method, extension=None):
     """Load the mutation rates in a format that :func:`compute_gammas` uses.
 
     :type key: str or NoneType
@@ -28,16 +28,21 @@ def load_mutation_rates(key, method):
         - gene: mutation rate
     """
 
+    if extension is not None: 
+        extended_location_output = os.path.join(location_output,extension)
+    else: extended_location_output = location_output
+
     if(method == "variant"):
-        variant_based_mutation_rates = pd.read_csv(os.path.join(location_output,
+        variant_based_mutation_rates = pd.read_csv(os.path.join(extended_location_output,
                                                         'variant_based_mutation_rates.txt'),
                                                         index_col=0)
         variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
         if key[-4:] == 'plus':
-            key = key[:-5]
+            accession_key = key[:-5]
+        else: accession_key = key
 
-        mus = variant_based_mutation_rates[key]
+        mus = variant_based_mutation_rates[accession_key]
         mus = {gene: mu for gene, mu in mus.items() if not np.isnan(mu)}
 
     elif(method == "cesR"):
@@ -46,7 +51,7 @@ def load_mutation_rates(key, method):
         else:
             final_part_key = key[-4:]
         mus_df = pd.read_csv(
-            os.path.join(location_output,
+            os.path.join(extended_location_output,
                         f"{key[:-4] + final_part_key}_mutation_rates.txt"),
             index_col='gene')
 
@@ -62,7 +67,7 @@ def load_mutation_rates(key, method):
 
 
 
-def load_results(result_type, which=None):
+def load_results(result_type, which=None, extension=None):
     """Load the results.
 
     :type result_type: str
@@ -89,7 +94,7 @@ def load_results(result_type, which=None):
     """
 
     if result_type == 'mutations':
-        results = {key: load_mutation_rates(key, which)
+        results = {key: load_mutation_rates(key, which, extension)
                    for key in results_keys}
     else:
         if which is None:
@@ -100,8 +105,12 @@ def load_results(result_type, which=None):
                             else "") +
                            ".npy"
                       for key in results_keys}
-
-        results = {key: np.load(os.path.join(location_output,
+        
+        if extension is not None: 
+            extended_location_output = os.path.join(location_output,extension)
+        else: extended_location_output = location_output
+        
+        results = {key: np.load(os.path.join(extended_location_output,
                                              file_name),
                                 allow_pickle=True).item()
                    for key,file_name in file_names.items()}
