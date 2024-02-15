@@ -62,7 +62,6 @@ wget https://misc.cidma.us/data/genie_9/data_clinical_sample.txt
 wget https://misc.cidma.us/data/genie_9/data_mutations_extended_lifted.txt
 wget https://misc.cidma.us/data/genie_9/data_mutations_extended.txt
 wget https://misc.cidma.us/data/genie_9/genomic_information.txt
-cd ..
 echo "...done downloading GENIE data."
 echo ""
 echo ""
