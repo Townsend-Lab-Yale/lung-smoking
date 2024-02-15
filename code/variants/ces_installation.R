@@ -13,7 +13,6 @@ install.packages("remotes", repos = "http://cran.us.r-project.org")
 remotes::install_github("Townsend-Lab-Yale/cancereffectsizeR@*release",
   dependencies = TRUE)
 
-library(BiocManager)
-install("BSgenome.Hsapiens.UCSC.hg19")
+BiocManager::install("BSgenome.Hsapiens.UCSC.hg19", force=TRUE)
 
 remotes::install_github("Townsend-Lab-Yale/ces.refset.hg19@*release", force = TRUE)
