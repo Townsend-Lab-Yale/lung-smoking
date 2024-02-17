@@ -19,6 +19,8 @@ location_output = '../../output/'
 
 save_results = TRUE
 
+recurrent_variants_only = FALSE
+
 #' Create CESA object for mutation rate calculation and MAF construction
 #' Output locations: 'data/pan_data_cesa_for_cancer_epistasis.rds'
 #'   'data/(panel_)(non)smoking_sample_ids.txt'
@@ -56,8 +58,12 @@ variants_per_gene = merge(cesa_maf, preloaded_maf[is.na(problem) & Variant_Class
                           all=F)
 # excluding all non-SNVs
 variants_per_gene = variants_per_gene[top_gene %in% gene_mut_rate_df$gene & variant_type == 'snv' & !is.na(variant_id), .(top_gene, variant_id)]
-# excluding non-recurrent variants
-recurrent_variants_per_gene = variants_per_gene[, .N, by=.(top_gene, variant_id)][N>1]
+
+if(recurrent_variants_only){
+    # excluding non-recurrent variants
+    variants_per_gene = variants_per_gene[, .N, by=.(top_gene, variant_id)][N>1]
+}
+
 
 #' Calculate variant level mutation rates
 #' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
@@ -68,14 +74,14 @@ gene_mut_rate_df[, pan_data :=
                 gene_mutation_rate(x,
                                    pan_data_gene_rates[gene==x, rate_grp_1],
                                    genome_trinucleotide_mutation_proportions,
-                                   variants = recurrent_variants_per_gene[top_gene == x, variant_id]))]
+                                   variants = variants_per_gene[top_gene == x, variant_id]))]
 smoking_w_panel_gene_rates = fread(paste0(location_output, 'smoking_w_panel_mutation_rates.txt'))
 gene_mut_rate_df[, smoking := 
             sapply(gene, function(x) 
                 gene_mutation_rate(x,
                                    smoking_w_panel_gene_rates[gene==x, rate_grp_1],
                                    smoking_genome_trinucleotide_mutation_proportions,
-                                   variants = recurrent_variants_per_gene[top_gene == x, variant_id]))]
+                                   variants = variants_per_gene[top_gene == x, variant_id]))]
 
 nonsmoking_w_panel_gene_rates = fread(paste0(location_output, 'nonsmoking_w_panel_mutation_rates.txt'))
 gene_mut_rate_df[, nonsmoking := 
@@ -83,7 +89,7 @@ gene_mut_rate_df[, nonsmoking :=
                 gene_mutation_rate(x,
                                    nonsmoking_w_panel_gene_rates[gene==x, rate_grp_1],
                                    nonsmoking_genome_trinucleotide_mutation_proportions,
-                                   variants = recurrent_variants_per_gene[top_gene == x, variant_id]))]
+                                   variants = variants_per_gene[top_gene == x, variant_id]))]
 
 
 fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))
@@ -91,7 +97,7 @@ fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.tx
 maf_file = read.csv(paste0(location_output,"merged_luad_maf.txt"))
 colnames(maf_file)[2] = 'Tumor_Sample_Barcode'; colnames(maf_file)[7] <- 'Tumor_Allele'
 
-final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, save_results)
+final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, recurrent_variants_only, save_results)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'output/genes_per_sample.txt'
