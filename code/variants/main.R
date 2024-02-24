@@ -20,6 +20,7 @@ location_output = '../../output/'
 save_results = TRUE
 
 recurrent_variants_only = FALSE
+trim_oncogenes = TRUE
 
 #' Create CESA object for mutation rate calculation and MAF construction
 #' Output locations: 'data/pan_data_cesa_for_cancer_epistasis.rds'
@@ -64,6 +65,19 @@ if(recurrent_variants_only){
     variants_per_gene = variants_per_gene[, .N, by=.(top_gene, variant_id)][N>1]
 }
 
+if(trim_oncogenes){
+  #' excluding non-recurrent variants if the gene is likely an oncogene (max 
+  #' variant prevalence accounts for more than 6% of all variants)
+  
+  oncogene_threshold = 0.06
+  
+  var_counts = variants_per_gene[, .N, by=.(top_gene, variant_id)]
+  likely_oncogenes = var_counts[,max(N)/sum(N) > oncogene_threshold & max(N)>1,by=top_gene][(V1),top_gene]
+  
+  variants_per_gene = rbind(variants_per_gene[top_gene %in% likely_oncogenes, .N, by=.(top_gene, variant_id)][N>1],
+                            variants_per_gene[!(top_gene %in% likely_oncogenes), .N, by=.(top_gene, variant_id)])
+}
+
 
 #' Calculate variant level mutation rates
 #' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
@@ -92,12 +106,12 @@ gene_mut_rate_df[, nonsmoking :=
                                    variants = variants_per_gene[top_gene == x, variant_id]))]
 
 
-fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))
+if(save_results){fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))}
 
 maf_file = read.csv(paste0(location_output,"merged_luad_maf.txt"))
 colnames(maf_file)[2] = 'Tumor_Sample_Barcode'; colnames(maf_file)[7] <- 'Tumor_Allele'
 
-final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, recurrent_variants_only, save_results)
+final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, variants_per_gene, save_results)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'output/genes_per_sample.txt'
