@@ -543,7 +543,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
 def main(genes=None,
          num_per_combo=[1,2,3],
          keys=None,
-         mu_method="cesR",
+         mu_method="variant",
          pathways=False,
          flexible_last_layer=False,
          recompute_samples_per_combination=False,
@@ -653,7 +653,7 @@ if __name__ == "__main__":
          flexible_last_layer=False,
          pathways=False,
          num_per_combo=[1, 2, 3],
-         mu_method="cesR",
+         mu_method="variant",
          keys = results_keys)
     print("")
     print('Done running main.')
