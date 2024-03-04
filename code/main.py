@@ -214,15 +214,13 @@ def compute_samples_for_all_combinations(genes=None,
                                       [({pathway: genes[pathway] for pathway in combo},
                                         key,
                                         pathways,
-                                        print_info) for combo in gene_combos],
-                                      chunksize=n_cores)
+                                        print_info) for combo in gene_combos])
         else:
             mp_results = pool.starmap(filter_and_compute_samples,
                                       [(combo,
                                         key,
                                         pathways,
-                                        print_info) for combo in gene_combos],
-                                      chunksize=n_cores)
+                                        print_info) for combo in gene_combos])
 
         counts = {combo: count_array
                   for result in mp_results
@@ -451,8 +449,8 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
 
     pool = mp.Pool(processes=n_cores)
     mp_results = pool.starmap(compute_lambda_for_combo,
-                              [(combo, counts, flexible_last_layer) for combo in counts.keys()],
-                              chunksize=n_cores)
+                              [(combo, counts, flexible_last_layer)
+                               for combo in counts.keys()])
     lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
     lambdas_cis = {result[0]: result[2] for result in mp_results if result is not None}
 
