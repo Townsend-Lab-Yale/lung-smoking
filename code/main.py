@@ -502,7 +502,11 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
     lambdas_mles = all_lambdas[key, 'mles']
     lambdas_cis = all_lambdas[key, 'cis']
 
-    for combo in lambdas_mles.keys():
+    total_num_combos = len(lambdas_mles.keys())
+
+    for counter, combo in enumerate(lambdas_mles.keys()):
+
+        print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
 
         M = len(combo)
         # Constructs dictionary of the form:
