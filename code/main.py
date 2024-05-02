@@ -1,6 +1,9 @@
 import os
 import multiprocessing as mp
 
+from math import comb
+from math import ceil
+
 from itertools import combinations
 from itertools import chain
 
@@ -75,7 +78,7 @@ gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
 #              "HALLMARK_ANGIOGENESIS":HALLMARK_ANGIOGENESIS,
 #              "HALLMARK_KRAS":HALLMARK_KRAS}
 
-n_cores = 20
+n_cores = 50
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -102,6 +105,7 @@ def compute_samples_for_all_combinations(genes=None,
                                          num_per_combo=3,
                                          mus_keys=None,
                                          pathways=False,
+                                         chunksize=None,
                                          print_info=False,
                                          save_results=True):
 
@@ -215,14 +219,14 @@ def compute_samples_for_all_combinations(genes=None,
                                         key,
                                         pathways,
                                         print_info) for combo in gene_combos],
-                                      chunksize=n_cores)
+                                      chunksize=chunksize)
         else:
             mp_results = pool.starmap(filter_and_compute_samples,
                                       [(combo,
                                         key,
                                         pathways,
                                         print_info) for combo in gene_combos],
-                                      chunksize=n_cores)
+                                      chunksize=chunksize)
 
         counts = {combo: count_array
                   for result in mp_results
@@ -420,7 +424,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     return None
 
 
-def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results=True):
+def compute_all_lambdas(key, all_counts, flexible_last_layer=False, chunksize=None, save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
 
@@ -452,7 +456,7 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, save_results
     pool = mp.Pool(processes=n_cores)
     mp_results = pool.starmap(compute_lambda_for_combo,
                               [(combo, counts, flexible_last_layer) for combo in counts.keys()],
-                              chunksize=n_cores)
+                              chunksize=chunksize)
     lambdas_mles = {result[0]: result[1] for result in mp_results if result is not None}
     lambdas_cis = {result[0]: result[2] for result in mp_results if result is not None}
 
@@ -602,6 +606,11 @@ def main(genes=None,
         raise IOError("`genes` must be either a list of genes "
                       "or a dictionary of genes and pathways.")
 
+    if isinstance(num_per_combo, int):
+        num_per_combo = [num_per_combo]
+
+    chunksize = ceil(1/3 * sum([comb(len(genes),k) for k in num_per_combo]) / n_cores)
+
     for key in keys:
         print("")
 
@@ -611,7 +620,7 @@ def main(genes=None,
             or not os.path.exists(samples_per_combination_files[key])):
             print(f"Computing number of samples per combination for {key}...")
             all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
-                                                                   pathways, print_info, save_results)
+                                                                   pathways, chunksize, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
             all_counts[key] = np.load(samples_per_combination_files[key],
@@ -622,7 +631,7 @@ def main(genes=None,
 
         print(f"Estimating all epistatic models for {key}...")
         print("")
-        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, save_results)
+        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, chunksize, save_results)
         all_lambdas[(key, 'mles')] = lambdas_mles
         all_lambdas[(key, 'cis')] = lambdas_cis
         print(f"done estimating all epistatic models for {key}.")
@@ -652,7 +661,7 @@ if __name__ == "__main__":
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
-         num_per_combo=[1, 2, 3],
+         num_per_combo=[1,2,3],
          mu_method="cesR",
          keys = results_keys)
     print("")
