@@ -206,7 +206,7 @@ smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
 nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
 
 # We are confident that these patients are never-smokers, and the publication indicated that they had
-# low smoking signature despite some having a history of secondary smoking.
+# no smoking signature despite some having a history of secondary smoking.
 nonsmoking_samples <- c(nonsmoking_samples,
                         NSLC_NCI_patients)
 
@@ -226,16 +226,6 @@ cesa_nonsmoking = clear_gene_rates(cesa)
 cesa_nonsmoking = gene_mutation_rates(cesa_nonsmoking, covariates = 'lung', 
                                    samples = cesa_nonsmoking$samples[Unique_Patient_Identifier %in% nonsmoking_samples, Unique_Patient_Identifier])
 
-# mutation rates of WES/WGS/TGS
-cesa_smoking_w_panel = clear_gene_rates(cesa)
-cesa_smoking_w_panel = gene_mutation_rates(cesa_smoking_w_panel, covariates = 'lung',
-                                           samples = cesa_smoking_w_panel$samples[Unique_Patient_Identifier %in% c(smoking_samples, panel_smoking_samples), Unique_Patient_Identifier])
-
-cesa_nonsmoking_w_panel = clear_gene_rates(cesa)
-cesa_nonsmoking_w_panel = gene_mutation_rates(cesa_nonsmoking_w_panel, covariates = 'lung',
-                                              samples = cesa_nonsmoking_w_panel$samples[Unique_Patient_Identifier %in% c(nonsmoking_samples, panel_nonsmoking_samples), Unique_Patient_Identifier])
-
-
 if(save_results){
   save_cesa(cesa, paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
   
@@ -243,7 +233,7 @@ if(save_results){
   
   fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
   fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
-  
+
   fwrite(list(panel_smoking_samples), paste0(location_data, 'panel_smoking_sample_ids.txt'))
   fwrite(list(panel_nonsmoking_samples), paste0(location_data, 'panel_nonsmoking_sample_ids.txt'))
   
@@ -252,6 +242,4 @@ if(save_results){
   fwrite(pan_data_gene_rates, paste0(location_output, 'pan_data_mutation_rates.txt'))
   fwrite(cesa_smoking$gene_rates, paste0(location_output, 'smoking_mutation_rates.txt'))
   fwrite(cesa_nonsmoking$gene_rates, paste0(location_output, 'nonsmoking_mutation_rates.txt'))
-  fwrite(cesa_smoking_w_panel$gene_rates, paste0(location_output, 'smoking_w_panel_mutation_rates.txt'))
-  fwrite(cesa_nonsmoking_w_panel$gene_rates, paste0(location_output, 'nonsmoking_w_panel_mutation_rates.txt'))
 }
