@@ -1117,11 +1117,14 @@ def create_mosaic_plot(plot_name=None):
     for tick_label in ax.yaxis.get_ticklabels():
         tick_label.set_verticalalignment('center')
 
+    plt.gcf().set_facecolor('none')
+
     if plot_name is None:
         plot_name = "lc_types_by_smoking_mosaic_plot.png"
     fig.savefig(os.path.join(location_figures,
                              plot_name),
-                dpi=1000)
+                dpi=1000,
+                transparent=True)
     plt.close('all')
     return fig
 

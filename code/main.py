@@ -506,7 +506,11 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
     lambdas_mles = all_lambdas[key, 'mles']
     lambdas_cis = all_lambdas[key, 'cis']
 
-    for combo in lambdas_mles.keys():
+    total_num_combos = len(lambdas_mles.keys())
+
+    for counter, combo in enumerate(lambdas_mles.keys()):
+
+        print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
 
         M = len(combo)
         # Constructs dictionary of the form:
@@ -547,7 +551,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
 def main(genes=None,
          num_per_combo=[1,2,3],
          keys=None,
-         mu_method="cesR",
+         mu_method="variant",
          pathways=False,
          flexible_last_layer=False,
          recompute_samples_per_combination=False,
@@ -661,8 +665,8 @@ if __name__ == "__main__":
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
-         num_per_combo=[1,2,3],
-         mu_method="cesR",
+         num_per_combo=[1, 2, 3],
+         mu_method="variant",
          keys = results_keys)
     print("")
     print('Done running main.')
