@@ -3,7 +3,7 @@
 library(cancereffectsizeR)
 library(data.table)
 
-construct_maf = function(cesa_maf, original_maf, preloaded_maf, variants_per_gene, save_results = TRUE){
+construct_maf = function(cesa_maf, original_maf, preloaded_maf, variants_per_gene=NULL, save_results = TRUE){
   #' Assigning a single gene to each variant
   cesa_maf = cesa_maf[lengths(genes) == 1 & !is.na(genes) & is.na(top_gene), top_gene := as.character(genes)]
   cesa_maf_variants = cesa_maf[variant_type == 'snv', .(Unique_Patient_Identifier, variant_id)]
@@ -13,8 +13,11 @@ construct_maf = function(cesa_maf, original_maf, preloaded_maf, variants_per_gen
   #' Taking the intersection of these loaded and preloaded variants as the ones to keep
   variants_to_keep = merge(cesa_maf_variants, preload_maf_variants) 
   
-  #' #' Only retain variants that were not removed per conditions in main.R (recurrents_only, trim_oncogenes)
-  #' variants_to_keep = variants_to_keep[variant_id %in% variants_per_gene$variant_id]
+  #' Only retain variants that were not removed per conditions in main.R (recurrents_only, trim_oncogenes)
+  #' Will also remove variants that aren't in the gene list (see main.R)
+  if(!is.null(variants_per_gene)){
+      variants_to_keep = variants_to_keep[variant_id %in% variants_per_gene$variant_id]
+  }
   
   #' Keeping desired variants in MAF and removing extraneous columns
   filtered_maf = merge(cesa_maf, variants_to_keep, by = c('Unique_Patient_Identifier','variant_id'))

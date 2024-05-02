@@ -3,7 +3,6 @@
 #'
 
 .libPaths = "./.Rlibs"
-# .libPaths(c("./.Rlibs", .libPaths()))
 
 #' Load in relevant functions
 #source('../cadd/cadd.R')
@@ -32,7 +31,6 @@ source('create_cesa_for_epistasis.R')
 gene_mut_rate_df = fread(paste0(location_data, "genes_list.txt"), header = F)
 colnames(gene_mut_rate_df) = 'gene'
 gene_mut_rate_df[,gene := toupper(gene)]
-#gene_mut_rate_df = gene_mut_rate_df[1:10,]
 
 #' Calculate trinucleotide mutation proportions across the whole genome in preparation for calculating variant mutation rates
 
