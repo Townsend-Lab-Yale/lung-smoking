@@ -53,42 +53,48 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
 
     plotting_df = df %>% filter(key == dataset_key, method == mu_method)
 
-    if(var_to_plot == "freq") {
-        plot = plotting_df %>%
-                ggplot(aes(x=reorder(gene, -freq), y=freq*100)) + 
-                geom_point(aes(fill = log(gamma_mle)), pch = 21, color = "black", size = 4) + 
-                scale_fill_viridis_c() +
-                labs(y = "Frequency (%)", title = "Prevalence of mutations in lung adenocarcinoma", fill = "Log(Selection Intensity)") + 
-                scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-                theme_minimal_grid() +
+    # if(var_to_plot == "freq") {
+    #     plot = plotting_df %>%
+    #             ggplot(aes(x=reorder(gene, -freq), y=freq*100)) + 
+    #             geom_point(aes(fill = log(gamma_mle)), pch = 21, color = "black", size = 4) + 
+    #             scale_fill_viridis_c() +
+    #             labs(y = "Frequency (%)", title = "Prevalence of mutations in lung adenocarcinoma", fill = "Log(Selection Intensity)") + 
+    #             scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+    #             theme_minimal_grid() +
                 
-                theme(axis.title.x = element_blank(), 
-                        axis.title.y = element_text(size = 18),
-                        axis.text.x = element_text(size = 14),
-                        plot.title = element_text(size = 20, hjust = 0.5),
-                        panel.grid.major.x = element_line(size=0.2),
-                        legend.position = c(0.6, 0.8),
-                        legend.background = element_rect(fill = "white"))
-    } else {
+    #             theme(axis.title.x = element_blank(), 
+    #                     axis.title.y = element_text(size = 18),
+    #                     axis.text.x = element_text(size = 14),
+    #                     plot.title = element_text(size = 20, hjust = 0.5),
+    #                     panel.grid.major.x = element_line(size=0.2),
+    #                     legend.position = c(0.6, 0.8),
+    #                     legend.background = element_rect(fill = "white"))
+    # } else {
         if (var_to_plot == "selection") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) +
+            plot = plotting_df %>% #mutate(gamma_mle = gamma_mle / 10^5, gamma_ci_low = gamma_ci_low / 10^5, gamma_ci_high = gamma_ci_high / 10^5) %>% 
+                ggplot(aes(x=reorder(gene, gamma_mle), y=gamma_mle)) +
                 geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0) +
-                labs(x = "Gene", y = "Selection intensity")
+                labs(x = "Gene", y = "Scaled selection coefficient")
         } else if (var_to_plot == "fixation") {
             plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=flux_mle)) +
                 geom_errorbar(aes(ymin = flux_ci_low, ymax = flux_ci_high), width=0) +
                 labs(x = "Gene", y = "Fixation rate")
         } else if (var_to_plot == "mutation") {
-            plot = plotting_df %>% ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) +
-                labs(x = "Gene", y = "Mutation rate")
+            plot = plotting_df %>% # mutate(mu = mu * 10^6, mu_ci_low = mu_ci_low * 10^6, mu_ci_high = mu_ci_high * 10^6) %>% 
+                ggplot(aes(x=reorder(gene, gamma_mle), y=mu)) +
+                labs(x = "Gene", y="Mutation rate") 
             if (include_mu_error) {plot = plot + geom_errorbar(aes(ymin = mu_ci_low, ymax = mu_ci_high), width=0)}
-        } else {stop("var_to_plot must be selection (selection intensity), fixation (mutation acquisition rate), mutation (mutation rate), or freq (mutation frequency)")}
+        } else if (var_to_plot == "frequency") {
+            plot = plotting_df %>% mutate(freq = 100*freq) %>% ggplot(aes(x=reorder(gene, gamma_mle), y=freq)) +
+                labs(x = "Gene", y = "Prevalence (%)")
+        } else {stop("var_to_plot must be selection (selection intensity), fixation (mutation acquisition rate), mutation (mutation rate), or frequency (mutation frequency)")}
 
         plot = plot + 
-            geom_point(aes(size=freq, color=freq)) + 
-            scale_color_viridis_c() +
-            scale_y_continuous(labels = ifelse(var_to_plot == "fixation", function(x)format(x, scientific=F), fancy_scientific)) +
-            guides(color=guide_legend(title="Frequency"), size = guide_legend(title="Frequency")) +
+            geom_point(aes(size=freq*100, color=freq*100)) + 
+            scale_color_viridis_c(labels = ~paste0(.x, "%")) +
+            scale_size_continuous(labels = ~paste0(.x, "%")) + 
+            scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), fancy_scientific)) +
+            guides(color=guide_legend(title="Prevalence"), size = guide_legend(title="Prevalence")) +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 18),
@@ -106,7 +112,7 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
         
         if(!show_genes){plot = plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank())}
         if(!show_freq_legend){plot = plot + theme(legend.position="none")}
-    }
+    # }
 
     
     return(plot)
@@ -136,7 +142,7 @@ get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
     return(gxe_effects)
 }
 
-get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2])}
+get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Smoker" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2])}
 
 plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=TRUE){
     
@@ -787,11 +793,11 @@ plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labe
 
 plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
     smoking_df %>% bind_rows(nonsmoking_df, .id="key") %>% filter(tested_combo == paste0(gt,"_",mg)) %>%
-    mutate(key = ifelse(key==1, "Ever-smoker","Never-smoker")) %>%
+    mutate(key = ifelse(key==1, "Smoker","Never-smoker")) %>%
     mutate(nudge_dist = scale((1:n())/n()**(1/.6), scale=FALSE), .by = c(key, epistatic_gt),
-            x_label = ifelse(epistatic_gt == "WT", "Wild-\ntype", paste0(epistatic_gt,"-\nmutant")),
-            x_label = ifelse(key == "Ever-smoker", paste0(x_label," "), x_label),
-            x_label = factor(x_label, levels = c("Wild-\ntype ", paste0(gt,"-\nmutant "),"Wild-\ntype", paste0(gt,"-\nmutant")))) %>% {#levels=c("Ever-smoker WT",paste0("Ever-smoker ",gt),"Never-smoker WT", paste0("Never-smoker ",gt)))) %>% {
+            x_label = ifelse(epistatic_gt == "WT", paste0(gt,"\nWT"), paste0(gt,"-\nmutant")),
+            x_label = ifelse(key == "Smoker", paste0(x_label," "), x_label),
+            x_label = factor(x_label, levels = c(paste0(gt,"\nWT "), paste0(gt,"-\nmutant "),paste0(gt,"\nWT"), paste0(gt,"-\nmutant")))) %>% {#levels=c("Ever-smoker WT",paste0("Ever-smoker ",gt),"Never-smoker WT", paste0("Never-smoker ",gt)))) %>% {
         ggplot(.,aes(x=x_label, y = gamma_mle)) + 
             geom_errorbar(aes(ymin=gamma_ci_low,ymax=gamma_ci_high),
                             width=0,linewidth=0.3,
@@ -801,18 +807,19 @@ plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
                             shape=21, 
                             position=position_nudge(.$nudge_dist)) + 
             geom_vline(xintercept = 2.5, lty=2,col="grey") +
+            scale_size_continuous(range=c(2,8)) +
             scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
-            scale_y_continuous(labels=fancy_scientific) +
+            scale_y_continuous(labels=function(x)x/1e5) +
             # scale_size_continuous() +
             #scale_size_binned(n.breaks = 2) +
-            labs(y="Scaled selection coefficient", title= paste(mg,'[',gt,']'), size="Sample count") +
-            guides(fill = "none", size=guide_legend(nrow=1)) +
+            labs(y="Scaled selection coefficient", title= paste("Selection for",mg,"mutations"), size="Sample count") +
+            guides(size=guide_legend(nrow=1), fill=guide_legend(override.aes = list(size=6))) +
             theme_classic() +
             theme(axis.title.x = element_blank(),
                 plot.title = element_text(size = 20, hjust=0.5),
-                axis.text = element_text(size = 12), 
+                axis.text = element_text(size = 16), 
                 axis.title.y = element_text(size = 20),
-                legend.position = "bottom")
+                legend.text = element_text(size=14))
     }
 }
 
@@ -929,7 +936,6 @@ t_test = function(mu1, mu2, sd1, sd2, n1, n2, mu0 = 0, detailed=F){
     } else{
         return(list(t_stat, p_val))
     }
-    
 }
 
 head_and_tail = function(df, n=6, n_head=n, n_tail=n){rbind(head(df, n_head),tail(df, n_tail))}
