@@ -19,7 +19,7 @@ location_output = '../../output/'
 save_results = TRUE
 
 recurrent_variants_only = FALSE
-trim_oncogenes = TRUE
+trim_oncogenes = FALSE
 
 #' Create CESA object for mutation rate calculation and MAF construction
 #' Output locations: 'data/pan_data_cesa_for_cancer_epistasis.rds'
