@@ -72,9 +72,7 @@ tcga_df["tumor_stage"] = tcga_df["tumor_stage"].str.upper().map(stage_dict).fill
 #removing duplicate rows for radiation therapy
 tcga_df = tcga_df[tcga_df['treatment_type'] == 'Pharmaceutical Therapy, NOS']
 #adding treatment column
-#at least for now, temporarily making treatment column NaN because we are unsure whether patients are treatment naive or not/when treatments were applied.
-# Update: most patients have no prior treatment (see prior_treatment column. 3 received some form of prior treatment, not sure what kind)
-tcga_df['Treatment'] = np.NaN #tcga_df['treatment_or_therapy'].apply(lambda x: True if x == 'yes' else False if x == 'no' else np.NaN)
+tcga_df['Treatment'] = tcga_df['prior_treatment'].apply(lambda x: True if x == 'Yes' else False if x == 'No' else np.NaN)
 tcga_df = tcga_df[["case_id","pack_years_smoked","tumor_stage", "months_to_death", "Treatment"]]
 tcga_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)","Treatment"]
 #metastatis_at_diagnosis/metastasis_at_diagnosis_site columns are only NA values
@@ -86,6 +84,7 @@ oncosg_df["SMOKING_STATUS"] = oncosg_df["SMOKING_STATUS"].apply(lambda x: True i
 #converting stages to one format amongst all datasets
 oncosg_df["STAGE"] = oncosg_df["STAGE"].map(stage_dict).fillna(oncosg_df["STAGE"])
 #adding treatment column
+oncosg_df['Treatment'] = oncosg_df.apply(lambda x: True if (x.TKI_TREATMENT == "Yes" or x.CHEMOTHERAPY == "Yes") else False if (x.TKI_TREATMENT == "No" and x.CHEMOTHERAPY == "No") else np.NaN, axis=1)
 oncosg_df['Treatment'] = oncosg_df['TKI_TREATMENT'].apply(lambda x: True if x == 'Yes' else False if x == 'No' else np.NaN)
 oncosg_df = oncosg_df[["PATIENT_ID", "SMOKING_STATUS", "STAGE", "OS_MONTHS", "Treatment"]]
 oncosg_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)", "Treatment"]
@@ -113,7 +112,7 @@ msk2017_df["SMOKING_HISTORY"] = msk2017_df["SMOKING_HISTORY"].apply(lambda x: Tr
 #converting stages to one format amongst all datasets
 msk2017_df["STAGE_AT_DIAGNOSIS"] = msk2017_df["STAGE_AT_DIAGNOSIS"].map(stage_dict | {'IA L,IV R':'1a'}).fillna(msk2017_df["STAGE_AT_DIAGNOSIS"])
 #adding treatment column
-msk2017_df['Treatment'] = msk2017_df['TARGET_THERAPY'].apply(lambda x: True if x == 'YES' else False if x == 'NO' else np.NaN)
+msk2017_df['Treatment'] = msk2017_df['SAMPLE_PRE_LUNG_THERAPY'].apply(lambda x: False if x == 'YES' else True if x == 'NO' else np.NaN)
 #removing non-primary samples
 metastatic_sample_ids_2017 = msk2017_df[msk2017_df['SAMPLE_TYPE'] != 'Primary']['SAMPLE_ID']
 msk2017_df = msk2017_df[msk2017_df['SAMPLE_TYPE'] == 'Primary']
