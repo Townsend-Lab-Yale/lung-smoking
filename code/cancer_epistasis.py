@@ -294,6 +294,36 @@ def convert_samples_to_dict(samples):
     return results_as_dict
 
 
+def convert_mus_to_dict(mus, genes):
+    """Convert a dictionary of mus with all mus per gene, to another
+    dictionary with keys equal to each possible jumps under the
+    assumption that the mus are not genotype dependent.
+
+    :type mus: dict
+    :param mus: Dictionary with mutation rates per gene.
+
+    :type genes: list
+    :param genes: List with the genes to extract.
+
+    :rtype: dict
+    :return: Dictionary with the mutation rates, indexed by a pair of
+        tuples representing the mutation combination where the flux is
+        coming from and going to.
+
+    """
+
+    M = len(genes)
+
+    S = build_S_as_array(M)
+
+    xys = order_pos_lambdas(S)
+
+    results_as_dict = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
+                       for xy in xys}
+
+    return results_as_dict
+
+
 def convert_lambdas_to_dict(results):
     """Convert a fluxes array to a dictionary.
 
