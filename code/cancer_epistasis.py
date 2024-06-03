@@ -654,13 +654,13 @@ def epistatic_ratios(results, M, results_cis=None):
 
 def epistatic_ratios_2_matrix(results, results_cis, genes_ordered_list):
 
-    ratios_dic = epistatic_ratios(results, 2, results_cis)
+    ratios_dict = epistatic_ratios(results, 2, results_cis)
 
     n = len(genes_ordered_list)
 
     matrix = np.array(n*[n*[np.nan]])
 
-    for genes, values in ratios_dic.items():
+    for genes, values in ratios_dict.items():
         for comparison, value in values.items():
             gene_selected = genes[comparison[0][1].index(1)]
             context_gene = genes[comparison[1][0].index(1)]
