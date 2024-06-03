@@ -549,6 +549,18 @@ plot_all_epistatic_interactions_for_one_gene = function(mg, gt_base, df, condens
     return(p)
 }
 
+epistasis_t_test = function(wt_gamma_mle, mut_gamma_mle, wt_gamma_ci_low, wt_gamma_ci_high, mut_gamma_ci_low, mut_gamma_ci_high, wt_n, mut_n){
+    # Assigning standard deviation values based on direction of comparison due to asymmetric bounds
+    if(mut_gamma_mle > wt_gamma_mle){
+        mut_sd = mut_gamma_mle - mut_gamma_ci_low
+        wt_sd = wt_gamma_ci_high - wt_gamma_mle
+    } else {
+        mut_sd = mut_gamma_ci_high - mut_gamma_mle
+        wt_sd = wt_gamma_mle - wt_gamma_ci_low}
+    
+    return(t_test(wt_gamma_mle, mut_gamma_mle, wt_sd, mut_sd, wt_n, mut_n))
+}
+
 pairwise_comparisons = function(data){
     data = as.data.table(data)
     WT_row = data[from_gt == "WT"]
@@ -561,6 +573,8 @@ pairwise_comparisons = function(data){
         tested_combo_ = paste0(epi_gt,'_',mutated_gene)
         ratio_ = mutant_rows[[i, 'gamma_mle']] / WT_row$gamma_mle
         signif_ = (mutant_rows[[i, 'gamma_ci_low']] > WT_row$gamma_ci_high) | (WT_row$gamma_ci_low > mutant_rows[[i, 'gamma_ci_high']])
+        # Assigning p-values via Welch's t-test
+        p_val_ = epistasis_t_test(WT_row$gamma_mle, mutant_rows[[i, 'gamma_mle']], WT_row$gamma_ci_low, WT_row$gamma_ci_high, mutant_rows[[i, 'gamma_ci_low']], mutant_rows[[i, 'gamma_ci_high']], WT_row$from_count, mutant_rows[[i, 'from_count']])
 
         new_WT_row = data.table(gene_set = WT_row$gene_set,
                                 tested_combo = tested_combo_,
@@ -571,7 +585,8 @@ pairwise_comparisons = function(data){
                                 gamma_ci_high = WT_row$gamma_ci_high,
                                 to_count = WT_row$to_count,
                                 ratio = ratio_, 
-                                signif = signif_)
+                                signif = signif_,
+                                p_val = p_val_)
         new_WT_row[,key:=WT_row$key]
         new_epi_row = data.table(gene_set = WT_row$gene_set,
                                 tested_combo = tested_combo_,
@@ -582,7 +597,8 @@ pairwise_comparisons = function(data){
                                 gamma_ci_high = mutant_rows[[i, 'gamma_ci_high']],
                                 to_count = mutant_rows[[i, 'to_count']],
                                 ratio = ratio_, 
-                                signif = signif_)
+                                signif = signif_,
+                                p_val = p_val_)
         new_epi_row[,key:=mutant_rows[[i, 'key']]]
         all_comparisons = rbind(all_comparisons, new_WT_row, new_epi_row)
     }
@@ -593,7 +609,7 @@ pairwise_comparisons = function(data){
 get_interaction_df = function(data){
     gammas_df_list = 
         data %>% 
-        select(key, gene_set, from_gt, mutated_gene, gamma_ci_low, gamma_mle, gamma_ci_high, to_count) %>%
+        select(key, gene_set, from_gt, mutated_gene, gamma_ci_low, gamma_mle, gamma_ci_high, from_count, to_count) %>%
         split(data %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
     interaction_df = rbindlist(lapply(gammas_df_list, pairwise_comparisons))
     interaction_df = interaction_df %>%
@@ -821,6 +837,112 @@ plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
                 axis.title.y = element_text(size = 20),
                 legend.text = element_text(size=14))
     }
+}
+
+create_plotting_df = function(mg, gt, df, spread=0.8){
+    tmp = df %>% 
+        filter(str_count(tested_combo,"_")>1) %>% # 2 genes to third
+        filter(mutated_gene == mg) %>%
+        filter(str_detect(epistatic_gt, gt)) %>%
+        pull(tested_combo)
+    
+    if(length(tmp)==0){return(data.frame())}
+
+    return(
+        df %>%
+        filter(tested_combo %in% tmp, epistatic_gt != "WT") %>%
+        mutate(pairwise_combo = paste0(mg,' [',gt,']')) %>%
+        arrange(gene_set) %>%
+        group_by(pairwise_combo) %>%
+        mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE), 
+                label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.125,nudge_dist-0.125)) %>%
+        mutate(genes_to_label = gsub("_","",gsub(gt,"",epistatic_gt)))
+    )
+}
+
+find_extra_effects = function(data){
+    pairwise_row = data %>% filter(group == "single")
+    extra_gene_rows = data %>% filter(group == "double")
+
+    extra_gene_rows = 
+        extra_gene_rows %>%
+        mutate(difference_from_pairwise = gamma_mle - pairwise_row$gamma_mle,
+                ratio_to_pairwise = gamma_mle/pairwise_row$gamma_mle, 
+                # confidence interval for double mutation does not overlap with MLE for pairwise interaction
+                extra_effect = gamma_ci_high < pairwise_row$gamma_mle |
+                                gamma_ci_low > pairwise_row$gamma_mle,
+                extra_effect_strict = ifelse(extra_effect, (gamma_ci_high < pairwise_row$gamma_ci_low | gamma_ci_low > pairwise_row$gamma_ci_high), FALSE),
+                signif = any(signif,extra_effect))
+    
+    return(data %>% filter(group != "double") %>% bind_rows(extra_gene_rows))
+}
+
+get_multi_gene_effects = function(epistatic_pairs, M3_df, M2_df){
+    mutant_genes = str_split_i(epistatic_pairs,'_',2)
+    epi_genes = str_split_i(epistatic_pairs,'_',1)
+
+    plotting_df = rbindlist(lapply(1:length(epistatic_pairs), 
+                    function(i){create_plotting_df(mutant_genes[i], epi_genes[i], M3_df)}))
+
+    plotting_df = plotting_df %>%
+        bind_rows(M2_df %>% filter(tested_combo %in% epistatic_pairs) %>% mutate(pairwise_combo = combo_name, nudge_dist = 0)) %>%
+        mutate(group = ifelse(epistatic_gt=="WT","WT", ifelse(str_detect(epistatic_gt, "_"), "double","single"))) %>%
+        arrange(pairwise_combo)
+
+    gene_set_list = split(plotting_df, plotting_df$pairwise_combo)
+    plotting_df = rbindlist(lapply(gene_set_list, find_extra_effects))
+
+    return(plotting_df)
+}
+
+plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
+
+    alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
+    fill_palette = c("WT (no epistasis)" = hue_pal()(3)[1], "Pairwise" = hue_pal()(3)[3], "Higher-order" = hue_pal()(3)[2])
+    size_palette = c("WT (no epistasis)" = 5, "Pairwise" = 5, "Higher-order" = 3)
+
+    if(!is.null(interactions_to_plot)){
+        df = df %>% filter(pairwise_combo %in% interactions_to_plot) %>%
+                    mutate(pairwise_combo = factor(pairwise_combo, interactions_to_plot))
+    }
+
+    df = df %>%
+            mutate(group_label = ifelse(group == "WT", "WT (no epistasis)", ifelse(group == "single", "Pairwise", "Higher-order")),
+                    extra_effect = ifelse(is.na(extra_effect), FALSE, extra_effect),
+                    extra_effect_strict = ifelse(is.na(extra_effect_strict), FALSE, extra_effect_strict)) %>%
+            rowwise() %>% mutate(show_effect = ifelse(strict, extra_effect_strict, extra_effect)) %>% ungroup() 
+    
+    plot = 
+        df %>%
+        ggplot(aes(x = pairwise_combo, y=gamma_mle)) + 
+            geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high, alpha= (group != "double" | show_effect)),
+                            width=0, linewidth = 0.2, position = position_nudge(df$nudge_dist)) + 
+            geom_point(aes(fill=group_label, size=group_label, alpha= (group != "double" | show_effect)), 
+                            shape = 21, position = position_nudge(df$nudge_dist)) +
+            geom_text(data = df %>% filter(group=="double", show_effect),
+                                        aes(label=genes_to_label), 
+                                        position = position_nudge(df %>% filter(group=="double", show_effect) %>% pull(label_nudge_dist)),
+                                        check_overlap = TRUE) +
+            labs(x="Epistatic pair\nMutated gene [genetic context]", y="Scaled selection coefficient") +
+            scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
+            scale_fill_manual(values = fill_palette, name="Genetic Context") +
+            scale_size_manual(values = size_palette, name="Genetic Context") +
+            guides(alpha="none") + 
+            scale_y_continuous(labels=fancy_scientific) +
+            theme_classic() +
+            theme(plot.title = element_text(size = 24, hjust=0.5),
+                        axis.title = element_text(size = 20),
+                        axis.text = element_text(size = 16),
+                        axis.ticks.x = element_blank(),
+                        legend.position = "right",#c(0.6,0.2),
+                        # legend.direction="horizontal",
+                        legend.key.size = unit(1.5, 'cm'),
+                        legend.text = element_text(size = 16),
+                        legend.title = element_text(size = 18),
+                        panel.grid.major.y = element_line(color="gray",linewidth=0.75, linetype=3)) +
+            coord_flip()
+    
+    return(plot)
 }
 
 # With modification from https://groups.google.com/g/ggplot2/c/a_xhMoQyxZ4
