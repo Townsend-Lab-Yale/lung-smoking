@@ -20,6 +20,8 @@ from cancer_epistasis import order_genes_by_result_values
 from cancer_epistasis import compute_gammas
 from cancer_epistasis import compute_CI_gamma
 
+from cancer_epistasis import epistatic_ratios_2_matrix
+
 from theory import build_S_with_tuples
 from theory import build_S_as_array
 from theory import order_pos_lambdas
@@ -676,96 +678,8 @@ if __name__ == "__main__":
 
 
 
-def epistatic_comparisons(M):
-    """For a value of `M' (total number of genes compared in the
-    model) return all possible epistatic comparisons that include one
-    more mutated gene in the somatic genotype.
-
-    """
-
-    jumps = human_order_single_jumps(M)
-    comparisons = []
-    for jump in jumps:
-        if sum(jump[1]) < M:
-            new_mut_index = list(np.array(jump[1])-np.array(jump[0])).index(1)
-            for place in range(M):
-                if jump[0][place] == 0 and place != new_mut_index:
-                    comparison_from = list(jump[0])
-                    comparison_to = list(jump[1])
-                    comparison_from[place] = 1
-                    comparison_to[place] = 1
-                    comparison = (tuple(comparison_from), tuple(comparison_to))
-                    comparisons.append(
-                        (jump, comparison))
-    return comparisons
 
 
-
-def epistatic_ratios(results, M, results_cis=None):
-
-    """Compute ratios between values of the `results' in a somatic
-    genotype vs another one with one less mutated gene.
-
-
-    :type results: dict
-    :param results: Dictionary with the results for which we will
-        compute epistatic ratios. It should be indexed by tuples
-        of genes that were included in the model. Here we can put
-        either selections (gammas), fluxes (lambdas, but Jeff doesn't
-        like this approach), or later even mutation rates (mus).
-
-    :type M: int
-    :param M: Number of genes to consider in the models
-
-    :type results_cis: dict or None
-    :param results_cis: Dictionary with the results confidence
-       intervals. Results of ratios are set to 1 if they are not
-       statistically significant. Statistical significance is
-       conservatively determined by non overlapping confidence
-       intervals. If None is provided (default), then do consider
-       statistical significance for the ratios.
-
-
-
-    """
-
-    comparisons = epistatic_comparisons(M)
-
-    if results_cis is None:
-        ratios = {genes:{comparison:(
-            results[genes][comparison[1]]/results[genes][comparison[0]])
-                         for comparison in comparisons}
-                  for genes in results.keys() if len(genes) == M}
-    else:
-        ratios = {genes:{comparison:(
-            results[genes][
-                comparison[1]]/results[genes][comparison[0]])
-                         if (max(results_cis[genes][comparison[0]][0],
-                                 results_cis[genes][comparison[1]][0]) >
-                             min(results_cis[genes][comparison[0]][1],
-                                 results_cis[genes][comparison[1]][1]))
-                         else 1
-                         for comparison in comparisons}
-                  for genes in results.keys() if len(genes) == M}
-
-    return ratios
-
-
-def epistatic_ratios_2_matrix(results, results_cis):
-
-    ratios_dic = epistatic_ratios(results, 2, results_cis)
-
-    n = len(gene_list)
-
-    matrix = np.array(n*[n*[np.nan]])
-
-    for genes, values in ratios_dic.items():
-        for comparison, value in values.items():
-            gene_selected = genes[comparison[0][1].index(1)]
-            context_gene = genes[comparison[1][0].index(1)]
-            matrix[gene_list.index(gene_selected)][gene_list.index(context_gene)] = value
-
-    return matrix
 
 
 

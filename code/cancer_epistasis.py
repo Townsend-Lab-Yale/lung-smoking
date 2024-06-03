@@ -29,6 +29,7 @@ from theory import build_S_with_tuples
 from theory import obtain_pos_lambdas_indices
 from theory import order_pos_lambdas
 from theory import generate_paths
+from theory import epistatic_comparisons
 
 from scipy.stats import chi2
 
@@ -599,3 +600,71 @@ def order_genes_by_result_values(results):
                        reverse=True)
 
     return gene_list
+
+
+def epistatic_ratios(results, M, results_cis=None):
+
+    """Compute ratios between values of the `results' in a somatic
+    genotype vs another one with one less mutated gene.
+
+
+    :type results: dict
+    :param results: Dictionary with the results for which we will
+        compute epistatic ratios. It should be indexed by tuples
+        of genes that were included in the model. Here we can put
+        either selections (gammas), fluxes (lambdas, but Jeff doesn't
+        like this approach), or later even mutation rates (mus).
+
+    :type M: int
+    :param M: Number of genes to consider in the models
+
+    :type results_cis: dict or None
+    :param results_cis: Dictionary with the results confidence
+       intervals. Results of ratios are set to 1 if they are not
+       statistically significant. Statistical significance is
+       conservatively determined by non overlapping confidence
+       intervals. If None is provided (default), then do consider
+       statistical significance for the ratios.
+
+
+
+    """
+
+    comparisons = epistatic_comparisons(M)
+
+    if results_cis is None:
+        ratios = {genes:{comparison:(
+            results[genes][comparison[1]]/results[genes][comparison[0]])
+                         for comparison in comparisons}
+                  for genes in results.keys() if len(genes) == M}
+    else:
+        ratios = {genes:{comparison:(
+            results[genes][
+                comparison[1]]/results[genes][comparison[0]])
+                         if (max(results_cis[genes][comparison[0]][0],
+                                 results_cis[genes][comparison[1]][0]) >
+                             min(results_cis[genes][comparison[0]][1],
+                                 results_cis[genes][comparison[1]][1]))
+                         else 1
+                         for comparison in comparisons}
+                  for genes in results.keys() if len(genes) == M}
+
+    return ratios
+
+
+def epistatic_ratios_2_matrix(results, results_cis, genes_ordered_list):
+
+    ratios_dic = epistatic_ratios(results, 2, results_cis)
+
+    n = len(genes_ordered_list)
+
+    matrix = np.array(n*[n*[np.nan]])
+
+    for genes, values in ratios_dic.items():
+        for comparison, value in values.items():
+            gene_selected = genes[comparison[0][1].index(1)]
+            context_gene = genes[comparison[1][0].index(1)]
+            matrix[genes_ordered_list.index(gene_selected)][
+                genes_ordered_list.index(context_gene)] = value
+
+    return matrix

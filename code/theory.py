@@ -211,3 +211,28 @@ def generate_paths(target):
         organized_paths.append(list(zip(path[:-1], path[1:])))
 
     return organized_paths
+
+
+
+def epistatic_comparisons(M):
+    """For a value of `M' (total number of genes compared in the
+    model) return all possible epistatic comparisons that include one
+    more mutated gene in the somatic genotype.
+
+    """
+
+    jumps = human_order_single_jumps(M)
+    comparisons = []
+    for jump in jumps:
+        if sum(jump[1]) < M:
+            new_mut_index = list(np.array(jump[1])-np.array(jump[0])).index(1)
+            for place in range(M):
+                if jump[0][place] == 0 and place != new_mut_index:
+                    comparison_from = list(jump[0])
+                    comparison_to = list(jump[1])
+                    comparison_from[place] = 1
+                    comparison_to[place] = 1
+                    comparison = (tuple(comparison_from), tuple(comparison_to))
+                    comparisons.append(
+                        (jump, comparison))
+    return comparisons
