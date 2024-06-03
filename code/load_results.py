@@ -102,7 +102,9 @@ def load_results(result_type, which=None, extension=None):
             which = 'variant'
         results = {key: load_mutation_rates(key, which, extension)
                    for key in results_keys}
-    else:
+    elif result_type in ['samples',
+                         'fluxes',
+                         'selections']:
         if which is None:
             which = 'mles'
 
@@ -121,5 +123,12 @@ def load_results(result_type, which=None, extension=None):
                                              file_name),
                                 allow_pickle=True).item()
                    for key,file_name in file_names.items()}
+    else:
+        raise ValueError("Only the following result types are allowed:"
+                         "- 'samples'"
+                         "- 'mutations'"
+                         "- 'fluxes'"
+                         "- 'selections'")
+
 
     return results
