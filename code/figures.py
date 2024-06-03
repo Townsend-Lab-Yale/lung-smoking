@@ -9,36 +9,133 @@ from statsmodels.graphics.mosaicplot import mosaic
 from locations import location_figures
 from locations import location_output
 
-from import_results import provide_all_relevant_lambdas_and_gammas
-from import_results import results_keys
-from import_results import pts_per_mutation
-from import_results import samples_per_combination
-from import_results import mutation_rates
+# from import_results import provide_all_relevant_lambdas_and_gammas
+# from import_results import results_keys
+# from import_results import pts_per_mutation
+# from import_results import samples_per_combination
+# from import_results import mutation_rates
+
+
+from load_results import load_results
 
 from landscape_plotting import plot_landscape
 
-all_lambdas, all_gammas = provide_all_relevant_lambdas_and_gammas()
-
-results_TP53_KRAS_smoking = np.load(
-    os.path.join(location_output,
-                 "results_TP53_KRAS_model_smoking_plus.npy"),
-    allow_pickle=True).item()
-
-results_TP53_KRAS_nonsmoking = np.load(
-    os.path.join(location_output,
-                 "results_TP53_KRAS_model_nonsmoking_plus.npy"),
-    allow_pickle=True).item()
+all_samples = load_results('samples')
+all_lambdas = load_results('fluxes')
+all_mus = load_results('mutations')
+all_gammas = load_results('selections')
 
 
-results_TP53_KRAS_EGFR_smoking = np.load(
-    os.path.join(location_output,
-                 "results_TP53_KRAS_EGFR_model_smoking_plus.npy"),
-    allow_pickle=True).item()
+# all_lambdas, all_gammas = provide_all_relevant_lambdas_and_gammas(["smoking_plus", "nonsmoking_plus"])
 
-results_TP53_KRAS_EGFR_nonsmoking = np.load(
-    os.path.join(location_output,
-                 "results_TP53_KRAS_EGFR_model_nonsmoking_plus.npy"),
-    allow_pickle=True).item()
+# results_TP53_KRAS_smoking = np.load(
+#     os.path.join(location_output,
+#                  "results_TP53_KRAS_model_smoking_plus.npy"),
+#     allow_pickle=True).item()
+
+# results_TP53_KRAS_nonsmoking = np.load(
+#     os.path.join(location_output,
+#                  "results_TP53_KRAS_model_nonsmoking_plus.npy"),
+#     allow_pickle=True).item()
+
+
+# results_TP53_KRAS_EGFR_smoking = np.load(
+#     os.path.join(location_output,
+#                  "results_TP53_KRAS_EGFR_model_smoking_plus.npy"),
+#     allow_pickle=True).item()
+
+# results_TP53_KRAS_EGFR_nonsmoking = np.load(
+#     os.path.join(location_output,
+#                  "results_TP53_KRAS_EGFR_model_nonsmoking_plus.npy"),
+#     allow_pickle=True).item()
+
+
+
+from cancer_epistasis import convert_samples_to_dict
+from cancer_epistasis import convert_mus_to_dict
+
+
+def plot_figures_presentation_montreal():
+    all_plots = {}
+
+    ## * Epistasis TP53, KRAS, EGFR in smokers
+    print(f"Plotting TP53, KRAS, EGFR model")
+
+    all_plots['tp53_kras_egfr_landscape_smoking', 'lambdas'] = plot_landscape(
+        all_lambdas['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
+        all_samples['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
+        mutation_names=['TP53', 'KRAS', 'EGFR'],
+        positions='left_to_right',
+        scale_arrows=1,
+        scale_circle_areas=0.027,
+        include_n_circles=False,
+        subplot_label="Substitution /",
+        subplot_label_ha='right',
+        subplot_label_va='top',
+        multiplier_figsize=0.4,
+        multiplier_font_size=0.4,
+        plot_name='landscape_lambdas_tp53_kras_egfr_smoking')
+
+
+    all_plots['tp53_kras_egfr_landscape_smoking', 'mus'] = plot_landscape(
+        convert_mus_to_dict(all_mus['smoking_plus'], ['TP53', 'KRAS', 'EGFR']),
+        all_samples['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
+        mutation_names=['TP53', 'KRAS', 'EGFR'],
+        positions='left_to_right',
+        scale_arrows=0.25*10**(6),
+        scale_circle_areas=0.027,
+        include_n_circles=False,
+        subplot_label="Mutation rate",
+        subplot_label_ha='right',
+        subplot_label_va='top',
+        multiplier_figsize=0.4,
+        multiplier_font_size=0.4,
+        plot_name='landscape_mus_tp53_kras_egfr_smoking')
+
+
+    all_plots['tp53_kras_egfr_landscape_smoking', 'gammas'] = plot_landscape(
+        all_gammas['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
+        all_samples['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
+        mutation_names=['TP53', 'KRAS', 'EGFR'],
+        positions='left_to_right',
+        scale_arrows=0.25*10**(-6),
+        scale_circle_areas=0.027,
+        include_n_circles=False,
+        subplot_label="Selection =",
+        subplot_label_ha='left',
+        subplot_label_va='top',
+        multiplier_figsize=0.4,
+        multiplier_font_size=0.4,
+        plot_name='landscape_gammas_tp53_kras_egfr_smoking')
+
+
+    all_plots['braf_ctnnb1_setd2_landscape_smoking', 'gammas'] = plot_landscape(
+        all_gammas['smoking_plus'][('BRAF', 'CTNNB1', 'SETD2')],
+        all_samples['smoking_plus'][('BRAF', 'CTNNB1', 'SETD2')],
+        mutation_names=['BRAF', 'CTNNB1', 'SETD2'],
+        positions='left_to_right',
+        scale_arrows=0.25*10**(-6),
+        scale_circle_areas=0.0165,
+        include_n_circles=False,
+        # subplot_label="Selection =",
+        # subplot_label_ha='left',
+        # subplot_label_va='top',
+        multiplier_figsize=0.75,
+        multiplier_font_size=0.9,
+        plot_name='landscape_gammas_braf_ctnnb1_setd2_smoking')
+
+    return all_plots
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -259,33 +356,33 @@ def top_genes(rates, top=3):
 #                                for lambdas in [all_lambdas[key, 'no_epi', 'mles']
 #                                                          for key in results_keys]])
 
-top_genes_from_110 = set.union(
-    set(top_genes(all_lambdas['pan_data', 'from_110', 'mles'],
-                  top=4).keys()).difference(
-                      {'CSMD3', 'TTN'}),
-    set(top_genes(all_lambdas['smoking', 'from_110', 'mles'],
-                  top=5).keys()).difference(
-                   {'CSMD3', 'TTN'}),
-    set(top_genes(all_lambdas['nonsmoking', 'from_110', 'mles'],
-                  top=3).keys()))
+# top_genes_from_110 = set.union(
+#     set(top_genes(all_lambdas['pan_data', 'from_110', 'mles'],
+#                   top=4).keys()).difference(
+#                       {'CSMD3', 'TTN'}),
+#     set(top_genes(all_lambdas['smoking', 'from_110', 'mles'],
+#                   top=5).keys()).difference(
+#                    {'CSMD3', 'TTN'}),
+#     set(top_genes(all_lambdas['nonsmoking', 'from_110', 'mles'],
+#                   top=3).keys()))
 
-top_genes_from_normal = set.union(
-    set(top_genes(all_lambdas['pan_data', 'from_normal', 'mles'],
-                  top=4).keys()).difference(
-                   {'CSMD3', 'TTN'}),
-    set(top_genes(all_lambdas['smoking', 'from_normal', 'mles'],
-                  top=5).keys()).difference(
-                   {'CSMD3', 'TTN'}),
-    set(top_genes(all_lambdas['nonsmoking', 'from_normal', 'mles'],
-                  top=5).keys()).difference(
-                   {'CSMD3', 'TTN'}))
+# top_genes_from_normal = set.union(
+#     set(top_genes(all_lambdas['pan_data', 'from_normal', 'mles'],
+#                   top=4).keys()).difference(
+#                    {'CSMD3', 'TTN'}),
+#     set(top_genes(all_lambdas['smoking', 'from_normal', 'mles'],
+#                   top=5).keys()).difference(
+#                    {'CSMD3', 'TTN'}),
+#     set(top_genes(all_lambdas['nonsmoking', 'from_normal', 'mles'],
+#                   top=5).keys()).difference(
+#                    {'CSMD3', 'TTN'}))
 
 
-top_genes_no_epi = set()
-top_genes_from_110 = set()
-top_genes_from_normal = set(pts_per_mutation[:10].index)
+# top_genes_no_epi = set()
+# top_genes_from_110 = set()
+# top_genes_from_normal = set(pts_per_mutation[:10].index)
 
-top_genes_epi = set.union(top_genes_from_110, top_genes_from_normal)
+# top_genes_epi = set.union(top_genes_from_110, top_genes_from_normal)
 
 
 # for multi_key, lambdas in all_lambdas.items():
@@ -1431,7 +1528,7 @@ if __name__ == "__figures__":
 
 mutations_per_gene = {}
 
-for key in ['pan_data', 'smoking', 'nonsmoking']:
+for key in ['smoking', 'nonsmoking']:
 
     mutations_per_gene[key] = {gene: (samples_per_combination[key].loc[gene].loc['(0, 0, 1)']
                                       + samples_per_combination[key].loc[gene].loc['(1, 0, 1)']

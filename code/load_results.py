@@ -23,24 +23,31 @@ def load_mutation_rates(key, method, extension=None):
         - variant (sum of mutation rate for each variant site in gene)
         - cesR (gene mutation rate directly from cancereffectsizeR)
 
+    :type extension: str
+    :param extension: Which mutation rate calculation method to use. Can be one of:
+        - variant (sum of mutation rate for each variant site in gene)
+        - cesR (gene mutation rate directly from cancereffectsizeR)
+
     :rtype: dict
     :return: A dictionary with the genes as keys and the mutation rates as values.
         - gene: mutation rate
     """
 
-    if extension is not None: 
-        extended_location_output = os.path.join(location_output,extension)
-    else: extended_location_output = location_output
+    if extension is not None:
+        extended_location_output = os.path.join(location_output, extension)
+    else:
+        extended_location_output = location_output
 
     if key[-4:] == 'plus':
-            accession_key = key[:-5]
-    else: accession_key = key
+        accession_key = key[:-5]
+    else:
+        accession_key = key
 
     if(method == "variant"):
         variant_based_mutation_rates = pd.read_csv(os.path.join(extended_location_output,
-                                                        'variant_based_mutation_rates.txt'),
-                                                        index_col=0)
-        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()        
+                                                                'variant_based_mutation_rates.txt'),
+                                                   index_col=0)
+        variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
         mus = variant_based_mutation_rates[accession_key]
         mus = {gene: mu for gene, mu in mus.items() if not np.isnan(mu)}
@@ -69,6 +76,7 @@ def load_results(result_type, which=None, extension=None):
     :type result_type: str
     :param result_type: What type of result to load. Can be one of:
         - 'samples'
+        - 'mutations'
         - 'fluxes'
         - 'selections'
 
@@ -90,6 +98,8 @@ def load_results(result_type, which=None, extension=None):
     """
 
     if result_type == 'mutations':
+        if which is None:
+            which = 'variant'
         results = {key: load_mutation_rates(key, which, extension)
                    for key in results_keys}
     else:
@@ -101,11 +111,12 @@ def load_results(result_type, which=None, extension=None):
                             else "") +
                            ".npy"
                       for key in results_keys}
-        
-        if extension is not None: 
+
+        if extension is not None:
             extended_location_output = os.path.join(location_output,extension)
-        else: extended_location_output = location_output
-        
+        else:
+            extended_location_output = location_output
+
         results = {key: np.load(os.path.join(extended_location_output,
                                              file_name),
                                 allow_pickle=True).item()

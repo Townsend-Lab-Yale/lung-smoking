@@ -8,6 +8,8 @@ from itertools import permutations
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+from cancer_epistasis import convert_samples_to_dict
+
 from theory import numbers_positive_lambdas
 from theory import build_S_as_array
 from theory import build_S_with_tuples
@@ -154,7 +156,8 @@ def plot_landscape(arrows, circle_areas,
                    circle_values_max=1,
                    circle_values_label="",
                    mutation_names=None,
-                   scale_arrows=0.3, scale_circle_areas=0.5,
+                   scale_arrows=0.3,
+                   scale_circle_areas=0.5,
                    include_n_circles=True,
                    positions="out_to_in",
                    subplot_label=None,
@@ -162,6 +165,7 @@ def plot_landscape(arrows, circle_areas,
                    subplot_label_va='top',
                    name_x_offsets=None,
                    name_y_offsets=None,
+                   multiplier_figsize=1.57,
                    multiplier_font_size=1,
                    plot_name=None):
     """Plot a mutation landscape with the fluxes, selection
@@ -234,8 +238,8 @@ def plot_landscape(arrows, circle_areas,
     inches_per_pt = 1.0/72.27               # Convert pt to inches
     fig_width = fig_width_pt*inches_per_pt  # width in inches
 
-    fig = plt.figure(figsize=[1.57*fig_width,
-                              1.57*fig_width*4.3/4.62],
+    fig = plt.figure(figsize=[multiplier_figsize*fig_width,
+                              multiplier_figsize*fig_width*4.3/4.62],
                      # the weird ratio above is to keep
                      # circles as circles it relates to
                      # the x and y lims of the ax
@@ -309,6 +313,9 @@ def plot_landscape(arrows, circle_areas,
                  linewidth=0,
                  alpha=0.7,
                  zorder=3)
+
+    if not isinstance(circle_areas, dict):
+        circle_areas = convert_samples_to_dict(circle_areas)
 
     ## Draw circles
     if circle_values is None:
