@@ -15,6 +15,7 @@ from count_combinations import updated_compute_samples
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
+from cancer_epistasis import order_genes_by_result_values
 
 from cancer_epistasis import compute_gammas
 from cancer_epistasis import compute_CI_gamma
@@ -796,21 +797,11 @@ class MidpointNormalize(mcolors.Normalize):
         return np.interp(value, x, y, left=-np.inf, right=np.inf)
 
 
-gene_list_by_selection = {gene[0]:max(value.values()) # max doesn't
-                                                      # matter there
-                                                      # is only one
-                                                      # value
-                          for gene,value in gammas_['pan_data'].items()
-                          if len(gene) == 1}
-gene_list_by_selection = sorted(gene_list_by_selection,
-                                key=lambda k: gene_list_by_selection[k],
-                                reverse=True)
-
-
 def plot_epistatic_ratios_2_matrices(results_nonsmoking,
                                      results_nonsmoking_cis,
                                      results_smoking,
                                      results_smoking_cis,
+                                     gene_list_by_selection,
                                      plot_name=None):
 
     matrix1 = epistatic_ratios_2_matrix(results_nonsmoking,

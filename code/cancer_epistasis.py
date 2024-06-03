@@ -398,11 +398,13 @@ def compute_gammas(lambdas, mus):
         for xy, flux in lambdas.items()}
     return gammas
 
+
 def compute_CI_gamma(lambda_cis, mus):
     gamma_CIs = {
         xy:[bound/mus[tuple(np.array(xy[1])-np.array(xy[0]))] for bound in ci]
         for xy, ci in lambda_cis.items()}
     return gamma_CIs
+
 
 def compute_log_lh(positive_lambdas, samples):
     """Not really the log likelihood but that plus a constant (that
@@ -564,3 +566,36 @@ def compute_probability_paths(lambdas,
                  for path, value in prod_lambdas.items()}
 
         return probs
+
+
+## Ordering of results
+
+def order_genes_by_result_values(results):
+    """Give a list of the genes ordered by values.
+
+    :type results: dict
+    :param results: Dictionary with the results for which will be
+        ordered by result values. It should be indexed by tuples of
+        genes that were included in the model, and where here we will
+        only take the M=1 (no epistasis) results for the ordering. Use
+        for example as input: load_results('selections')['pan_data']
+        to order by selection, where load_results is the function from
+        load_results.py
+
+    :rtype: list
+    :return: A list with the genes, ordered by values in `results'.
+
+    """
+
+    gene_list = {gene[0]:max(value.values()) # max doesn't
+                                             # matter there
+                                             # is only one
+                                             # value because
+                                             # M = 1
+                 for gene, value in results.items()
+                 if len(gene) == 1}
+    gene_list = sorted(gene_list,
+                       key=lambda k: gene_list[k],
+                       reverse=True)
+
+    return gene_list
