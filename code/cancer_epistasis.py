@@ -571,6 +571,31 @@ def compute_probability_paths(lambdas,
 
 ## Ordering of results
 
+def find_model(genes, main_gene_list):
+    """If results where produced from `main_gene_list' then for any
+    non-ordered tuple or list `genes', return the rightly ordered
+    tuple that will index the results.
+
+    For example, if main_gene_list = ['TP53', 'KRAS', 'EGFR', 'BRAF', ...]
+
+    and ('TP53', 'BRAF', 'EGFR') is provided as genes
+
+    it will return
+
+    ('TP53', 'EGFR', 'BRAF')
+
+    """
+
+    gene_positions = {gene: index for index, gene in enumerate(main_gene_list)}
+
+    # Sort the genes based on their positions in the main_gene_list
+    sorted_genes = sorted(genes, key=lambda gene: gene_positions[gene])
+
+    # Convert the sorted list back to a tuple and return
+    return tuple(sorted_genes)
+
+
+
 def order_genes_by_result_values(results):
     """Give a list of the genes ordered by values.
 
