@@ -693,3 +693,48 @@ def epistatic_ratios_2_matrix(results, results_cis, genes_ordered_list):
                 genes_ordered_list.index(context_gene)] = value
 
     return matrix
+
+
+
+def epistatic_ratios_3rd_gene_effects(results, results_cis):
+    """When does the presence of a third gene in a somatic genotype,
+    alter the epistatic effect of the selection of a gene in the
+    presence of another.
+
+    Results are a dictionary where the keys are of the form
+
+        ('gene_always_previously_mutated_in_comparison', 'gene_selected', 'third_gene')
+
+    and the values are the gene ratios of
+
+        gene_always_there+third_gene -> gene_always_there+third_gene+gene_selected
+
+    and
+
+       gene_always_there -> gene_always_there+gene_selected
+
+    """
+
+    ratios_dict = epistatic_ratios(results, 3, results_cis)
+
+    effects = {}
+
+    for genes, values in ratios_dict.items():
+        for comparison, value in values.items():
+            if value != 1:
+                from_gene = genes[(comparison[0][0]).index(1)]
+                to_gene_tuple = tuple(np.array(comparison[0][1]) -
+                                      np.array(comparison[0][0]))
+                to_gene = genes[to_gene_tuple.index(1)]
+                gene_3rd_tuple = tuple(np.array(comparison[1][0]) -
+                                       np.array(comparison[0][0]))
+                gene_3rd = genes[gene_3rd_tuple.index(1)]
+                effects[(from_gene, to_gene, gene_3rd)] = value
+
+
+    return effects
+
+
+# from load_results import load_results
+# gammas_ = load_results('selections')
+# gammas_cis_ = load_results('selections', 'cis')
