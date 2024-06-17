@@ -61,7 +61,7 @@ def plot_figures_presentation_montreal():
     ## * Epistasis TP53, KRAS, EGFR in smokers
     print(f"Plotting TP53, KRAS, EGFR model")
 
-    all_plots['tp53_kras_egfr_landscape_smoking', 'lambdas'] = plot_landscape(
+    all_plots['landscape_tp53_kras_egfr_smoking', 'lambdas'] = plot_landscape(
         all_lambdas['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
         all_samples['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
         mutation_names=['TP53', 'KRAS', 'EGFR'],
@@ -77,7 +77,7 @@ def plot_figures_presentation_montreal():
         plot_name='landscape_lambdas_tp53_kras_egfr_smoking')
 
 
-    all_plots['tp53_kras_egfr_landscape_smoking', 'mus'] = plot_landscape(
+    all_plots['landscape_tp53_kras_egfr_smoking', 'mus'] = plot_landscape(
         convert_mus_to_dict(all_mus['smoking_plus'], ['TP53', 'KRAS', 'EGFR']),
         all_samples['smoking_plus'][('TP53', 'KRAS', 'EGFR')],
         mutation_names=['TP53', 'KRAS', 'EGFR'],
@@ -101,28 +101,54 @@ def plot_figures_presentation_montreal():
         scale_arrows=0.25*10**(-6),
         scale_circle_areas=0.027,
         include_n_circles=False,
-        subplot_label="Selection =",
+        subplot_label="= Selection",
         subplot_label_ha='left',
         subplot_label_va='top',
         multiplier_figsize=0.4,
         multiplier_font_size=0.4,
-        plot_name='landscape_gammas_tp53_kras_egfr_smoking')
+        plot_name='landscape_gammas_tp53_kras_egfr_smoking_selection')
 
 
-    all_plots['braf_ctnnb1_setd2_landscape_smoking', 'gammas'] = plot_landscape(
-        all_gammas['smoking_plus'][('BRAF', 'CTNNB1', 'SETD2')],
-        all_samples['smoking_plus'][('BRAF', 'CTNNB1', 'SETD2')],
-        mutation_names=['BRAF', 'CTNNB1', 'SETD2'],
-        positions='left_to_right',
-        scale_arrows=0.25*10**(-6),
-        scale_circle_areas=0.0165,
-        include_n_circles=False,
-        # subplot_label="Selection =",
-        # subplot_label_ha='left',
-        # subplot_label_va='top',
-        multiplier_figsize=0.75,
-        multiplier_font_size=0.9,
-        plot_name='landscape_gammas_braf_ctnnb1_setd2_smoking')
+    def plot_landscape_3(genes, smoking_or_nonsmoking):
+
+        plot_name = (f"landscape_gammas_{'_'.join([x.lower() for x in genes])}_"
+                     f"{smoking_or_nonsmoking}")
+
+
+        all_plots[plot_name, 'gammas'] = plot_landscape(
+            all_gammas[f'{smoking_or_nonsmoking}_plus'][genes],
+            all_samples[f'{smoking_or_nonsmoking}_plus'][genes],
+            mutation_names=genes,
+            positions='left_to_right',
+            scale_arrows=0.25*10**(-6),
+            scale_circle_areas=0.0165,
+            include_n_circles=False,
+            # subplot_label=f"{'smokers' if smoking_or_nonsmoking == 'smoking' else 'non-smokers'}",
+            # subplot_label_ha='right',
+            # subplot_label_va='center',
+            multiplier_figsize=0.75,
+            multiplier_font_size=0.5,
+            plot_name=plot_name)
+
+    for genes in [('TP53', 'EGFR', 'RBM10'),
+                  ('TP53', 'EGFR', 'RB1')]:
+        plot_landscape_3(genes, 'nonsmoking')
+
+    for genes in {('KEAP1', 'STK11', 'APC'),
+                  ('KRAS', 'KEAP1', 'SMARCA4'),
+                  ('KRAS', 'SMARCA4', 'APC'),
+                  ('KRAS', 'STK11', 'RBM10'),
+                  ('TP53', 'ATM', 'GNAS'),
+                  ('TP53', 'BRAF', 'BRCA2'),
+                  ('TP53', 'BRAF', 'SETD2'),
+                  ('TP53', 'EGFR', 'KEAP1'),
+                  ('TP53', 'KEAP1', 'BRCA2'),
+                  ('TP53', 'KEAP1', 'RB1'),
+                  ('TP53', 'KRAS', 'EGFR'),
+                  ('TP53', 'KRAS', 'KEAP1'),
+                  ('TP53', 'RB1', 'BRCA2'),
+                  ('TP53', 'RBM10', 'GNAS')}:
+        plot_landscape_3(genes, 'smoking')
 
     return all_plots
 
@@ -1525,29 +1551,6 @@ def plot_xs_vs_ys_scatter(xs_key,
 if __name__ == "__figures__":
     plot_all()
 
-
-mutations_per_gene = {}
-
-for key in ['smoking', 'nonsmoking']:
-
-    mutations_per_gene[key] = {gene: (samples_per_combination[key].loc[gene].loc['(0, 0, 1)']
-                                      + samples_per_combination[key].loc[gene].loc['(1, 0, 1)']
-                                      + samples_per_combination[key].loc[gene].loc['(0, 1, 1)']
-                                      + samples_per_combination[key].loc[gene].loc['(1, 1, 1)'])
-                                   for gene in samples_per_combination[key].index}
-
-
-    mutations_per_gene[key].update({'TP53':(samples_per_combination[key].loc['EGFR'].loc['(1, 0, 0)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 0, 1)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 0)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 1)']),
-                                    'KRAS':(samples_per_combination[key].loc['EGFR'].loc['(0, 1, 0)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(0, 1, 1)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 0)']
-                                            + samples_per_combination[key].loc['EGFR'].loc['(1, 1, 1)'])})
-
-
-    mutations_per_gene[key] = {k: v for k, v in sorted(mutations_per_gene[key].items(), key=lambda item: item[1])}
 
 
 def plot_figures_poster():
