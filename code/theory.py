@@ -214,10 +214,14 @@ def generate_paths(target):
 
 
 
-def epistatic_comparisons(M):
+def epistatic_comparisons(M, restrict_to_full_genes=True):
     """For a value of `M' (total number of genes compared in the
     model) return all possible epistatic comparisons that include one
     more mutated gene in the somatic genotype.
+
+    If `restrict_to_full_genes' then only consider comparisons where
+    the destination is the somatic genotype that includes all genes
+    mutated (that is, the one that is represented by a M 1s).
 
     """
 
@@ -233,6 +237,9 @@ def epistatic_comparisons(M):
                     comparison_from[place] = 1
                     comparison_to[place] = 1
                     comparison = (tuple(comparison_from), tuple(comparison_to))
-                    comparisons.append(
-                        (jump, comparison))
+                    if restrict_to_full_genes:
+                        if np.sum(comparison_to) == M:
+                            comparisons.append((jump, comparison))
+                    else:
+                        comparisons.append((jump, comparison))
     return comparisons
