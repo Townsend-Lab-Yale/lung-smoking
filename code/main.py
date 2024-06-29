@@ -15,9 +15,12 @@ from count_combinations import updated_compute_samples
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
+from cancer_epistasis import order_genes_by_result_values
 
 from cancer_epistasis import compute_gammas
 from cancer_epistasis import compute_CI_gamma
+
+from cancer_epistasis import epistatic_ratios_2_matrix
 
 from theory import build_S_with_tuples
 from theory import build_S_as_array
@@ -675,107 +678,31 @@ if __name__ == "__main__":
 
 
 
-def epistatic_comparisons(M):
-    """For a value of `M' (total number of genes compared in the
-    model) return all possible epistatic comparisons that include one
-    more mutated gene in the somatic genotype.
-
-    """
-
-    jumps = human_order_single_jumps(M)
-    comparisons = []
-    for jump in jumps:
-        if sum(jump[1]) < M:
-            new_mut_index = list(np.array(jump[1])-np.array(jump[0])).index(1)
-            for place in range(M):
-                if jump[0][place] == 0 and place != new_mut_index:
-                    comparison_from = list(jump[0])
-                    comparison_to = list(jump[1])
-                    comparison_from[place] = 1
-                    comparison_to[place] = 1
-                    comparison = (tuple(comparison_from), tuple(comparison_to))
-                    comparisons.append(
-                        (jump, comparison))
-    return comparisons
-
-
-
-def epistatic_ratios(results, M, results_cis=None):
-
-    """Compute ratios between values of the `results' in a somatic
-    genotype vs another one with one less mutated gene.
-
-
-    :type results: dict
-    :param results: Dictionary with the results for which we will
-        compute epistatic ratios. It should be indexed by tuples
-        of genes that were included in the model. Here we can put
-        either selections (gammas), fluxes (lambdas, but Jeff doesn't
-        like this approach), or later even mutation rates (mus).
-
-    :type M: int
-    :param M: Number of genes to consider in the models
-
-    :type results_cis: dict or None
-    :param results_cis: Dictionary with the results confidence
-       intervals. Results of ratios are set to 1 if they are not
-       statistically significant. Statistical significance is
-       conservatively determined by non overlapping confidence
-       intervals. If None is provided (default), then do consider
-       statistical significance for the ratios.
-
-
-
-    """
-
-    comparisons = epistatic_comparisons(M)
-
-    if results_cis is None:
-        ratios = {genes:{comparison:(
-            results[genes][comparison[1]]/results[genes][comparison[0]])
-                         for comparison in comparisons}
-                  for genes in results.keys() if len(genes) == M}
-    else:
-        ratios = {genes:{comparison:(
-            results[genes][
-                comparison[1]]/results[genes][comparison[0]])
-                         if (max(results_cis[genes][comparison[0]][0],
-                                 results_cis[genes][comparison[1]][0]) >
-                             min(results_cis[genes][comparison[0]][1],
-                                 results_cis[genes][comparison[1]][1]))
-                         else 1
-                         for comparison in comparisons}
-                  for genes in results.keys() if len(genes) == M}
-
-    return ratios
-
-
-def epistatic_ratios_2_matrix(results, results_cis):
-
-    ratios_dic = epistatic_ratios(results, 2, results_cis)
-
-    n = len(gene_list)
-
-    matrix = np.array(n*[n*[np.nan]])
-
-    for genes, values in ratios_dic.items():
-        for comparison, value in values.items():
-            gene_selected = genes[comparison[0][1].index(1)]
-            context_gene = genes[comparison[1][0].index(1)]
-            matrix[gene_list.index(gene_selected)][gene_list.index(context_gene)] = value
-
-    return matrix
 
 
 
 
 
 
+## All this code will be moved eventually to figures
+
+gammas_ = load_results('selections')
+gammas_cis_ = load_results('selections', 'cis')
+lambas_ = load_results('fluxes')
+lambas_cis_ = load_results('fluxes', 'cis')
+mus_ = load_results('mutations')
+gene_list_by_selection = order_genes_by_result_values(gammas_['pan_data'])
 
 
+
+from cancer_epistasis import epistatic_ratios_3rd_gene_effects
+
+import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
+from locations import location_figures
+
 
 
 class MidpointNormalize(mcolors.Normalize):
@@ -796,40 +723,42 @@ class MidpointNormalize(mcolors.Normalize):
         return np.interp(value, x, y, left=-np.inf, right=np.inf)
 
 
-gene_list_by_selection = {gene[0]:max(value.values()) # max doesn't
-                                                      # matter there
-                                                      # is only one
-                                                      # value
-                          for gene,value in gammas_['pan_data'].items()
-                          if len(gene) == 1}
-gene_list_by_selection = sorted(gene_list_by_selection,
-                                key=lambda k: gene_list_by_selection[k],
-                                reverse=True)
-
-
 def plot_epistatic_ratios_2_matrices(results_nonsmoking,
                                      results_nonsmoking_cis,
                                      results_smoking,
                                      results_smoking_cis,
+                                     gene_list_by_selection,
+                                     third_gene_effects=None,
                                      plot_name=None):
+    """Creat a plot with the epistatic ratios.
 
-    matrix1 = epistatic_ratios_2_matrix(results_nonsmoking,
-                                        results_nonsmoking_cis)
-    matrix2 = epistatic_ratios_2_matrix(results_smoking,
-                                        results_smoking_cis)
+    third_gene_effects if provided should be a tuple with third gene
+    effects for nonsmoking and smoking, each element as return by
+    epistatic_ratios_3rd_gene_effects.
 
-    print(matrix1)
-    ## Trick to make diagnoal gray
+    """
+
+    matrix_smoking = epistatic_ratios_2_matrix(results_smoking,
+                                        results_smoking_cis,
+                                        gene_list_by_selection)
+    matrix_nonsmoking = epistatic_ratios_2_matrix(results_nonsmoking,
+                                        results_nonsmoking_cis,
+                                        gene_list_by_selection)
 
 
+
+    if plot_name is None:
+        plot_name = "epistatic_ratios_matrices"
+        if third_gene_effects is not None:
+            plot_name = plot_name + "_with_third_gene_effects"
 
     fig = plt.figure(figsize=(15, 8))
 
     # Axes for the heatmaps, with center space for a colorbar
     gs = gridspec.GridSpec(1, 3,
                            width_ratios=[1, 0.05, 1])
-    ax2 = fig.add_subplot(gs[0])
-    ax1 = fig.add_subplot(gs[2])
+    ax_smoking = fig.add_subplot(gs[0])
+    ax_nonsmoking = fig.add_subplot(gs[2])
 
 
     # Color map
@@ -842,61 +771,81 @@ def plot_epistatic_ratios_2_matrices(results_nonsmoking,
 
     midnorm = MidpointNormalize(vmin=0, vcenter=1, vmax=30)
 
-    pcm1 = ax1.pcolormesh(np.arange(len(gene_list_by_selection)),
-                             np.arange(len(gene_list_by_selection)),
-                             matrix1[::-1],
-                             rasterized=True,
-                             norm=midnorm,
-                             cmap=cmap,
-                             shading='auto')
+    # Pseudocolor plots are the heatmaps (matrices represented by colors)
+    pcm_smoking = ax_smoking.pcolormesh(
+        np.arange(len(gene_list_by_selection)),
+        np.arange(len(gene_list_by_selection)),
+        matrix_smoking[::-1],
+        rasterized=True,
+        norm=midnorm,
+        cmap=cmap,
+        shading='auto')
 
-    pcm2 = ax2.pcolormesh(np.arange(len(gene_list_by_selection)),
-                             np.arange(len(gene_list_by_selection)),
-                             matrix2[::-1],
-                             rasterized=True,
-                             norm=midnorm,
-                             cmap=cmap,
-                             shading='auto')
-
-
-    ax1.set_title("Never-smokers")
-    ax1.set_aspect('equal', adjustable='box')
-
-    ax1.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax1.set_xticklabels(gene_list_by_selection, rotation=90)
-    ax1.set_xlabel("Context (mutated gene in somatic genotype)")
-
-    ax1.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax1.set_yticklabels(gene_list_by_selection[::-1])
-    ax1.set_ylabel("Gene mutation under selection")
-
-    ax1.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
-    ax1.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
-    ax1.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+    pcm_nonsmoking = ax_nonsmoking.pcolormesh(
+        np.arange(len(gene_list_by_selection)),
+        np.arange(len(gene_list_by_selection)),
+        matrix_nonsmoking[::-1],
+        rasterized=True,
+        norm=midnorm,
+        cmap=cmap,
+        shading='auto')
 
 
-    ax2.set_title("Ever smokers")
-    ax2.set_aspect('equal', adjustable='box')
+    ax_smoking.set_title("smokers", fontsize=18)
+    ax_smoking.set_aspect('equal', adjustable='box')
 
-    ax2.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax2.set_xticklabels(gene_list_by_selection, rotation=90)
-    ax2.set_xlabel("Context (mutated gene in somatic genotype)")
+    ax_smoking.set_xticks(np.arange(len(gene_list_by_selection)))
+    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90)
+    ax_smoking.set_xlabel("Context (mutated gene in somatic genotype)")
 
-    ax2.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax2.set_yticklabels(gene_list_by_selection[::-1])
-    ax2.set_ylabel("Gene mutation under selection")
+    ax_smoking.set_yticks(np.arange(len(gene_list_by_selection)))
+    ax_smoking.set_yticklabels(gene_list_by_selection[::-1])
+    ax_smoking.set_ylabel("Gene mutation under selection")
 
-    ax2.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
-    ax2.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
-    ax2.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+    ax_smoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_smoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_smoking.grid(which='minor', color='gray', linestyle='-', linewidth=1)
 
-    ax1.yaxis.set_ticks_position("right")
-    ax1.yaxis.set_label_position("right")
+    if third_gene_effects is not None:
+        for genes, value in third_gene_effects[0].items():
+            x = gene_list_by_selection.index(genes[0])
+            y = gene_list_by_selection[::-1].index(genes[1])
+            xs = [x-0.5, x, x+0.5]
+            ys = [y+0.5, y, y+0.5]
+            ax_nonsmoking.fill(xs, ys, color=pcm_nonsmoking.to_rgba(value), edgecolor='none')
 
+        for genes, value in third_gene_effects[1].items():
+            x = gene_list_by_selection.index(genes[0])
+            y = gene_list_by_selection[::-1].index(genes[1])
+            xs = [x-0.5, x, x+0.5]
+            ys = [y+0.5, y, y+0.5]
+            ax_smoking.fill(xs, ys, color=pcm_smoking.to_rgba(value), edgecolor='none')
+
+
+    ax_nonsmoking.set_title("non-smokers", fontsize=18)
+    ax_nonsmoking.set_aspect('equal', adjustable='box')
+
+    ax_nonsmoking.set_xticks(np.arange(len(gene_list_by_selection)))
+    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90)
+    ax_nonsmoking.set_xlabel("Context (mutated gene in somatic genotype)")
+
+    ax_nonsmoking.set_yticks(np.arange(len(gene_list_by_selection)))
+    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1])
+    ax_nonsmoking.set_ylabel("Gene mutation under selection")
+
+    ax_nonsmoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_nonsmoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_nonsmoking.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+
+    ax_nonsmoking.yaxis.set_ticks_position("right")
+    ax_nonsmoking.yaxis.set_label_position("right")
+
+
+    ## Color bar in the center of the two matrices
 
     cb_ax = fig.add_axes([0.505, 0.22, 0.01, 0.56])  # Adjust these values as needed
 
-    cb = fig.colorbar(pcm2, cax=cb_ax,
+    cb = fig.colorbar(pcm_smoking, cax=cb_ax,
                       orientation='vertical',
                       fraction=0.01,
                       pad=0.1)
@@ -904,15 +853,197 @@ def plot_epistatic_ratios_2_matrices(results_nonsmoking,
     cb.set_label('Epistatic ratio')
     cb.ax.yaxis.set_label_position('left')
 
+
+
     plt.subplots_adjust(wspace=0.13)
 
 
-    # plt.tight_layout()
+    dpi = 200
+    fig.savefig(os.path.join(location_figures,
+                             plot_name),
+                dpi=dpi)
+    plt.close('all')
+
+    return fig
+
+
+
+
+
+
+def plot_epistatic_ratios_2_matrices_poster(results_nonsmoking,
+                                            results_nonsmoking_cis,
+                                            results_smoking,
+                                            results_smoking_cis,
+                                            gene_list_by_selection,
+                                            third_gene_effects=None,
+                                            plot_name=None):
+    """Creat a plot with the epistatic ratios.
+
+    third_gene_effects if provided should be a tuple with third gene
+    effects for nonsmoking and smoking, each element as return by
+    epistatic_ratios_3rd_gene_effects.
+
+    """
+
+    matrix_smoking = epistatic_ratios_2_matrix(results_smoking,
+                                        results_smoking_cis,
+                                        gene_list_by_selection)
+    matrix_nonsmoking = epistatic_ratios_2_matrix(results_nonsmoking,
+                                        results_nonsmoking_cis,
+                                        gene_list_by_selection)
+
+
+
+    if plot_name is None:
+        plot_name = "epistatic_ratios_matrices_poster"
+        if third_gene_effects is not None:
+            plot_name = plot_name + "_with_third_gene_effects"
+
+    fig = plt.figure(figsize=(8, 15))
+
+    # Axes for the heatmaps, with center space for a colorbar
+    gs = gridspec.GridSpec(3, 1,
+                           height_ratios=[1, 0.05, 1])
+    ax_smoking = fig.add_subplot(gs[0])
+    ax_nonsmoking = fig.add_subplot(gs[2])
+
+
+    # Color map
+    cmap = mcolors.LinearSegmentedColormap.from_list(
+        "truncated_seismic_r",
+        plt.cm.seismic_r(np.linspace(0.15, 0.85, 256)))
+    cmap.set_bad(np.array([0.7, 0.7, 0.7, 1]), 1.0) # set to gray nan
+                                                    # values; i.e. the
+                                                    # diagonal
+
+    midnorm = MidpointNormalize(vmin=0, vcenter=1, vmax=30)
+
+    # Pseudocolor plots are the heatmaps (matrices represented by colors)
+    pcm_smoking = ax_smoking.pcolormesh(
+        np.arange(len(gene_list_by_selection)),
+        np.arange(len(gene_list_by_selection)),
+        matrix_smoking[::-1],
+        rasterized=True,
+        norm=midnorm,
+        cmap=cmap,
+        shading='auto')
+
+    pcm_nonsmoking = ax_nonsmoking.pcolormesh(
+        np.arange(len(gene_list_by_selection)),
+        np.arange(len(gene_list_by_selection)),
+        matrix_nonsmoking[::-1],
+        rasterized=True,
+        norm=midnorm,
+        cmap=cmap,
+        shading='auto')
+
+
+    # ax_smoking.set_title("Ever smokers")
+    ax_smoking.set_aspect('equal', adjustable='box')
+
+    ax_smoking.set_xticks(np.arange(len(gene_list_by_selection)))
+    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90)
+    ax_smoking.set_xlabel("Context (mutated gene in somatic genotype)")
+
+    ax_smoking.set_yticks(np.arange(len(gene_list_by_selection)))
+    ax_smoking.set_yticklabels(gene_list_by_selection[::-1])
+    ax_smoking.set_ylabel("Gene mutation under selection")
+
+    ax_smoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_smoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_smoking.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+
+    ax_smoking.xaxis.set_ticks_position("top")
+    ax_smoking.xaxis.set_label_position("top")
+
+    if third_gene_effects is not None:
+
+        for genes, value in third_gene_effects[0].items():
+            x = gene_list_by_selection.index(genes[0])
+            y = gene_list_by_selection[::-1].index(genes[1])
+            xs = [x-0.5, x, x+0.5]
+            ys = [y+0.5, y, y+0.5]
+            ax_nonsmoking.fill(xs, ys, color=pcm_nonsmoking.to_rgba(value), edgecolor='none')
+
+        for genes, value in third_gene_effects[1].items():
+            x = gene_list_by_selection.index(genes[0])
+            y = gene_list_by_selection[::-1].index(genes[1])
+            xs = [x-0.5, x, x+0.5]
+            ys = [y+0.5, y, y+0.5]
+            ax_smoking.fill(xs, ys, color=pcm_smoking.to_rgba(value), edgecolor='none')
+
+
+    # ax_nonsmoking.set_title("Never-smokers")
+    ax_nonsmoking.set_aspect('equal', adjustable='box')
+
+    ax_nonsmoking.set_xticks(np.arange(len(gene_list_by_selection)))
+    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90)
+    ax_nonsmoking.set_xlabel("Context (mutated gene in somatic genotype)")
+
+    ax_nonsmoking.set_yticks(np.arange(len(gene_list_by_selection)))
+    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1])
+    ax_nonsmoking.set_ylabel("Gene mutation under selection")
+
+    ax_nonsmoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_nonsmoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
+    ax_nonsmoking.grid(which='minor', color='gray', linestyle='-', linewidth=1)
+
+    # ax_nonsmoking.yaxis.set_ticks_position("right")
+    # ax_nonsmoking.yaxis.set_label_position("right")
+
+
+    ## Color bar in the center of the two matrices
+
+    cb_ax = fig.add_axes([0.1, 0.50, 0.8, 0.01])  # Adjust these values as needed
+
+    cb = fig.colorbar(pcm_smoking, cax=cb_ax,
+                      orientation='horizontal',
+                      fraction=0.01,
+                      pad=0.1)
+    cb.set_ticks([0, 1, 10, 20, 30])
+    cb.set_label('Epistatic ratio')
+    cb.ax.yaxis.set_label_position('left')
+
+
+
+    plt.subplots_adjust(wspace=0.13)
+
 
     dpi = 200
-    if plot_name is None:
-        plot_name = "epistatic_ratios_matrices"
-        fig.savefig(os.path.join(location_figures,
-                                 plot_name),
-                    dpi=dpi)
-        plt.close('all')
+    fig.savefig(os.path.join(location_figures,
+                             plot_name),
+                dpi=dpi)
+    plt.close('all')
+
+    return fig
+
+
+
+
+# third_gene_effects = (
+#     epistatic_ratios_3rd_gene_effects(gammas_['nonsmoking_plus'], gammas_cis_['nonsmoking_plus']),
+#     epistatic_ratios_3rd_gene_effects(gammas_['smoking_plus'], gammas_cis_['smoking_plus']))
+
+
+
+# plot_epistatic_ratios_2_matrices(gammas_['nonsmoking_plus'],
+#                                  gammas_cis_['nonsmoking_plus'],
+#                                  gammas_['smoking_plus'],
+#                                  gammas_cis_['smoking_plus'],
+#                                  gene_list_by_selection)
+
+# plot_epistatic_ratios_2_matrices(gammas_['nonsmoking_plus'],
+#                                  gammas_cis_['nonsmoking_plus'],
+#                                  gammas_['smoking_plus'],
+#                                  gammas_cis_['smoking_plus'],
+#                                  gene_list_by_selection,
+#                                  third_gene_effects=third_gene_effects)
+
+
+# plot_epistatic_ratios_2_matrices_poster(gammas_['nonsmoking_plus'],
+#                                         gammas_cis_['nonsmoking_plus'],
+#                                         gammas_['smoking_plus'],
+#                                         gammas_cis_['smoking_plus'],
+#                                         gene_list_by_selection,
+#                                         third_gene_effects=third_gene_effects)

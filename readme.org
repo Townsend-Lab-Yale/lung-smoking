@@ -324,3 +324,17 @@ is true
 * Possible reviewers
 
 Teresa Landi (suggested by Jeff on the slack channel [2022-08-22 Mon])
+
+* KRAS can be bunched together
+
+"Comparing size distributions of tumors of each tumor sup- pressor
+genotype revealed consistent effects between KRAS G12C- and KRAS
+G12D-driven lung tumors." Oncogenic context shapes the ﬁtness
+landscape of tumor suppression
+https://www.nature.com/articles/s41467-023-42156-y
+
+Compare selection coefficients with graph that contains KRAS + TSGs
+(Figure 2A)
+
+Check genes that interact differently with EGFR and BRAF and do
+pairwise epistasis (maybe + TP53) to compare if we get the same results.
