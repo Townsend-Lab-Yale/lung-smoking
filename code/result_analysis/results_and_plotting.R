@@ -21,7 +21,6 @@ location_variant_output = glue("variant_results/")
 location_cesR_output = glue("cesR_results/")
 
 # M = 1
-
 load_M1_results = function(mu_method){
     if(mu_method == "cesR"){location_output = location_cesR_output}
     else if (mu_method == "variant") {location_output = location_variant_output}
@@ -118,6 +117,7 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
     return(plot)
 }
 
+# M = 1 GxE effects
 get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
     if(include_panel_data){keys = c("smoking_plus","nonsmoking_plus")}
     else{keys = c("smoking","nonsmoking")}
@@ -245,9 +245,11 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
     return(list(df = comparison_df, plot = combined_plot))
 }
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # M = 3
 
+# Load results
 find_mutated_gene = function(mutation_indices){
     numeric_indices = as.integer(stringr::str_extract_all(mutation_indices,"\\d")[[1]])
     len = length(numeric_indices)
@@ -310,8 +312,11 @@ load_M3_results = function(mu_method, lower_bound = 1e-2){
     return(gammas_df)
 }
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 # Test for epistatic interactions from WT genotype
 # will return info on all interactions, significant or not
+# Only used for epistasis heatmaps and networks
 
 calc_WT_epistasis_ratios = function(data){
     WT_row = data[from_gt == "WT"]
@@ -351,80 +356,10 @@ calc_WT_epistasis_ratios_for_all_data = function(gammas_df){
     return(all_epistatic_comparisons)
 }
 
-# checks for epistatic interactions from any genotype, not just WT
-# only returns significant interactions
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-check_ci_overlap = function(data, test_gge) {
-  # order from low to high
-  #   this minimizes the number of comparisons that need to be checked
-  #   since if a row's upper bound is less than the next upper bound,
-  #   then the it is impossible for the lower bound of the row to be greater
-  #   than the next row's upper bound.
-  data = data[order(data$gamma_ci_high), ]
-  
-  non_overlaps = data.table()
-  
-  n = nrow(data)
-  
-  # iterate through each row, checking if the next rows' lower 
-  # bounds are greater than the current row's upper bound
-  for (i in 1:(n - 1)) {
-    var1 <- data[i]
-    candidates <- data[(i + 1):n, ]
-    candidates <- candidates[candidates$gamma_ci_low > var1$gamma_ci_high, ]
-    
-    if(nrow(candidates) > 0) {
-      for(j in 1:nrow(candidates)) {
-        row = data.table(lower = var1$from, 
-                        upper = candidates$from[j], 
-                        ratio = candidates$gamma_mle[j]/var1$gamma_mle,
-                        lower_gt = var1$from_gt, 
-                        upper_gt = candidates$from_gt[j],
-                        under_neg_sel = var1$gamma_mle < 1)
-        if(test_gge) {
-            row$lower_key = var1$key
-            row$upper_key = candidates$key[j]
-        }
-        non_overlaps = rbind(non_overlaps, row)
-      }
-    }
-  }
-  if(nrow(non_overlaps) > 0) {
-    non_overlaps$mutated_gene = var1$mutated_gene
-    non_overlaps$gene_set = var1$gene_set
-  }
-
-  return(non_overlaps)
-}
-
-get_epistasis_results = function(gammas_df, test_gge = FALSE){
-    gammas_df_list = 
-        gammas_df %>% 
-        select(key, gene_set, mutated_gene, from, from_gt, gamma_mle, gamma_ci_low, gamma_ci_high) %>%
-        split(gammas_df %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
-
-    if(test_gge){
-        gammas_df_list = gammas_df_list[unlist(lapply(gammas_df_list, function(df) nrow(df) == 8))]
-    }
-
-    epistasis_results = rbindlist(lapply(gammas_df_list, function(df) check_ci_overlap(df, test_gge) ))
-
-    return(epistasis_results)
-}
-
-summarize_epistasis_results = function(epistasis_results, exclude_synergy_with_TP53 = TRUE){
-    summarized_results = epistasis_results %>%
-        group_by(lower_gt, upper_gt, mutated_gene) %>%
-        summarize(median_ratio = round(median(ratio),3),
-                sd_ratio = round(sqrt(var(ratio)),3), 
-                rel_sd = round(sqrt(var(ratio))/median(ratio),3), 
-                n = n()) %>%
-        ungroup()
-    
-    return(summarized_results)
-}
-
-# Plot epistasic interactions
+# Scatterplot representation of epistatic interactions, showing selection from one genotype on one axis 
+# and selection from the other genotype on the other axis
 
 plot_epistatic_interaction = function(mg, gt1, gt2, df, condensed = FALSE, edge_color="black"){
     gt1 = gt1[order(gt1)]
@@ -549,14 +484,21 @@ plot_all_epistatic_interactions_for_one_gene = function(mg, gt_base, df, condens
     return(p)
 }
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# G x G (Pairwise)
+## Both pairwise and higher-order epistasis analyses begin with getting the interaction dataframe
+
+# Welch's t-test for whether epistatic interactions are significant, assuming normality of 
+# scaled selection coefficient estimates
 epistasis_t_test = function(wt_gamma_mle, mut_gamma_mle, wt_gamma_ci_low, wt_gamma_ci_high, mut_gamma_ci_low, mut_gamma_ci_high, wt_n, mut_n){
     # Assigning standard deviation values based on direction of comparison due to asymmetric bounds
     if(mut_gamma_mle > wt_gamma_mle){
-        mut_sd = mut_gamma_mle - mut_gamma_ci_low
-        wt_sd = wt_gamma_ci_high - wt_gamma_mle
+        mut_sd = (mut_gamma_mle - mut_gamma_ci_low)/qnorm(0.975)
+        wt_sd = (wt_gamma_ci_high - wt_gamma_mle)/qnorm(0.975)
     } else {
-        mut_sd = mut_gamma_ci_high - mut_gamma_mle
-        wt_sd = wt_gamma_mle - wt_gamma_ci_low}
+        mut_sd = (mut_gamma_ci_high - mut_gamma_mle)/qnorm(0.975)
+        wt_sd = (wt_gamma_mle - wt_gamma_ci_low)/qnorm(0.975)}
     
     return(t_test(wt_gamma_mle, mut_gamma_mle, wt_sd, mut_sd, wt_n, mut_n))
 }
@@ -627,6 +569,8 @@ get_interaction_df = function(data){
                                     genes[!(genes %in% c(str_split(epistatic_gt,'_')[[1]], mutated_gene))]})) %>% ungroup()                                
     return(interaction_df)
 }
+
+# Plotting selection of synergistic and/or antagonistic pairwise interactions
 
 process_interaction_df = function(df, interactions_to_plot=NULL, n_interactions=10, synergy_or_antagonism = "both", include_higher_order=FALSE, spread=2/3){
     interaction_df = df
@@ -717,6 +661,8 @@ plot_interactions = function(df, interactions_to_plot=NULL, n_interactions=10, s
     plot_interactions_from_df(processed_interaction_df, custom_order, log_scale, title, add_annotations, minimal_labels)
 }
 
+# Plotting multiple comparisons of pairwise epistatic interactions between two environments
+
 plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labels=c("Environment 1","Environment 2"), log_scale=FALSE,spread=2/3, add_annotations=TRUE, minimal_labels=TRUE){
     env1_df = env1_df %>% filter(tested_combo %in% interactions_to_plot)
     env2_df = env2_df %>% filter(tested_combo %in% interactions_to_plot)
@@ -806,6 +752,7 @@ plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labe
     aplot::plot_list(env2_plot, env1_plot, env1_legend, env2_legend, nrow=2, heights = c(1,0.05))
 }
 
+# Plotting singular comparisons of pairwise epistasis between two environments
 
 plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
     smoking_df %>% bind_rows(nonsmoking_df, .id="key") %>% filter(tested_combo == paste0(gt,"_",mg)) %>%
@@ -839,63 +786,115 @@ plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
     }
 }
 
-create_plotting_df = function(mg, gt, df, spread=0.8){
-    tmp = df %>% 
-        filter(str_count(tested_combo,"_")>1) %>% # 2 genes to third
-        filter(mutated_gene == mg) %>%
-        filter(str_detect(epistatic_gt, gt)) %>%
-        pull(tested_combo)
-    
-    if(length(tmp)==0){return(data.frame())}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    return(
-        df %>%
-        filter(tested_combo %in% tmp, epistatic_gt != "WT") %>%
+# G x G x G
+
+find_extra_effects = function(mg, gt, df, spread=0.8){
+    if(df %>% filter(mutated_gene == mg, str_detect(epistatic_gt, gt)) %>% nrow > 0){
+        return(
+        df %>% 
+        filter(mutated_gene == mg, str_detect(epistatic_gt, gt)) %>%
+        group_by(gene_set) %>%
+        mutate(extra_effect_strict = max(gamma_ci_low) > min(gamma_ci_high)) %>%
+        filter(str_detect(epistatic_gt,"_")) %>%
+        
         mutate(pairwise_combo = paste0(mg,' [',gt,']')) %>%
         arrange(gene_set) %>%
         group_by(pairwise_combo) %>%
         mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE), 
                 label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.125,nudge_dist-0.125)) %>%
-        mutate(genes_to_label = gsub("_","",gsub(gt,"",epistatic_gt)))
-    )
+        mutate(genes_to_label = gsub("_","",gsub(gt,"",epistatic_gt))))
+    }
 }
 
-find_extra_effects = function(data){
-    pairwise_row = data %>% filter(group == "single")
-    extra_gene_rows = data %>% filter(group == "double")
-
-    extra_gene_rows = 
-        extra_gene_rows %>%
-        mutate(difference_from_pairwise = gamma_mle - pairwise_row$gamma_mle,
-                ratio_to_pairwise = gamma_mle/pairwise_row$gamma_mle, 
-                # confidence interval for double mutation does not overlap with MLE for pairwise interaction
-                extra_effect = gamma_ci_high < pairwise_row$gamma_mle |
-                                gamma_ci_low > pairwise_row$gamma_mle,
-                extra_effect_strict = ifelse(extra_effect, (gamma_ci_high < pairwise_row$gamma_ci_low | gamma_ci_low > pairwise_row$gamma_ci_high), FALSE),
-                signif = any(signif,extra_effect))
-    
-    return(data %>% filter(group != "double") %>% bind_rows(extra_gene_rows))
-}
-
+# @param epistatic_pairs: pair of genes in the form of [prior mutation, subsequent mutation]
+#                           additive and higher-order interactions will be evaluated against
+#                           the pairwise interactions between the two genes of the pair
 get_multi_gene_effects = function(epistatic_pairs, M3_df, M2_df){
     mutant_genes = str_split_i(epistatic_pairs,'_',2)
     epi_genes = str_split_i(epistatic_pairs,'_',1)
 
     plotting_df = rbindlist(lapply(1:length(epistatic_pairs), 
-                    function(i){create_plotting_df(mutant_genes[i], epi_genes[i], M3_df)}))
+                    function(i){find_extra_effects(mutant_genes[i], epi_genes[i], M3_df)}))
 
     plotting_df = plotting_df %>%
         bind_rows(M2_df %>% filter(tested_combo %in% epistatic_pairs) %>% mutate(pairwise_combo = combo_name, nudge_dist = 0)) %>%
         mutate(group = ifelse(epistatic_gt=="WT","WT", ifelse(str_detect(epistatic_gt, "_"), "double","single"))) %>%
         arrange(pairwise_combo)
 
-    gene_set_list = split(plotting_df, plotting_df$pairwise_combo)
-    plotting_df = rbindlist(lapply(gene_set_list, find_extra_effects))
-
     return(plotting_df)
 }
 
+
+
+# create_plotting_df = function(mg, gt, df, spread=0.8){
+#     # tmp is a list of all two genes to third combinations where the mutated gene is the third
+#     #   and the pairwise interactor is in the initial two
+#     tmp = df %>% 
+#         filter(str_count(tested_combo,"_")>1) %>% # two genes to third (110 -> 111)
+#         filter(mutated_gene == mg) %>%
+#         filter(str_detect(epistatic_gt, gt)) %>%
+#         pull(tested_combo)
+    
+#     if(length(tmp)==0){return(data.frame())}
+
+#     # returns df of only results from two genes to third
+#     return(
+#         df %>%
+#         filter(tested_combo %in% tmp, epistatic_gt != "WT") %>%
+#         mutate(pairwise_combo = paste0(mg,' [',gt,']')) %>%
+#         arrange(gene_set) %>%
+#         group_by(pairwise_combo) %>%
+#         mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE), 
+#                 label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.125,nudge_dist-0.125)) %>%
+#         mutate(genes_to_label = gsub("_","",gsub(gt,"",epistatic_gt)))
+#     )
+# }
+
+# find_extra_effects = function(data){
+#     pairwise_row = data %>% filter(group == "single")
+#     extra_gene_rows = data %>% filter(group == "double")
+
+#     extra_gene_rows = 
+#         extra_gene_rows %>%
+#         mutate(difference_from_pairwise = gamma_mle - pairwise_row$gamma_mle,
+#                 ratio_to_pairwise = gamma_mle/pairwise_row$gamma_mle, 
+#                 # confidence interval for double mutation does not overlap with MLE for pairwise interaction
+#                 extra_effect = gamma_ci_high < pairwise_row$gamma_mle |
+#                                 gamma_ci_low > pairwise_row$gamma_mle,
+#                 extra_effect_strict = gamma_ci_high < pairwise_row$gamma_ci_low | gamma_ci_low > pairwise_row$gamma_ci_high,
+#                 signif = any(signif,extra_effect_strict))
+    
+#     return(data %>% filter(group != "double") %>% bind_rows(extra_gene_rows))
+# }
+
+# # @param epistatic_pairs: pair of genes in the form of [prior mutation, subsequent mutation]
+# #                           additive and higher-order interactions will be evaluated against
+# #                           the pairwise interactions between the two genes of the pair
+# get_multi_gene_effects = function(epistatic_pairs, M3_df, M2_df){
+#     mutant_genes = str_split_i(epistatic_pairs,'_',2)
+#     epi_genes = str_split_i(epistatic_pairs,'_',1)
+
+#     plotting_df = rbindlist(lapply(1:length(epistatic_pairs), 
+#                     function(i){create_plotting_df(mutant_genes[i], epi_genes[i], M3_df)}))
+
+#     plotting_df = plotting_df %>%
+#         bind_rows(M2_df %>% filter(tested_combo %in% epistatic_pairs) %>% mutate(pairwise_combo = combo_name, nudge_dist = 0)) %>%
+#         mutate(group = ifelse(epistatic_gt=="WT","WT", ifelse(str_detect(epistatic_gt, "_"), "double","single"))) %>%
+#         arrange(pairwise_combo)
+
+#     gene_set_list = split(plotting_df, plotting_df$pairwise_combo)
+#     # currently find extra effects is not working becuase is comparing M=3 results to M=2 results
+#     plotting_df = rbindlist(lapply(gene_set_list, find_extra_effects))
+
+#     return(plotting_df)
+# }
+
+# Plot additive and higher-order epistatic interactions
+# The from-WT and pairwise points come from the M=2 model, which represents an average of all M=3 models
 plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
+# TODO: add option to plot only interactions that have an extra effect
 
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.1)
     fill_palette = c("WT (no epistasis)" = hue_pal()(3)[1], "Pairwise" = hue_pal()(3)[3], "Higher-order" = hue_pal()(3)[2])
@@ -908,9 +907,9 @@ plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
 
     df = df %>%
             mutate(group_label = ifelse(group == "WT", "WT (no epistasis)", ifelse(group == "single", "Pairwise", "Higher-order")),
-                    extra_effect = ifelse(is.na(extra_effect), FALSE, extra_effect),
+                    #extra_effect = ifelse(is.na(extra_effect), FALSE, extra_effect),
                     extra_effect_strict = ifelse(is.na(extra_effect_strict), FALSE, extra_effect_strict)) %>%
-            rowwise() %>% mutate(show_effect = ifelse(strict, extra_effect_strict, extra_effect)) %>% ungroup() 
+            rowwise() %>% mutate(show_effect = extra_effect_strict) %>% ungroup()
     
     plot = 
         df %>%
@@ -923,7 +922,7 @@ plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
                                         aes(label=genes_to_label), 
                                         position = position_nudge(df %>% filter(group=="double", show_effect) %>% pull(label_nudge_dist)),
                                         check_overlap = TRUE) +
-            labs(x="Epistatic pair\nMutated gene [genetic context]", y="Scaled selection coefficient") +
+            labs(x="Mutated gene [somatic genotype]", y="Scaled selection coefficient") +
             scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
             scale_fill_manual(values = fill_palette, name="Genetic Context") +
             scale_size_manual(values = size_palette, name="Genetic Context") +
@@ -933,7 +932,6 @@ plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
             theme(plot.title = element_text(size = 24, hjust=0.5),
                         axis.title = element_text(size = 20),
                         axis.text = element_text(size = 16),
-                        axis.ticks.x = element_blank(),
                         legend.position = "right",#c(0.6,0.2),
                         # legend.direction="horizontal",
                         legend.key.size = unit(1.5, 'cm'),
@@ -943,23 +941,6 @@ plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
             coord_flip()
     
     return(plot)
-}
-
-# With modification from https://groups.google.com/g/ggplot2/c/a_xhMoQyxZ4
-fancy_scientific = function(l) {
-    l = format(l, scientific = TRUE)
-    l = gsub("^0(.*)e(.*)", "0", l) # Just show 0 when is 0e...
-    l = gsub("^(.*)e", "'\\1'e", l)
-    l = gsub("\\+","",l) # modification to remove unnecessary pluses
-    l = gsub("e", "%*%10^", l)
-    return(parse(text=l))
-}
-
-log_labels = function(l) {
-    l = format(l, scientific = TRUE)
-    l = gsub("\\+","",l)
-    l = gsub("^1e", "10^", l)
-    return(parse(text=l))
 }
 
 # plot_interactions = function(df, interactions_to_plot=NULL, custom_order=FALSE, log_scale=FALSE,spread=2/3,title="default", add_annotations=TRUE, minimal_labels=TRUE){
@@ -1038,6 +1019,23 @@ log_labels = function(l) {
 
 #     return(plot)
 # }
+
+# With modification from https://groups.google.com/g/ggplot2/c/a_xhMoQyxZ4
+fancy_scientific = function(l) {
+    l = format(l, scientific = TRUE)
+    l = gsub("^0(.*)e(.*)", "0", l) # Just show 0 when is 0e...
+    l = gsub("^(.*)e", "'\\1'e", l)
+    l = gsub("\\+","",l) # modification to remove unnecessary pluses
+    l = gsub("e", "%*%10^", l)
+    return(parse(text=l))
+}
+
+log_labels = function(l) {
+    l = format(l, scientific = TRUE)
+    l = gsub("\\+","",l)
+    l = gsub("^1e", "10^", l)
+    return(parse(text=l))
+}
 
 add_default_theme = function(p){
     p = p + 
@@ -1131,3 +1129,78 @@ load_M2_results = function(mu_method, lower_bound = 1e-2){
 
     return(gammas_df)
 }
+
+# Old code, no longer used, expect in older analysis files
+
+# # checks for epistatic interactions from any genotype, not just WT
+# # only returns significant interactions
+
+# check_ci_overlap = function(data, test_gge) {
+#   # order from low to high
+#   #   this minimizes the number of comparisons that need to be checked
+#   #   since if a row's upper bound is less than the next upper bound,
+#   #   then the it is impossible for the lower bound of the row to be greater
+#   #   than the next row's upper bound.
+#   data = data[order(data$gamma_ci_high), ]
+  
+#   non_overlaps = data.table()
+  
+#   n = nrow(data)
+  
+#   # iterate through each row, checking if the next rows' lower 
+#   # bounds are greater than the current row's upper bound
+#   for (i in 1:(n - 1)) {
+#     var1 <- data[i]
+#     candidates <- data[(i + 1):n, ]
+#     candidates <- candidates[candidates$gamma_ci_low > var1$gamma_ci_high, ]
+    
+#     if(nrow(candidates) > 0) {
+#       for(j in 1:nrow(candidates)) {
+#         row = data.table(lower = var1$from, 
+#                         upper = candidates$from[j], 
+#                         ratio = candidates$gamma_mle[j]/var1$gamma_mle,
+#                         lower_gt = var1$from_gt, 
+#                         upper_gt = candidates$from_gt[j],
+#                         under_neg_sel = var1$gamma_mle < 1)
+#         if(test_gge) {
+#             row$lower_key = var1$key
+#             row$upper_key = candidates$key[j]
+#         }
+#         non_overlaps = rbind(non_overlaps, row)
+#       }
+#     }
+#   }
+#   if(nrow(non_overlaps) > 0) {
+#     non_overlaps$mutated_gene = var1$mutated_gene
+#     non_overlaps$gene_set = var1$gene_set
+#   }
+
+#   return(non_overlaps)
+# }
+
+# get_epistasis_results = function(gammas_df, test_gge = FALSE){
+#     gammas_df_list = 
+#         gammas_df %>% 
+#         select(key, gene_set, mutated_gene, from, from_gt, gamma_mle, gamma_ci_low, gamma_ci_high) %>%
+#         split(gammas_df %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
+
+#     if(test_gge){
+#         gammas_df_list = gammas_df_list[unlist(lapply(gammas_df_list, function(df) nrow(df) == 8))]
+#     }
+
+#     epistasis_results = rbindlist(lapply(gammas_df_list, function(df) check_ci_overlap(df, test_gge) ))
+
+#     return(epistasis_results)
+# }
+
+# summarize_epistasis_results = function(epistasis_results, exclude_synergy_with_TP53 = TRUE){
+#     summarized_results = epistasis_results %>%
+#         group_by(lower_gt, upper_gt, mutated_gene) %>%
+#         summarize(median_ratio = round(median(ratio),3),
+#                 sd_ratio = round(sqrt(var(ratio)),3), 
+#                 rel_sd = round(sqrt(var(ratio))/median(ratio),3), 
+#                 n = n()) %>%
+#         ungroup()
+    
+#     return(summarized_results)
+# }
