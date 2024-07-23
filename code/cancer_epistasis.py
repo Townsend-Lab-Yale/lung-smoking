@@ -271,6 +271,217 @@ def estimate_lambdas(samples, upper_bound_prior=3, draws=10000,
     return results
 
 
+## Comparison of differences between two groups
+
+def p_value_same_lambda_xy(samples1,
+                           samples2,
+                           xy,
+                           lambdas1_h1=None,
+                           lambdas2_h1=None,
+                           upper_bound_priors1=1,
+                           upper_bound_priors2=1,
+                           upper_bound_prior_shared=1,
+                           verbose=False,
+                           kwargs=None):
+    """Estimate the probability of a null hypothesis of lambdas_xy
+    being the same when estimating the parameters of two models
+    informed by samples1 and samples2.
+
+    :type samples1: numpy.ndarray
+    :param samples1: One dimensional array with the first set of
+        samples to compare. It should be of the same size as S, and
+        have in each entry the number of individuals that have the
+        respective mutation combination.
+
+    :type samples2: numpy.ndarray
+    :param samples2: One dimensional array with the second set of
+        samples to compare. It should be of the same size as
+        `samples1'.
+
+    :type xy: tuple
+    :param xy: A tuple with the somatic genotype from and to that will
+        make the comparison. Each element of the tuple should be tuple
+        of 0s and 1s of size M, where the samples are divided into
+        combinations of mutations in M genes (or categories).
+
+    :type lambdas1_h1: numpy.ndarray or NoneType
+    :param lambdas1_h1: Estimates of the fluxes informed by `samples1'
+        under H_1. It is optional, otherwise they are computed.
+
+    :type lambdas2_h1: numpy.ndarray or NoneType
+    :param lambdas2_h1: Estimates of the fluxes informed by `samples2'
+        under H_1. It is optional, otherwise they are computed.
+
+    :type upper_bound_priors1: float
+    :param upper_bound_priors1: Upper bound for the uniform prior used
+        for each lambda for the model informed by samples1.
+
+    :type upper_bound_priors2: float
+    :param upper_bound_priors2: Upper bound for the uniform prior used
+        for each lambda for the model informed by samples2.
+
+    :type upper_bound_shared: float
+    :param upper_bound_shared: Upper bound for the uniform prior used
+        for the shared lambda.
+
+    :type kwargs: dict
+    :param kwargs: Dictionary of keyword arguments to pass to the pymc3
+        find_MAP function.
+
+    :type verbose: bool
+    :param verbose: If True, print information on the lambda and
+        loglikehood estimates under H_0 and H_1
+
+    :rtype: numpy.float64
+    :return: p-value of the null hypothesis.
+
+    """
+
+    if len(samples1) != len(samples2):
+        raise ValueError("The lengths of samples1 and samples2 must be equal.")
+
+    M = int(np.log2(len(samples1))) # 2^M is the number mutation combinations
+    S = build_S_as_array(M)
+
+    positive_lambdas_indices =  obtain_pos_lambdas_indices(S)
+    ordered_pos_lambdas = order_pos_lambdas(S)
+    xy_index = ordered_pos_lambdas.index(xy)
+
+    number_samples1 = int(np.sum(samples1))
+    number_samples2 = int(np.sum(samples2))
+
+
+    ## Our H_0 is that the specific lambda_xy is equal for both
+    ## models. So in the likelihood with H0 is the product of the
+    ## likelihoods of the models with samples1 aand samples2 but
+    ## fixing a shared lambda. First, we compute the lambdas that
+    ## would maximize such a likelihood
+
+
+    if M == 1:
+        ## then we have a close formula for the result, and only one
+        ## lambda, the shared one
+        results_map_h0 = {'lambda_shared':np.array(
+            [np.log(1+(samples1[1]+samples2[1])/(samples1[0]+samples2[0]))])}
+
+        lambdas1_h0 = results_map_h0['lambda_shared']
+        lambdas2_h0 = results_map_h0['lambda_shared']
+
+
+    else:
+        ## when M > 1 then there is one shared lambda and other
+        ## lambdas that are model specific
+
+        number_positive_lambdas = int(np.sum(positive_lambdas_indices)-1)
+
+        with pm.Model():
+
+            ## We set an uninformative prior for the lambdas:
+            positive_lambdas1 = pm.Uniform(
+                name="lambdas1",
+                lower=0,
+                upper=upper_bound_priors1,
+                shape=number_positive_lambdas)
+
+            positive_lambdas2 = pm.Uniform(
+                name="lambdas2",
+                lower=0,
+                upper=upper_bound_priors2,
+                shape=number_positive_lambdas)
+
+            lambda_shared = pm.Uniform(
+                name="lambda_shared",
+                lower=0,
+                upper=upper_bound_prior_shared,
+                shape=1)
+
+            concatenated_lambdas1 = tt.concatenate([
+                positive_lambdas1[:xy_index],
+                lambda_shared,
+                positive_lambdas1[xy_index:]])
+
+            concatenated_lambdas2 = tt.concatenate([
+                positive_lambdas2[:xy_index],
+                lambda_shared,
+                positive_lambdas2[xy_index:]])
+
+            Ps1 = compute_Ps_at_T_tens(concatenated_lambdas1)
+            Ps2 = compute_Ps_at_T_tens(concatenated_lambdas2)
+
+            likelihood1 = pm.Multinomial(name="samples1",
+                                         p=Ps1,
+                                         n=number_samples1,
+                                         observed=samples1)
+            likelihood2 = pm.Multinomial(name="samples2",
+                                         p=Ps2,
+                                         n=number_samples2,
+                                         observed=samples2)
+            if kwargs is None:
+                kwargs = {}
+
+            results_map_h0 = pm.find_MAP(**kwargs)
+
+        lambdas1_h0 = np.concatenate([
+            results_map_h0['lambdas1'][:xy_index],
+            results_map_h0['lambda_shared'],
+            results_map_h0['lambdas1'][xy_index:]])
+
+
+        lambdas2_h0 = np.concatenate([
+            results_map_h0['lambdas2'][:xy_index],
+            results_map_h0['lambda_shared'],
+            results_map_h0['lambdas2'][xy_index:]])
+
+    if verbose:
+        print(f"lambdas1 under H_0: {lambdas1_h0}")
+        print(f"lambdas2 under H_0: {lambdas2_h0}")
+
+
+    ## Now that we have the lambdas that maximize the likelihood under
+    ## H0, we compute the actual likelihood
+
+    logp1_h0 = multinomial.logpmf(samples1, number_samples1, compute_Ps_at_T(lambdas1_h0))
+    logp2_h0 = multinomial.logpmf(samples2, number_samples2, compute_Ps_at_T(lambdas2_h0))
+    logp_h0 = logp1_h0 + logp2_h0
+
+    if verbose:
+        print(f"loglikelihood for samples1 under h0: {logp1_h0}")
+        print(f"loglikelihood for samples2 under h0: {logp2_h0}")
+
+
+    ## Our H_1 is that the lambda_xy is different, which would come
+    ## from separate MLE calculation with samples1 and samples2
+
+    ## If lambdas1 or lambdas2 are not provided we need to compute them
+    if lambdas1_h1 is None:
+        lambdas1_h1 = estimate_lambdas(samples1, draws=1,
+                                       ## this will fail if bounds are
+                                       ## set specifically for each lambda
+                                       upper_bound_prior=upper_bound_priors1)['lambdas']
+        if verbose:
+            print(f"lambdas1 under H_1: {lambdas1_h1}")
+
+    if lambdas2_h1 is None:
+        lambdas2_h1 = estimate_lambdas(samples2, draws=1,
+                                       ## this will fail if bounds are
+                                       ## set specifically for each lambda
+                                       upper_bound_prior=upper_bound_priors2)['lambdas']
+        if verbose:
+            print(f"lambdas2 under H_1: {lambdas2_h1}")
+
+    logp1_h1 = multinomial.logpmf(samples1, number_samples1, compute_Ps_at_T(lambdas1_h1))
+    logp2_h1 = multinomial.logpmf(samples2, number_samples2, compute_Ps_at_T(lambdas2_h1))
+    logp_h1 = logp1_h1 + logp2_h1
+    if verbose:
+        print(f"loglikehood for samples1 under h1: {logp1_h1}")
+        print(f"loglikehood for samples2 under h1: {logp2_h1}")
+
+    ## Now we compute the probability of H0 using Wilk's theorem
+    D = 2*(logp_h1-logp_h0)
+    return chi2.pdf(D, 1)
+
+
+
 def convert_samples_to_dict(samples):
     """Convert a samples array to a dictionary.
 
