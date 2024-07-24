@@ -34,21 +34,6 @@ and follow the instructions.
   be assuming that NA means no smoking, i.e., that there was
   information for smoking for all participants
 
-* Genes to take into account for M>4 analysis
-
-From Michael Klein's CRSO
-(https://www.embopress.org/doi/full/10.15252/msb.20209810), these
-pairs have interactions:
-
-- CDKN2A + TP53
-- RB1 + TP53
-- KRAS + TP53
-- CDKN2A + EGFR
-- BRAF + TP53
-- NF1 + TP53
-
-So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
-
 * Sources of genes in consideration
 
 - [[https://www.sciencedirect.com/science/article/pii/S1470204515000777#][Genomic alterations in lung adenocarcinoma]]
@@ -56,69 +41,6 @@ So we should consider CDKN2A, TP53, RB1, KRAS, EGFR, BRAF and NF1.
 - [[https://www.nature.com/articles/nature13385][Comprehensive molecular profiling of lung adenocarcinoma]]
 - [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
 - [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
-
-* Genes for which the 1 bound did not work and we had to modify it
-
-Pan-cancer:
-
-HRAS
-VHL
-TRAF2
-BBC3
-BCL2L1
-CARM1
-CBFB
-CD276
-CDKN2B
-EIF4E
-FOXO1
-GNA11
-GNAQ
-GPS2
-GSK3B
-JUN
-MEF2B
-MSI2
-MST1
-PIM1
-SDHB
-SDHC
-SDHD
-SMAD3
-SUZ12
-
-
-Smoking:
-
-AXL
-LRATD2
-RYK
-MAF1
-DDX47
-TCF7
-NAA60
-CDK19
-EXOSC9
-CCNI
-TMEM65
-DHRS9
-TCIRG1
-TXNRD3
-MAP1S
-WWTR1
-BBC3
-CDK8
-HLA
-PDPK1
-RAB35
-RAC1
-RHOA
-SESN3
-ELOC
-TMPRSS2
-VEGFA
-
-Non-smoking: None
 
 * TODO [0/3] Before publishing                                      :waiting:
 
@@ -132,144 +54,12 @@ Non-smoking: None
 - [ ] Check with Stephen status of package lift_coords and change it
   from the requirements (currently requires access to a private repo).
 
-* Future analyses
-
-- See effect of smoking person years
-
 * Introduction
 
 "If our aim is to understand cancer evolution, we cannot ignore the
 environment in which a cancer cell evolves." Genetic and non-genetic
 clonal diversity in cancer evolution by James R. M. Black and Nicholas
 McGranahan
-
-* TODO [5/11] TODO list
-SCHEDULED: <2023-07-03 Mon>
-
-- [X] Track theory.py and check for duplicate code in
-  count_combinations.py
-
-- [X] Presentation
-
-  + pan-data wildtype for the three most common genes
-
-  + flux vs selection difference
-
-One slide, in wild-type three most common genes
-
-Top three means: selections and fluxes (could be 6?)
-
-  + section: smoking vs wild-type
-
-Flux vs selection in smoking
-another in nonsmoking
-in wild-type
-
-  + what happens next TP53+KRAS vs wildtype
-
-flux TP53+KRAS compared to wildtype
-selection TP53+KRAS compared to wildtype
-smoking and nonsmoking
-
-- [X] Calculate the highest number with 111 out of all genes and do
-  the figures with those to see if estimates of 110->110 for
-  nonsmoking have less uncertainty
-
-- [X] Run model with just KRAS and TP53
-
-- [ ] Include graph of paths in top right corner to distinguish
-  000->001 from 110->110
-
-- [ ] Obtain estimate of EGFR from 000->001 for nonsmoking (even when
-  110->111 cannot be computed)
-
-- [ ] Fix discrepancy with gene names, for example mTOR
-
-- [X] See how many patients would be added to the analysis if we
-  consider the panel data that has smoking annotations: MSK 2015, 2017
-  and 2018 have smoking annotations. It would add 586 samples, nearly
-  doubling our current data set for smoking/nonsmoking.
-
-- [ ] Run analysis including MSK 2015, 2017 and 2018 to
-  smoking/nonsmoking.
-
-- [ ] Use get_cBioPortal_data.R in setup.sh
-
-Regarding age these references could help (and be cited for "there is
-a linear relationship between age and cancer"):
-
-- Salk, J.J.; Schmitt, M.W.; Loeb, L.A. Enhancing the accuracy of
-  next-generation sequencing for detecting rare and subclonal
-  mutations. Nat. Rev. Genet. 2018, 19, 269–285.
-- Risques, R.A.; Kennedy, S.R. Aging and the rise of somatic
-  cancer-associated mutations in normal tissues. PLoS Genet. 2018, 14,
-  e1007108.
-- Forsberg, L.A.; Gisselsson, D.; Dumanski, L.A.F.J.P. Mosaicism in
-  health and disease—Clones picking up speed. Nat. Rev. Genet. 2017,
-  18, 128–142.
-- Krimmel, J.D.; Salk, J.J.; Risques, R.A. Cancer-like mutations in
-  non-cancer tissue: Towards a better understanding of multistep
-  carcinogenesis. Transl. Cancer Res. 2016, 5, S1302–S1304.
-
-Regarding smoking:
-
-- Devarakonda et al. Genomic Profiling of Lung Adenocarcinoma in
-  Never-Smokers https://ascopubs.org/doi/full/10.1200/JCO.21.01691
-
-Regarding both:
-
-- Huang et al. Single-cell analysis of somatic mutations in human
-  bronchial epithelial cells in relation to aging and smoking
-  https://www.nature.com/articles/s41588-022-01035-w
-
-* Notes for presentation
-
-No epistasis
-- Top 3 genes pan: 'EGFR', 'STK11', 'KEAP1'       (last two not in nonsmoking)
--         smoking: 'EGFR', 'STK11',        'RYR2'
--      nonsmoking: 'EGFR',                        'BRAF', 'SPATA3'
-
-Epistasis from 110:
-- All top 3 only 'RYR2' in 'no epistasis'
-- All top 3 = 8 genes only 'COL11A1' in both smoking and pan_data
-- All top 3, none of them are included in nonsmoking for no epistasis
-
-Epistasis from normal:
-- All top 3 only 'RYR2' and 'EGFR' in 'no epistasis'
-- All top 3 = 5 genes only 'COL11A1' in both smoking and pan_data
-- All top 3, none of them are included in nonsmoking for no epistasis
-- 'EGFR' not in nonsmoking (have to investigate why)
-
-Two genes I removed because I do not trust the flux estimate:
-- CSMD3
-- TTN
-I'll rerun the epistasis analysis for those
-
-* TODO Use get_cBioPortal_data.R in setup.sh
-SCHEDULED: <2023-06-20 Tue>
-
-* TODO Check how main.py produces results
-
-Also import_results that handles those results. Try to make it so that
-it produces results that can be plotted with the regular functions
-from plotting.py and figures.py
-
-* TODO Use updated_compute_samples everywhere
-
-That is a version of compute_samples that uses a pandas dataframe of
-patients instead of the MAF file directly.
-
-* TODO Add code to count_combinations for handling pathways
-
-In general aggregating multiple genes
-
-* TODO Put 'gene' in graphs that flux and selection
-SCHEDULED: <2023-06-20 Tue>
-
-Currently, the inset graph can be confusing
-
-* TODO Add total n in landscapes figures
-SCHEDULED: <2023-06-20 Tue>
 
 * For introduction
 
@@ -290,6 +80,7 @@ the co-ocurrence of mutationss with KRAS: K-ras Mutation Subtypes in
 NSCLC and Associated Co-occuring Mutations in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
 
+
 More on KRAS
 https://www.sciencedirect.com/science/article/pii/S0923753423006567
 
@@ -299,15 +90,18 @@ responsible for most of the difference in selection between smokers
 and non-smokers. But it is clear (is it?) that smoking is the factor
 that causes those differences.
 
+
 K-ras Mutation Subtypes in NSCLC and Associated Co-occuring Mutations
 in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
+
 
 TP53 mutations are associated with the development of distant
 metastases and poor diagnosis and are more common in smokers: Genomic
 analysis of early-stage lung cancer reveals a role for TP53 mutations
 in distant metastasis
 https://www.nature.com/articles/s41598-022-21448-1
+
 
 If we take a look at KRAS effect on other mutations and OS: "Mutations
 in KEAP1 and SMARCA4, but not STK11, were associated with metastatic
@@ -316,18 +110,17 @@ poor outcomes in KEAP1MUT tumors." Molecular markers of metastatic
 disease in KRAS mutant lung adenocarcinoma
 https://www.sciencedirect.com/science/article/pii/S0923753423006567
 
-** TODO KRAS, KEAP1, STK11 model
+We can run a model with KRAS, KEAP1, STK11 and maybe SMARCA4 check if
+the above is true.
 
-Run model with KRAS, KEAP1, STK11 and maybe SMARCA4 check if the above
-is true
 
-* Possible reviewers
+Comparative bioinformatic analysis of KRAS, STK11 and KEAP1
+(co-)mutations in non-small cell lung cancer with a special focus on
+KRAS G12C
+https://www.lungcancerjournal.info/article/S0169-5002(23)00899-1/fulltext
 
-Teresa Landi (suggested by Jeff on the slack channel [2022-08-22 Mon])
 
-* KRAS can be bunched together
-
-"Comparing size distributions of tumors of each tumor sup- pressor
+KRAS can be bunched together: "Comparing size distributions of tumors of each tumor sup- pressor
 genotype revealed consistent effects between KRAS G12C- and KRAS
 G12D-driven lung tumors." Oncogenic context shapes the ﬁtness
 landscape of tumor suppression
@@ -338,3 +131,7 @@ Compare selection coefficients with graph that contains KRAS + TSGs
 
 Check genes that interact differently with EGFR and BRAF and do
 pairwise epistasis (maybe + TP53) to compare if we get the same results.
+
+* Possible reviewers
+
+Teresa Landi (suggested by Jeff on the slack channel [2022-08-22 Mon])
