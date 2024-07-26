@@ -91,6 +91,11 @@ and non-smokers. But it is clear (is it?) that smoking is the factor
 that causes those differences.
 
 
+Evidence that synthetic lethality underlies the mutual exclusivity of
+oncogenic KRAS and EGFR mutations in lung adenocarcinoma
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4478584/
+
+
 K-ras Mutation Subtypes in NSCLC and Associated Co-occuring Mutations
 in Other Oncogenic Pathways
 https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
@@ -130,7 +135,27 @@ Compare selection coefficients with graph that contains KRAS + TSGs
 (Figure 2A)
 
 Check genes that interact differently with EGFR and BRAF and do
-pairwise epistasis (maybe + TP53) to compare if we get the same results.
+pairwise epistasis (maybe + TP53) to compare if we get the same
+results.
+
+
+Impact of the STK11/KRAS co-mutation on the response to immunotherapy
+in a real-world pan-cancer cohort
+https://journals.sagepub.com/doi/full/10.1177/03008916231204441
+
+
+Whole-genome sequencing reveals the molecular implications of the
+stepwise progression of lung adenocarcinoma
+https://www.nature.com/articles/s41467-023-43732-y
+
+
+Fully accessible fitness landscape of oncogene-negative lung
+adenocarcinoma https://www.pnas.org/doi/10.1073/pnas.2303224120
+
+
+Distinct patterns of somatic genome alterations in lung
+adenocarcinomas and squamous cell carcinomas
+https://www.nature.com/articles/ng.3564
 
 * Possible reviewers
 
