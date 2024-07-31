@@ -282,6 +282,7 @@ def p_value_same_lambda_xy(samples1,
                            upper_bound_priors1=1,
                            upper_bound_priors2=1,
                            upper_bound_prior_shared=1,
+                           return_lambdas_estimates=False,
                            verbose=False,
                            kwargs=None):
     """Estimate the probability of a null hypothesis of lambdas_xy
@@ -329,12 +330,19 @@ def p_value_same_lambda_xy(samples1,
     :param kwargs: Dictionary of keyword arguments to pass to the pymc3
         find_MAP function.
 
+    :type return_lambdas_estimates: bool
+    :param return_lambdas_estimates: If True, return the lambda
+        estimates H_1
+
     :type verbose: bool
     :param verbose: If True, print information on the lambda and
         loglikehood estimates under H_0 and H_1
 
-    :rtype: numpy.float64
-    :return: p-value of the null hypothesis.
+    :rtype: numpy.float64 or tuple
+    :return: p-value of the null hypothesis, or if
+        return_lambdas_estimates is True, a tuple with the p-value,
+        and the lambdas estimates for samples1 and samples2 under the
+        H0 hypothesis.
 
     """
 
@@ -479,7 +487,10 @@ def p_value_same_lambda_xy(samples1,
 
     ## Now we compute the probability of H0 using Wilk's theorem
     D = 2*(logp_h1-logp_h0)
-    return chi2.sf(D, 1)
+    if return_lambdas_estimates:
+        return (chi2.sf(D, 1), lambdas1_h1, lambdas2_h1)
+    else:
+        return chi2.sf(D, 1)
 
 
 
