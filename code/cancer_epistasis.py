@@ -479,7 +479,7 @@ def p_value_same_lambda_xy(samples1,
 
     ## Now we compute the probability of H0 using Wilk's theorem
     D = 2*(logp_h1-logp_h0)
-    return chi2.pdf(D, 1)
+    return chi2.sf(D, 1)
 
 
 
