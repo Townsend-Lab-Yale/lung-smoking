@@ -32,6 +32,7 @@ from theory import generate_paths
 from theory import epistatic_comparisons
 
 from scipy.stats import chi2
+from scipy.stats import multinomial
 
 random_seed = 777
 """Random seed to feed the random generators, to be able to replicate
