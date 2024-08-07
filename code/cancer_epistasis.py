@@ -509,7 +509,7 @@ def p_value_same_gamma_xy(samples1,
                           return_lambdas_estimates=False,
                           verbose=False,
                           kwargs=None):
-    """Estimate the probability of a null hypothesis of lambdas_xy
+    """Estimate the probability of a null hypothesis of gammas_xy
     being the same when estimating the parameters of two models
     informed by samples1 and samples2.
 
