@@ -1,0 +1,9 @@
+"","variant_name","included_with_variant","included_total","held_out","uncovered","group","included_without_variant"
+"1","KRAS_G12D",40,723,359,0,"Smoker",683
+"2","KRAS_G12C",170,853,229,0,"Smoker",683
+"3","BRAF_V600E",12,1014,68,0,"Smoker",1002
+"4","EGFR_L858R",39,984,98,0,"Smoker",945
+"5","KRAS_G12D",24,611,31,0,"Never-smoker",587
+"6","KRAS_G12C",7,594,48,0,"Never-smoker",587
+"7","BRAF_V600E",10,630,12,0,"Never-smoker",620
+"8","EGFR_L858R",105,457,185,0,"Never-smoker",352
