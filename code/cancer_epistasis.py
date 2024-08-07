@@ -22,6 +22,11 @@ import numpy as np
 import pymc3 as pm
 import theano.tensor as tt
 from theano.compile.ops import as_op
+## To upgrade to PyMC 5, install it and change previous 3 lines to:
+# import pymc as pm
+# import pytensor.tensor as tt
+# from pytensor.compile.ops import as_op
+
 
 from theory import numbers_positive_lambdas
 from theory import build_S_as_array
