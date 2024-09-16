@@ -22,7 +22,6 @@ from cancer_epistasis import compute_CI_gamma
 
 from cancer_epistasis import epistatic_ratios_2_matrix
 
-from theory import build_S_with_tuples
 from theory import build_S_as_array
 from theory import order_pos_lambdas
 
@@ -82,7 +81,7 @@ gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
 #              "HALLMARK_ANGIOGENESIS":HALLMARK_ANGIOGENESIS,
 #              "HALLMARK_KRAS":HALLMARK_KRAS}
 
-n_cores = 50
+N_CORES = 50
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -129,7 +128,7 @@ def compute_samples_for_all_combinations(genes=None,
         - smoking_plus (includes panel data)
         - nonsmoking_plus (includes panel data)
 
-    :type num_per_combo: int or list
+    :type num_per_combo: int or set
     :param num_per_combo: How many genes to include in
         each set of genes. It can also be list with integers.
 
@@ -153,7 +152,7 @@ def compute_samples_for_all_combinations(genes=None,
     else:
         all_genes = genes
 
-    if isinstance(num_per_combo, list):
+    if isinstance(num_per_combo, set):
         counts = {}
         for M in num_per_combo:
             print(f"Computing all samples with M={M}...")
@@ -214,7 +213,7 @@ def compute_samples_for_all_combinations(genes=None,
         else:
             genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
 
-        pool = mp.Pool(processes=n_cores)
+        pool = mp.Pool(processes=N_CORES)
         gene_combos = list(combinations(genes, num_per_combo))
 
         if pathways:
@@ -314,8 +313,8 @@ def lambdas_from_samples(samples, max_bound_changes=4):
     if len(samples) == 2 and draws == 1: # M=1 model with one draw
         print(f"MLE: {MLE['lambdas']}")
         return MLE
-    else:
-        print(f"MLE: {MLE[0]['lambdas']}")
+    
+    print(f"MLE: {MLE[0]['lambdas']}")
 
     bound_changes = 0
 
@@ -356,11 +355,11 @@ def lambdas_from_samples(samples, max_bound_changes=4):
         print("Algorithm did not converge changing bounds...")
         bound_changes += 1
 
-        # when the flux is below an arbitarily chosen value, lower the upper bound to optimize the search
+        # when the flux is below an arbitarily chosen value, lower the upper 
+        # bound to optimize the search
         to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)[0]
         for i in to_decrease:
             bounds[i] = bounds[i]/2
-        # bounds = [bounds[i]/2 if i in to_decrease else bounds[i] for i in range(num_fluxes)]
 
         print(f"Proposed bounds: {bounds}")
         MLE = estimate_lambdas(samples, draws=draws,
@@ -380,7 +379,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         print(f"Estimating fluxes for {combo}...")
         mle = lambdas_from_samples(samples)
 
-        if(mle == 'incomputable'):
+        if mle == 'incomputable':
             with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a', encoding='utf-8') as incomputable_output_file:
                 incomputable_output_file.write(str(combo) + '\n')
             return None
@@ -397,7 +396,7 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
         print(f"Estimating a limited selection of fluxes for {combo}...")
         mle = lambdas_from_samples(samples)
 
-        if(mle == 'incomputable'):
+        if mle == 'incomputable':
             with open(os.path.join(location_output,"incomputable_limited_selection_fluxes.txt"),'a', encoding='utf-8') as incomputable_output_file:
                 incomputable_output_file.write(str(combo) + '\n')
             return None
@@ -428,7 +427,11 @@ def compute_lambda_for_combo(combo, counts, flexible_last_layer):
     return None
 
 
-def compute_all_lambdas(key, all_counts, flexible_last_layer=False, chunksize=None, save_results=True):
+def compute_all_lambdas(key,
+                        all_counts,
+                        flexible_last_layer=False,
+                        chunksize=None,
+                        save_results=True):
     """Compute all estimates of the fluxes for the data set `key`
     iterating over all genes in :const:`gene_list`.in
 
@@ -457,7 +460,7 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, chunksize=No
 
     counts = all_counts[key]
 
-    pool = mp.Pool(processes=n_cores)
+    pool = mp.Pool(processes=N_CORES)
     mp_results = pool.starmap(compute_lambda_for_combo,
                               [(combo, counts, flexible_last_layer) for combo in counts.keys()],
                               chunksize=chunksize)
@@ -475,7 +478,8 @@ def compute_all_lambdas(key, all_counts, flexible_last_layer=False, chunksize=No
     return lambdas_mles, lambdas_cis
 
 
-def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict=None, save_results=True):
+def compute_all_gammas(key, all_lambdas, mus, 
+                       pathways=False, pathway_genes_dict=None, save_results=True):
     """Compute all estimates of the selection coefficient for the data
     set `key` iterating over all gene combinations that are present in
     the keys of :dict:`all_lambdas`
@@ -553,7 +557,7 @@ def compute_all_gammas(key, all_lambdas, mus, pathways=False, pathway_genes_dict
 
 
 def main(genes=None,
-         num_per_combo=[1,2,3],
+         num_per_combo={1,2,3},
          keys=None,
          mu_method="variant",
          pathways=False,
@@ -568,7 +572,7 @@ def main(genes=None,
         be made or a dictionary with the genes or pathways as keys and the gene
         or the genes in the pathway, respectively, as values.
 
-    :type num_per_combo: int
+    :type num_per_combo: int or set
     :param num_per_combo: How many genes to include in each set of
         genes
 
@@ -606,7 +610,7 @@ def main(genes=None,
         pathways = False
     elif isinstance(genes, dict):
         pathways = True
-        if not all([isinstance(entry, list) for entry in genes.values()]):
+        if not all(isinstance(entry, list) for entry in genes.values()):
             raise ValueError("When including pathways, all entries in "
                              "`genes` must be lists, not strings, "
                              "even if there is only gene for the pathway")
@@ -615,9 +619,9 @@ def main(genes=None,
                       "or a dictionary of genes and pathways.")
 
     if isinstance(num_per_combo, int):
-        num_per_combo = [num_per_combo]
+        num_per_combo = {num_per_combo}
 
-    chunksize = ceil(1/3 * sum([comb(len(genes),k) for k in num_per_combo]) / n_cores)
+    chunksize = ceil(1/3 * sum(comb(len(genes),k) for k in num_per_combo) / N_CORES)
 
     for key in keys:
         print("")
@@ -669,7 +673,7 @@ if __name__ == "__main__":
     main(recompute_samples_per_combination=True,
          flexible_last_layer=False,
          pathways=False,
-         num_per_combo=[1, 2, 3],
+         num_per_combo={1, 2, 3},
          mu_method="variant",
          keys = results_keys)
     print("")
