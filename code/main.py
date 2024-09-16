@@ -205,20 +205,21 @@ def compute_samples_for_all_combinations(genes=None,
                 print("Dropping the following pathways "
                       "because more than 5% of genes have incalculable fluxes: "
                       f"{pathways_to_remove}")
+                computable_genes = genes
+                for pathway in pathways_to_remove:
+                    computable_genes.pop(pathway)
 
-            for pathway in pathways_to_remove:
-                genes.pop(pathway)
-            genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
-                        for pathway, pathway_genes in genes.items()}
+            computable_genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
+                        for pathway, pathway_genes in computable_genes.items()}
         else:
-            genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
+            computable_genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
 
         pool = mp.Pool(processes=N_CORES)
-        gene_combos = list(combinations(genes, num_per_combo))
+        gene_combos = list(combinations(computable_genes, num_per_combo))
 
         if pathways:
             mp_results = pool.starmap(filter_and_compute_samples,
-                                      [({pathway: genes[pathway] for pathway in combo},
+                                      [({pathway: computable_genes[pathway] for pathway in combo},
                                         key,
                                         pathways,
                                         print_info) for combo in gene_combos],
@@ -653,9 +654,9 @@ def main(genes=None,
         print(f"Computing selection coefficients for {key}...")
         print("")
         if pathways:
-            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, genes, save_results)
+            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, genes, save_results=save_results)
         else: # if just genes
-            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results)
+            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results=save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
         print(f"done computing selection coefficients for {key}.")
