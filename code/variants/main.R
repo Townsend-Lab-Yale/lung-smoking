@@ -40,11 +40,15 @@ nonsmoking_samples = fread(paste0(location_data, 'nonsmoking_sample_ids.txt'), h
 panel_smoking_samples = fread(paste0(location_data, 'panel_smoking_sample_ids.txt'), header=F)[[1]]
 panel_nonsmoking_samples = fread(paste0(location_data, 'panel_nonsmoking_sample_ids.txt'), header=F)[[1]]
 
-genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf)
+ref_genome_version = 'hg19'
+
+genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf, ref_genome_version)
 smoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
-                                                                                             c(smoking_samples, panel_smoking_samples)])
+                                                                                             c(smoking_samples, panel_smoking_samples)], 
+                                                                                    ref_genome_version)
 nonsmoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
-                                                                                             c(nonsmoking_samples, panel_nonsmoking_samples)])
+                                                                                             c(nonsmoking_samples, panel_nonsmoking_samples)],
+                                                                                        ref_genome_version)
 
 #' Store dataframe of all non-silent variants present within the gene across all samples (so that the same
 #'   set of variants are used to calculate the gene mutation rate for all genes)
@@ -86,6 +90,7 @@ gene_mut_rate_df[, pan_data :=
                 gene_mutation_rate(x,
                                    pan_data_gene_rates[gene==x, rate_grp_1],
                                    genome_trinucleotide_mutation_proportions,
+                                   ref_genome_version,
                                    variants = variants_per_gene[top_gene == x, variant_id]))]
 smoking_w_panel_gene_rates = fread(paste0(location_output, 'smoking_mutation_rates.txt'))
 gene_mut_rate_df[, smoking := 
@@ -93,6 +98,7 @@ gene_mut_rate_df[, smoking :=
                 gene_mutation_rate(x,
                                    smoking_w_panel_gene_rates[gene==x, rate_grp_1],
                                    smoking_genome_trinucleotide_mutation_proportions,
+                                   ref_genome_version,
                                    variants = variants_per_gene[top_gene == x, variant_id]))]
 
 nonsmoking_w_panel_gene_rates = fread(paste0(location_output, 'nonsmoking_mutation_rates.txt'))
@@ -101,6 +107,7 @@ gene_mut_rate_df[, nonsmoking :=
                 gene_mutation_rate(x,
                                    nonsmoking_w_panel_gene_rates[gene==x, rate_grp_1],
                                    nonsmoking_genome_trinucleotide_mutation_proportions,
+                                   ref_genome_version,
                                    variants = variants_per_gene[top_gene == x, variant_id]))]
 
 

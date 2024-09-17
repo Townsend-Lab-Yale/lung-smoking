@@ -11,8 +11,15 @@ library(stringr)
 # find #times that context is observed
 # var_mut_rate = gene_rate * freq / #times-context-observed
 
-variant_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, variants=NULL, maf_df=NULL, samples=NULL){
+variant_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, ref_genome_version, variants=NULL, maf_df=NULL, samples=NULL){
   gene_x = gene
+
+  if(ref_genome_version == "hg19"){
+    reference_genome = BSgenome.Hsapiens.UCSC.hg19}
+  else if(ref_genome_version == "hg38"){
+    reference_genome = BSgenome.Hsapiens.UCSC.hg38}
+  else{stop('Reference genome version must be one of `hg19` or `hg38`')}
+
   # print(gene_x)
   
   # certain variants have an NA variant_id, but none of these are in genes in our 1290 genes of interest.
@@ -41,7 +48,7 @@ variant_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion
   #' 
   #' ASSUMPTION: all sequences taken from POSITIVE strand
   #' 
-  variant_mut_rate_df[, trinuc := as.vector(as.character(getSeq(BSgenome.Hsapiens.UCSC.hg19, names = str_c('chr', chr), start = pos-1, width=3, strand = '+')))]
+  variant_mut_rate_df[, trinuc := as.vector(as.character(getSeq(reference_genome, names = str_c('chr', chr), start = pos-1, width=3, strand = '+')))]
   
   #reverse complementing variants as necessary
   middle = str_c(substr(variant_mut_rate_df$trinuc,2,2),collapse="")
@@ -73,8 +80,8 @@ variant_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion
   return(variant_mut_rate_df)
 }
 
-gene_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, variants=NULL, maf_df=NULL, samples=NULL){
-  return(sum(variant_mutation_rate(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, variants, maf_df, samples)$mut_rate))
+gene_mutation_rate = function(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, ref_genome_version, variants=NULL, maf_df=NULL, samples=NULL){
+  return(sum(variant_mutation_rate(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, ref_genome_version, variants, maf_df, samples)$mut_rate))
   
   
   # variant_mut_rate_df = variant_mutation_rate(gene, gene_syn_mutation_rate, trinuc_proportion_matrix, variants, maf_df, samples)

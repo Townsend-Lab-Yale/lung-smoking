@@ -37,7 +37,13 @@ order_of_trinuc_muts =
 #'   comes from the set of variants in the dataset. Thus biases which influence
 #'   which variants are represented in the dataset will also influence the proportions.
 
-compute_trinuc_mut_proportions <- function(variants){
+compute_trinuc_mut_proportions <- function(variants, ref_genome_version){
+  if(ref_genome_version == "hg19"){
+    reference_genome = BSgenome.Hsapiens.UCSC.hg19}
+  else if(ref_genome_version == "hg38"){
+    reference_genome = BSgenome.Hsapiens.UCSC.hg38}
+  else{stop('Reference genome version must be one of `hg19` or `hg38`')}
+
   temp1 = str_split_fixed(variants, pattern = ':', n=2)
   temp2 = str_split_fixed(temp1[,2], pattern= '_', n=2)
   variants = as.data.table(cbind(temp1[,1],temp2))
@@ -46,7 +52,7 @@ compute_trinuc_mut_proportions <- function(variants){
   ## One sample did not have a position (strangely)
   variants = variants[!is.na(variants$pos)]
   variants$trinuc = as.vector(as.character(getSeq(
-    BSgenome.Hsapiens.UCSC.hg19,
+    reference_genome,
     names=str_c('chr', variants$chr),
     start=variants$pos-1,
     width=3,
@@ -80,18 +86,24 @@ compute_trinuc_mut_proportions <- function(variants){
 
 
 #' Computes proportions of each trinucleotide mutation in the CESA MAF file across the entire genome
-genome_trinuc_mut_proportions <- function(maf){
+genome_trinuc_mut_proportions <- function(maf, ref_genome_version){
   variants = unique(maf[!is.na(variant_id) & variant_type == 'snv', variant_id])
-  return(compute_trinuc_mut_proportions(variants))
+  return(compute_trinuc_mut_proportions(variants, ref_genome_version))
 }
 
-#' Calculates the 32 trinucleotide contexts for every site in any gene of interest in the hg19 genome.
+#' Calculates the 32 trinucleotide contexts for every site in any gene of interest in the hg19 or hg38 genome.
 #' 32 instead of 64 because any purine site is equivalent to its corresponding pyrimidine site 
 #'  because of the way mutations to those sites would be interpreted (see COSMIC)
 #' For purine sites, their context numbers are added to their reverse complement
 
-compute_trinucleotide_contexts <- function(genes) {
-  coding_seqs = sapply(genes, function(x) DNAString(paste0(as.character(cancereffectsizeR:::.ces_ref_data$ces.refset.hg19$RefCDS[[x]]$seq_cds1up[1:2]), as.character(cancereffectsizeR:::.ces_ref_data$ces.refset.hg19$RefCDS[[x]]$seq_cds1down))))
+compute_trinucleotide_contexts <- function(genes, ref_genome_version) {
+  if(ref_genome_version == "hg19"){
+    refset = cancereffectsizeR:::.ces_ref_data$ces.refset.hg19}
+  else if(ref_genome_version == "hg38"){
+    refset = cancereffectsizeR:::.ces_ref_data$ces.refset.hg38}
+  else{stop('Reference genome version must be one of `hg19` or `hg38`')}
+
+  coding_seqs = sapply(genes, function(x) DNAString(paste0(as.character(refset$RefCDS[[x]]$seq_cds1up[1:2]), as.character(refset$RefCDS[[x]]$seq_cds1down))))
   tri_nt_contexts = sapply(coding_seqs, function(x) Biostrings::trinucleotideFrequency(x))
   rows_to_remove = c()
   for(i in 1:nrow(tri_nt_contexts)){
