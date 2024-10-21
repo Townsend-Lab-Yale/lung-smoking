@@ -2,10 +2,9 @@
 #' Creates the MAF file and mutation rates necessary for input into cancer epistasis analysis. It assumes that the working directory is set to variants
 #'
 
-.libPaths = "./.Rlibs"
+.libPaths(c("./.Rlibs", .libPaths()))
 
 #' Load in relevant functions
-#source('../cadd/cadd.R')
 source('trinucleotide_functions.R')
 source('variant_mutation_rate.R')
 source('produce_genes_per_sample.R')
@@ -22,9 +21,11 @@ recurrent_variants_only = FALSE
 trim_oncogenes = FALSE
 
 #' Create CESA object for mutation rate calculation and MAF construction
-#' Output locations: 'data/pan_data_cesa_for_cancer_epistasis.rds'
+#' Output locations: 
+#'   'data/pan_data_cesa_for_cancer_epistasis.rds'
 #'   'data/(panel_)(non)smoking_sample_ids.txt'
 #'   'output/(non)smoking_(w_panel_)mutation_rates.txt'
+print('Creating CESA object for mutation rate calculation and MAF cleaning')
 source('create_cesa_for_epistasis.R')
 
 #' List of genes for which to calculate variant-level mutation rates
@@ -42,6 +43,7 @@ panel_nonsmoking_samples = fread(paste0(location_data, 'panel_nonsmoking_sample_
 
 ref_genome_version = 'hg19'
 
+print('Calculating gene-level mutation rates from aggregate of mutation rates of individual variants')
 genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf, ref_genome_version)
 smoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
                                                                                              c(smoking_samples, panel_smoking_samples)], 
@@ -109,10 +111,13 @@ gene_mut_rate_df[, nonsmoking :=
                                    nonsmoking_genome_trinucleotide_mutation_proportions,
                                    ref_genome_version,
                                    variants = variants_per_gene[top_gene == x, variant_id]))]
-
+print(unique(warnings()))
 
 if(save_results){fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))}
 
+#' Final MAF filtering steps prior to epistasis analysis
+#' Output location: 'output/cesR_maf_for_epistasis_analysis.txt'
+print("Filtering MAF")
 maf_file = read.csv(paste0(location_output,"merged_luad_maf.txt"))
 colnames(maf_file)[2] = 'Tumor_Sample_Barcode'; colnames(maf_file)[7] <- 'Tumor_Allele'
 
@@ -120,4 +125,5 @@ final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, variants_per_gene, 
 
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'output/genes_per_sample.txt'
+print("Creating table of samples and mutations")
 samples_genes = produce_genes_per_sample(final_maf, gene_mut_rate_df$gene, save_results)
