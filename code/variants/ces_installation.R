@@ -18,6 +18,6 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install(version = "3.17") # this is so that it works with R version 4.3
 
 library(BiocManager)
-BiocManager::install("BSgenome.Hsapiens.UCSC.hg19", force=TRUE)
+BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 
-remotes::install_github("Townsend-Lab-Yale/ces.refset.hg19", INSTALL_opts = "--no-test-load")
+remotes::install_github("Townsend-Lab-Yale/ces.refset.hg19")
