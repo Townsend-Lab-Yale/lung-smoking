@@ -6,6 +6,9 @@ import matplotlib.cm as cm
 
 from statsmodels.graphics.mosaicplot import mosaic
 
+from cancer_epistasis import order_genes_by_result_values
+from cancer_epistasis import epistatic_ratios_3rd_gene_effects
+
 from locations import location_figures
 from locations import location_output
 
@@ -15,16 +18,31 @@ from locations import location_output
 # from import_results import samples_per_combination
 # from import_results import mutation_rates
 
-
 from load_results import load_results
 
+from cancer_epistasis import convert_samples_to_dict
+from cancer_epistasis import convert_mus_to_dict
+from cancer_epistasis import order_genes_by_result_values
+from cancer_epistasis import epistatic_ratios_3rd_gene_effects
+
+
 from landscape_plotting import plot_landscape
+
+from matrix_plotting import plot_epistatic_ratios_2_matrices
+from matrix_plotting import plot_epistatic_ratios_2_matrices_poster
+from matrix_plotting import plot_epistatic_ratios_separate
+
+
+## Load results
 
 all_samples = load_results('samples')
 all_lambdas = load_results('fluxes')
 all_mus = load_results('mutations')
 all_gammas = load_results('selections')
+all_gammas_cis = load_results('selections', 'cis')
 
+
+gene_list_by_selection = order_genes_by_result_values(all_gammas['pan_data'])
 
 # all_lambdas, all_gammas = provide_all_relevant_lambdas_and_gammas(["smoking_plus", "nonsmoking_plus"])
 
@@ -48,11 +66,6 @@ all_gammas = load_results('selections')
 #     os.path.join(location_output,
 #                  "results_TP53_KRAS_EGFR_model_nonsmoking_plus.npy"),
 #     allow_pickle=True).item()
-
-
-
-from cancer_epistasis import convert_samples_to_dict
-from cancer_epistasis import convert_mus_to_dict
 
 
 def plot_figures_presentation_montreal():
@@ -1685,3 +1698,41 @@ def plot_figures_poster():
 
 
     return all_plots
+
+
+
+
+def plot_epistatic_ratio_matrices():
+    third_gene_effects = (
+        epistatic_ratios_3rd_gene_effects(all_gammas['nonsmoking_plus'],
+                                          all_gammas_cis['nonsmoking_plus']),
+        epistatic_ratios_3rd_gene_effects(all_gammas['smoking_plus'],
+                                          all_gammas_cis['smoking_plus']))
+
+
+    plot_epistatic_ratios_2_matrices(all_gammas['nonsmoking_plus'],
+                                     all_gammas_cis['nonsmoking_plus'],
+                                     all_gammas['smoking_plus'],
+                                     all_gammas_cis['smoking_plus'],
+                                     gene_list_by_selection)
+
+    plot_epistatic_ratios_2_matrices(all_gammas['nonsmoking_plus'],
+                                     all_gammas_cis['nonsmoking_plus'],
+                                     all_gammas['smoking_plus'],
+                                     all_gammas_cis['smoking_plus'],
+                                     gene_list_by_selection,
+                                     third_gene_effects=third_gene_effects)
+
+
+    plot_epistatic_ratios_2_matrices_poster(all_gammas['nonsmoking_plus'],
+                                            all_gammas_cis['nonsmoking_plus'],
+                                            all_gammas['smoking_plus'],
+                                            all_gammas_cis['smoking_plus'],
+                                            gene_list_by_selection,
+                                            third_gene_effects=third_gene_effects)
+
+    plot_epistatic_ratios_separate(all_gammas['nonsmoking_plus'],
+                                   all_gammas_cis['nonsmoking_plus'],
+                                   all_gammas['smoking_plus'],
+                                   all_gammas_cis['smoking_plus'],
+                                   gene_list_by_selection)
