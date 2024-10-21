@@ -244,7 +244,7 @@ def estimate_lambdas(samples, upper_bound_prior=3, draws=10000,
                 name="lambdas",
                 lower=0,
                 upper=upper_bound_prior,
-                shape=number_positive_lambdas)
+                shape=int(number_positive_lambdas))
 
             Ps = compute_Ps_at_T_tens(positive_lambdas)
 
