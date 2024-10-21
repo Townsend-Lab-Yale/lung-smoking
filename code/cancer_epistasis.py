@@ -1259,7 +1259,6 @@ def epistatic_ratios(results, M, results_cis=None):
     """Compute ratios between values of the `results' in a somatic
     genotype vs another one with one less mutated gene.
 
-
     :type results: dict
     :param results: Dictionary with the results for which we will
         compute epistatic ratios. It should be indexed by tuples
@@ -1279,7 +1278,9 @@ def epistatic_ratios(results, M, results_cis=None):
        statistical significance for the ratios.
 
 
-
+    :rtype: dict
+    :return: A dictionary with the epistatic ratios, with keys being
+       the genes in each model.
     """
 
     comparisons = epistatic_comparisons(M)
@@ -1304,7 +1305,44 @@ def epistatic_ratios(results, M, results_cis=None):
     return ratios
 
 
-def epistatic_ratios_2_matrix(results, results_cis, genes_ordered_list):
+def epistatic_ratios_2_matrix(results, genes_ordered_list, results_cis=None):
+    """Order results of the pair-wise epistatic ratios in a matrix.
+
+    This function calls :func:`epistatic_ratios` for M=2 to obtain all
+    epistatic ratios: the ratio of `results' (say selection) for a
+    gene in a somatic genotype with another gene mutated over
+    `results' for the same gene in a normal somatic genotype (the
+    other gene not mutated).
+
+    The results are provided as len(genes) x len(genes) matrix where
+    the rows represent the common gene (say, the gene selected), and
+    the columns the other gene for which the somatic genotype context
+    that ratio compares (with or without that other gene).
+
+    :type results: dict
+    :param results: Dictionary with the results for which we will
+        compute epistatic ratios. It should be indexed by tuples
+        of genes that were included in the model. Here we can put
+        either selections (gammas), fluxes (lambdas, but Jeff doesn't
+        like this approach), or later even mutation rates (mus).
+
+    :type M: int
+    :param M: Number of genes to consider in the models
+
+    :type results_cis: dict or None
+    :param results_cis: Dictionary with the results confidence
+       intervals. Results of ratios are set to 1 if they are not
+       statistically significant. Statistical significance is
+       conservatively determined by non overlapping confidence
+       intervals. If None is provided (default), then do consider
+       statistical significance for the ratios.
+
+
+    :rtype: dict
+    :return: A dictionary with the epistatic ratios, with keys being
+       the genes in each model.
+
+    """
 
     ratios_dict = epistatic_ratios(results, 2, results_cis)
 
