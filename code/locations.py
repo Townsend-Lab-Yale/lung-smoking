@@ -128,10 +128,6 @@ panel_smoking_sample_ids_file = os.path.join(location_data,
 panel_nonsmoking_sample_ids_file = os.path.join(location_data,
                                           'panel_nonsmoking_sample_ids.txt')
 
-samples_per_combination_files = {key: os.path.join(location_output,
-                                                   f"{key}_samples.npy")
-                                 for key in results_keys}
-
 
 default_mutation_names = list(alphabet)
 """Default mutation names, in case `mutation_names` is not provided

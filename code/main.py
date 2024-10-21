@@ -15,12 +15,9 @@ from count_combinations import updated_compute_samples
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
-from cancer_epistasis import order_genes_by_result_values
 
 from cancer_epistasis import compute_gammas
 from cancer_epistasis import compute_CI_gamma
-
-from cancer_epistasis import epistatic_ratios_2_matrix
 
 from theory import build_S_as_array
 from theory import order_pos_lambdas
@@ -28,60 +25,25 @@ from theory import order_pos_lambdas
 from locations import gene_list_file
 from locations import location_output
 from locations import results_keys
-from locations import samples_per_combination_files
-
 
 from load_results import load_results
 
 from filter_data import key_filtered_dbs
 from filter_data import filter_samples_for_genes
 
-from pymc3.exceptions import SamplingError
+from pymc.exceptions import SamplingError
 
 
 # gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
 # gene_list = [gene.upper() for gene in gene_list]
 
-gene_list = ["TP53","KRAS","EGFR","BRAF","CTNNB1",
-             "KEAP1","STK11","ATM","PIK3CA","RBM10",
-             "SMARCA4","SMAD4","ALK","ARID1A","APC",
-             "MET","RB1","SETD2","BRCA2","MGA",
-             "GNAS"] #"NRAS","ROS1","RET","U2AF1","NTRK",
+gene_list = ["TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
+             "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
+             "SMARCA4", "SMAD4", "ALK",   "ARID1A", "APC",
+             "MET",     "RB1",   "SETD2", "BRCA2",  "MGA",
+             "GNAS"]
 
-# hm_df = pd.read_csv("../data/gene_sets/hallmark_pathway_df.csv")
-
-# #HALLMARK_TNFA_SIGNALING_VIA_NFKB = list(hm_df[hm_df["pathway"]=="HALLMARK_TNFA_SIGNALING_VIA_NFKB"]["genes"])[0].split("|")
-# HALLMARK_HYPOXIA = list(hm_df[hm_df["pathway"]=="HALLMARK_HYPOXIA"]["genes"])[0].split("|")
-# HALLMARK_WNT_BETA_CATENIN_SIGNALING = list(hm_df[hm_df["pathway"]=="HALLMARK_WNT_BETA_CATENIN_SIGNALING"]["genes"])[0].split("|")
-# HALLMARK_DNA_REPAIR = list(hm_df[hm_df["pathway"]=="HALLMARK_DNA_REPAIR"]["genes"])[0].split("|")
-# HALLMARK_G2M_CHECKPOINT = list(hm_df[hm_df["pathway"]=="HALLMARK_G2M_CHECKPOINT"]["genes"])[0].split("|")
-
-# HALLMARK_PI3K_AKT_MTOR_SIGNALING = list(hm_df[hm_df["pathway"]=="HALLMARK_PI3K_AKT_MTOR_SIGNALING"]["genes"])[0].split("|")
-# HALLMARK_MYC_TARGETS_V2 = list(hm_df[hm_df["pathway"]=="HALLMARK_MYC_TARGETS_V2"]["genes"])[0].split("|")
-# HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION = list(hm_df[hm_df["pathway"]=="HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION"]["genes"])[0].split("|")
-# HALLMARK_INFLAMMATORY_RESPONSE = list(hm_df[hm_df["pathway"]=="HALLMARK_INFLAMMATORY_RESPONSE"]["genes"])[0].split("|")
-# HALLMARK_METABOLISM = list(hm_df[hm_df["pathway"]=="HALLMARK_OXIDATIVE_PHOSPHORYLATION"]["genes"])[0].split("|") + list(hm_df[hm_df["pathway"]=="HALLMARK_GLYCOLYSIS"]["genes"])[0].split("|")
-
-# HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY = list(hm_df[hm_df["pathway"]=="HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY"]["genes"])[0].split("|")
-# HALLMARK_P53_PATHWAY = list(hm_df[hm_df["pathway"]=="HALLMARK_P53_PATHWAY"]["genes"])[0].split("|")
-# HALLMARK_ANGIOGENESIS = list(hm_df[hm_df["pathway"]=="HALLMARK_ANGIOGENESIS"]["genes"])[0].split("|")
-# HALLMARK_KRAS = list(hm_df[hm_df["pathway"]=="HALLMARK_KRAS_SIGNALING_UP"]["genes"])[0].split("|") + list(hm_df[hm_df["pathway"]=="HALLMARK_KRAS_SIGNALING_DN"]["genes"])[0].split("|")
-
-# gene_list = {"HALLMARK_HYPOXIA":HALLMARK_HYPOXIA,
-#              "HALLMARK_WNT_BETA_CATENIN_SIGNALING":HALLMARK_WNT_BETA_CATENIN_SIGNALING,
-#              "HALLMARK_DNA_REPAIR":HALLMARK_DNA_REPAIR,
-#              "HALLMARK_G2M_CHECKPOINT":HALLMARK_G2M_CHECKPOINT,
-#              "HALLMARK_PI3K_AKT_MTOR_SIGNALING":HALLMARK_PI3K_AKT_MTOR_SIGNALING,
-#              "HALLMARK_MYC_TARGETS_V2":HALLMARK_MYC_TARGETS_V2,
-#              "HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION":HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION,
-#              "HALLMARK_INFLAMMATORY_RESPONSE":HALLMARK_INFLAMMATORY_RESPONSE,
-#              "HALLMARK_METABOLISM":HALLMARK_METABOLISM,
-#              "HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY":HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY,
-#              "HALLMARK_P53_PATHWAY":HALLMARK_P53_PATHWAY,
-#              "HALLMARK_ANGIOGENESIS":HALLMARK_ANGIOGENESIS,
-#              "HALLMARK_KRAS":HALLMARK_KRAS}
-
-N_CORES = 50
+N_CORES = 12#int(os.getenv("SLURM_CPUS_ON_NODE"))
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -240,7 +202,7 @@ def compute_samples_for_all_combinations(genes=None,
     if save_results:
         print("Saving results...")
         np.save(os.path.join(location_output,
-                             samples_per_combination_files[key]),
+                             f"{key}_samples.npy"),
                 counts)
 
         print("done.")
@@ -303,8 +265,10 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     """
 
-    bounds = 1
-    bound_maxes = np.array([bounds])
+    M = int(np.log2(len(samples)))
+    num_fluxes = M*2**(M-1) # formula for number of fluxes
+    initial_bound = 1
+    bounds = np.array([initial_bound]*num_fluxes, dtype='float')
 
     print(f"Bounds for fluxes: {bounds}")
     draws = 1
@@ -319,13 +283,8 @@ def lambdas_from_samples(samples, max_bound_changes=4):
 
     bound_changes = 0
 
-    # conditions necessitating change of bounds
-    if any(x in bound_maxes for x in MLE[0]['lambdas']) or MLE[1].fun < -1e+20:
-        M = int(np.log2(len(samples)))
-        num_fluxes = M*2**(M-1) # formula for number of fluxes
-        bounds = np.array([bounds]*num_fluxes, dtype='float')
     # if any of the fluxes reach the upper bound, common for pathway analysis
-    while any(x in bound_maxes for x in MLE[0]['lambdas']):
+    while any(np.isclose(MLE[0]['lambdas'], bounds, rtol=1e-2)):
         increment = 1
         if bound_changes == max_bound_changes:
             print(f"We have changed the bounds {bound_changes} times already, "
@@ -334,9 +293,7 @@ def lambdas_from_samples(samples, max_bound_changes=4):
             return "incomputable"
         print("Upper bound hit for one or more fluxes, increasing bounds...")
         bound_changes += 1
-        to_increase = [i for i in range(num_fluxes) if MLE[0]['lambdas'][i] in bound_maxes]
-        bounds = [bounds[i]+increment if i in to_increase else bounds[i] for i in range(num_fluxes)]
-        bound_maxes = np.append(bound_maxes, bound_maxes[-1]+increment)
+        bounds[np.where(np.isclose(MLE[0]['lambdas'], bounds, rtol=1e-2))] += increment
 
         print(f"Proposed bounds: {bounds}")
         try:
@@ -356,11 +313,9 @@ def lambdas_from_samples(samples, max_bound_changes=4):
         print("Algorithm did not converge changing bounds...")
         bound_changes += 1
 
-        # when the flux is below an arbitarily chosen value, lower the upper 
+        # when the flux is below an arbitarily chosen value, lower the upper
         # bound to optimize the search
-        to_decrease = np.where(MLE[0]['lambdas'] < 1e-5)[0]
-        for i in to_decrease:
-            bounds[i] = bounds[i]/2
+        bounds[np.where(MLE[0]['lambdas'] < 1e-5)] /= 2
 
         print(f"Proposed bounds: {bounds}")
         MLE = estimate_lambdas(samples, draws=draws,
@@ -519,7 +474,8 @@ def compute_all_gammas(key, all_lambdas, mus,
 
     for counter, combo in enumerate(lambdas_mles.keys()):
 
-        print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
+        if counter % 10 == 0:
+            print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
 
         M = len(combo)
         # Constructs dictionary of the form:
@@ -556,14 +512,22 @@ def compute_all_gammas(key, all_lambdas, mus,
 
     return gammas_mles, gammas_cis
 
+def set_output_location(extension):
+    """
+    :type extension: string
+    :param extension: path extension to append to location_output
+    """
+    global location_output
+    location_output = os.path.join(location_output, extension)
 
 def main(genes=None,
          num_per_combo={1,2,3},
          keys=None,
          mu_method="variant",
-         pathways=False,
+         pathways=False, 
          flexible_last_layer=False,
          recompute_samples_per_combination=False,
+         extension=None,
          print_info=True,
          save_results=True):
     """Main method for the estimation of all the fluxes.
@@ -622,6 +586,9 @@ def main(genes=None,
     if isinstance(num_per_combo, int):
         num_per_combo = {num_per_combo}
 
+    if extension is not None:
+        set_output_location(extension)
+
     chunksize = ceil(1/3 * sum(comb(len(genes),k) for k in num_per_combo) / N_CORES)
 
     for key in keys:
@@ -630,13 +597,13 @@ def main(genes=None,
         mus = load_results('mutations', mu_method)[key]
 
         if (recompute_samples_per_combination
-            or not os.path.exists(samples_per_combination_files[key])):
+            or not os.path.exists(os.path.join(location_output,f"{key}_samples.npy"))):
             print(f"Computing number of samples per combination for {key}...")
             all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
                                                                    pathways, chunksize, print_info, save_results)
         else:
             print(f"Loading counts per combination for {key}...")
-            all_counts[key] = np.load(samples_per_combination_files[key],
+            all_counts[key] = np.load(os.path.join(location_output,f"{key}_samples.npy"),
                                       allow_pickle=True).item()
         print(f"done computing samples per combination for {key}.")
         print("")
@@ -666,8 +633,6 @@ def main(genes=None,
 
     return all_counts, all_lambdas, all_gammas
 
-
-
 if __name__ == "__main__":
     print("Running main...")
     print("")
@@ -676,7 +641,8 @@ if __name__ == "__main__":
          pathways=False,
          num_per_combo={1, 2, 3},
          mu_method="variant",
-         keys = results_keys)
+         keys = results_keys,
+         extension = os.path.join("genes_v6","subset"))
     print("")
     print('Done running main.')
 
