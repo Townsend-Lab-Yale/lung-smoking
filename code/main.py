@@ -502,13 +502,13 @@ def compute_all_gammas(key, all_lambdas, mus,
             lambdas_cis[combo],
             mu_combo)
 
-        if save_results:
-            np.save(os.path.join(location_output,
-                                 f"{key}_selections_mles.npy"),
-                    gammas_mles)
-            np.save(os.path.join(location_output,
-                                 f"{key}_selections_cis.npy"),
-                    gammas_cis)
+    if save_results:
+        np.save(os.path.join(location_output,
+                                f"{key}_selections_mles.npy"),
+                gammas_mles)
+        np.save(os.path.join(location_output,
+                                f"{key}_selections_cis.npy"),
+                gammas_cis)
 
     return gammas_mles, gammas_cis
 
