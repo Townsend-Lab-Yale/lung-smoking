@@ -528,7 +528,8 @@ def main(genes=None,
          mu_method="variant",
          pathways=False,
          flexible_last_layer=False,
-         recompute_samples_per_combination=False,
+         recompute_samples_per_combination=True,
+         recompute_fluxes=True,
          extension=None,
          print_info=True,
          save_results=True):
@@ -598,24 +599,34 @@ def main(genes=None,
 
         mus = load_results('mutations', mu_method)[key]
 
-        if (recompute_samples_per_combination
-            or not os.path.exists(os.path.join(location_output,f"{key}_samples.npy"))):
-            print(f"Computing number of samples per combination for {key}...")
-            all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
-                                                                   pathways, chunksize, print_info, save_results)
-        else:
-            print(f"Loading counts per combination for {key}...")
-            all_counts[key] = np.load(os.path.join(location_output,f"{key}_samples.npy"),
-                                      allow_pickle=True).item()
-        print(f"done computing samples per combination for {key}.")
-        print("")
-        print("")
+        if (recompute_fluxes
+            or not os.path.exists(os.path.join(location_output,f"{key}_fluxes_mles.npy"))):
 
-        print(f"Estimating all epistatic models for {key}...")
-        print("")
-        lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, chunksize, save_results)
-        all_lambdas[(key, 'mles')] = lambdas_mles
-        all_lambdas[(key, 'cis')] = lambdas_cis
+            if (recompute_samples_per_combination
+                or not os.path.exists(os.path.join(location_output,f"{key}_samples.npy"))):
+                print(f"Computing number of samples per combination for {key}...")
+                all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
+                                                                    pathways, chunksize, print_info, save_results)
+            else:
+                print(f"Loading counts per combination for {key}...")
+                all_counts[key] = np.load(os.path.join(location_output,f"{key}_samples.npy"),
+                                        allow_pickle=True).item()
+            print(f"done computing samples per combination for {key}.")
+            print("")
+            print("")
+
+            print(f"Estimating all epistatic models for {key}...")
+            print("")
+            lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, chunksize, save_results)
+            all_lambdas[(key, 'mles')] = lambdas_mles
+            all_lambdas[(key, 'cis')] = lambdas_cis
+
+        else:
+            print(f"Loading epistatic model results for {key}...")
+            all_lambdas[(key, 'mles')] = np.load(os.path.join(location_output,f"{key}_fluxes_mles.npy"),
+                                                 allow_pickle=True).item()
+            all_lambdas[(key, 'cis')] = np.load(os.path.join(location_output,f"{key}_fluxes_cis.npy"),
+                                                 allow_pickle=True).item()
         print(f"done estimating all epistatic models for {key}.")
         print("")
         print("")
@@ -639,6 +650,7 @@ if __name__ == "__main__":
     print("Running main...")
     print("")
     main(recompute_samples_per_combination=True,
+         recompute_fluxes=True,
          flexible_last_layer=False,
          pathways=False,
          num_per_combo={1, 2, 3},
