@@ -110,6 +110,18 @@ echo ""
 echo ""
 
 
+echo "Downloading Yale data..."
+echo ""
+mkdir 'yale_luad'
+cd 'luad_tcga'
+wget https://misc.cidma.us/data/yale_luad/data_clinical_sample.txt
+wget https://misc.cidma.us/data/yale_luad/data_mutations_extended.txt
+echo "...done downloading Yale data."
+echo ""
+echo ""
+cd ..
+
+
 echo "Downloading TCGA data..."
 echo ""
 mkdir 'luad_tcga'
