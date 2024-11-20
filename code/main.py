@@ -34,16 +34,16 @@ from filter_data import filter_samples_for_genes
 from pymc.exceptions import SamplingError
 
 
-# gene_list = list(pd.read_csv(gene_list_file, header=None)[0])
-# gene_list = [gene.upper() for gene in gene_list]
+all_genes = list(pd.read_csv(gene_list_file, header=None)[0])
+all_genes = [gene.upper() for gene in all_genes]
 
-gene_list = ["TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
-             "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
-             "SMARCA4", "SMAD4", "ALK",   "ARID1A", "APC",
-             "MET",     "RB1",   "SETD2", "BRCA2",  "MGA",
-             "GNAS"]
+subset_genes = ["TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
+                "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
+                "SMARCA4", "SMAD4", "ALK",   "ARID1A", "APC",
+                "MET",     "RB1",   "SETD2", "BRCA2",  "MGA",
+                "GNAS"]
 
-N_CORES = 12 # int(os.getenv("SLURM_CPUS_ON_NODE"))
+N_CORES = 12#int(os.getenv("SLURM_CPUS_ON_NODE"))
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -474,7 +474,7 @@ def compute_all_gammas(key, all_lambdas, mus,
 
     for counter, combo in enumerate(lambdas_mles.keys()):
 
-        if counter % 10 == 0:
+        if counter+1 % 100 == 0:
             print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
 
         M = len(combo)
@@ -520,7 +520,9 @@ def set_output_location(extension):
     """
     global location_output
     location_output = os.path.join(location_output, extension)
-
+    
+    if not os.path.exists(location_output):
+        os.makedirs(location_output)
 
 def main(genes=None,
          num_per_combo={1,2,3},
@@ -565,7 +567,7 @@ def main(genes=None,
     all_gammas = {}
 
     if genes is None:
-        genes = gene_list
+        genes = subset_genes
     if keys is None:
         keys = results_keys
 
@@ -649,13 +651,18 @@ def main(genes=None,
 if __name__ == "__main__":
     print("Running main...")
     print("")
-    main(recompute_samples_per_combination=True,
-         recompute_fluxes=True,
-         flexible_last_layer=False,
-         pathways=False,
-         num_per_combo={1, 2, 3},
-         mu_method="variant",
+    main(genes=subset_genes,
+         num_per_combo=set(range(1,4)),
          keys = results_keys,
-         extension = os.path.join("genes_v6","subset"))
+         mu_method="variant",
+         pathways=False,
+         extension=os.path.join("final","subset"))
+    
+    main(genes=all_genes,
+         num_per_combo=1,
+         keys = results_keys,
+         mu_method="variant",
+         pathways=False,
+         extension=os.path.join("final","all"))
     print("")
     print('Done running main.')

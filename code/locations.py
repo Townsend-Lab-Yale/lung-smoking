@@ -37,7 +37,9 @@ data_sets_directories = {
     'TracerX':'nsclc_tracerx_2017',
     'Genie':'genie_9',
     'FM-AD':'luad_fm-ad',
-    'NCI':'lung_nci_2022'}
+    'NCI':'lung_nci_2022',
+    'CPTAC':'luad_cptac_2020',
+    'Yale':'yale_luad'}
 """Location of the directories that contain each data set in the
 `location_data' directory.
 
@@ -61,14 +63,6 @@ full_maf_file_names = {
                     directory,
                     "data_mutations_extended.txt")
     for db, directory in data_sets_directories.items()}
-
-
-full_maf_file_names_lifted = {
-    db:os.path.join(location_data,
-                    directory,
-                    "data_mutations_extended_lifted.txt")
-    for db, directory in data_sets_directories.items()}
-
 
 gene_list_file = os.path.join(location_data, "genes_list.txt")
 
