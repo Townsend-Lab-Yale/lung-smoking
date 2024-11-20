@@ -11,7 +11,8 @@ results."""
 
 
 
-files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018", "nsclc_tracerx_2017","genie_9","lung_nci_2022"]
+files = ["luad_oncosg_2020","luad_broad", "luad_mskcc_2015", "lung_msk_2017", "nsclc_pd1_msk_2018",
+         "nsclc_tracerx_2017","genie_9","lung_nci_2022","luad_cptac_2020"]
 #files that can be auto-merged
 nm_files = ["tsp.luad.maf.txt"]
 #files that don't need merging
@@ -53,7 +54,7 @@ broad_df["STAGE"] = broad_df["STAGE"].map(stage_dict).fillna(broad_df["STAGE"])
 broad_df = broad_df[["PATIENT_ID", "SMOKER", "STAGE", "PFS_MONTHS"]]
 broad_df.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)"]
 #"All tumors were chemotherapy-naive, primary resection specimens except for one case with whole genome sequence data (LU-A08-43) that was a post-chemotherapy metastatic tumor from a never-smoker" (Broad, 2012).
-broad_df['Treatment'] = False
+broad_df.loc[:, 'Treatment'] = False
 #removing non-primary samples
 broad_df = broad_df.drop(broad_df.index[broad_df['Sample ID'] == 'LU-A08-43'])
 
@@ -100,15 +101,18 @@ msk2015_df['Treatment'] = True
 # msk2015_df['Treatment'][msk2015_df['Sample ID'] == 'DM123062'] = True
 non_luad_sample_ids_msk2015 = msk2015_df[msk2015_df['HISTOLOGY'] != 'Adenocarcinoma']['SAMPLE_ID']
 msk2015_df = msk2015_df[msk2015_df['HISTOLOGY'] == 'Adenocarcinoma']
-# keeping only samples from lung tissue, whether primary or metastatic, according to supplementary table 4
-msk2015_df = msk2015_df[msk2015_df["SAMPLE_ID"].isin(["AU5884","CA9903","GR0134","JB112852","LO5004","MA7027","NI9507","RO3338","SB010944","SC0899","SR070761","TU0428","LO3793","SC6470","VA1330","VA7859","WA7899"])]
+# keeping only primary samples from lung tissue, according to supplementary table 4
+# samples LO3793, SC6470, VA1330, VA7859, WA7899 are from lung tissue but are metastatic
+msk2015_df = msk2015_df[msk2015_df["SAMPLE_ID"].isin(["AU5884","CA9903","GR0134","JB112852","LO5004","MA7027","NI9507","RO3338","SB010944","SC0899","SR070761","TU0428"])]
 msk2015_df = msk2015_df[["SAMPLE_ID", "Stage", "SMOKING_HISTORY", "PFS_MONTHS", "Treatment"]]
 #using sample_id instead of patient_id because that is what matches with patient_id in the maf file
 msk2015_df.columns = ["Sample ID","Stage","Smoker","Progression Free Survival (months)","Treatment"]
 
 
 msk2017_df = clinical_files.get('lung_msk_2017')
-msk2017_df["SMOKING_HISTORY"] = msk2017_df["SMOKING_HISTORY"].apply(lambda x: True if x in ("Current heavy", "Former heavy", "Former light") else False if x == "Never" else np.NaN)
+# Excluding "Former light" from consideration
+light_smoker_sample_ids_2017 = msk2017_df[msk2017_df['SMOKING_HISTORY'] == 'Former light']['SAMPLE_ID']
+msk2017_df["SMOKING_HISTORY"] = msk2017_df["SMOKING_HISTORY"].apply(lambda x: True if x in ("Current heavy", "Former heavy") else False if x == "Never" else np.NaN)
 #converting stages to one format amongst all datasets
 msk2017_df["STAGE_AT_DIAGNOSIS"] = msk2017_df["STAGE_AT_DIAGNOSIS"].map(stage_dict | {'IA L,IV R':'1a'}).fillna(msk2017_df["STAGE_AT_DIAGNOSIS"])
 #adding treatment column
@@ -126,6 +130,7 @@ msk2017_df = msk2017_df[["PATIENT_ID","SAMPLE_ID", "SMOKING_HISTORY", "STAGE_AT_
 msk2017_df.columns = ["Patient ID","Sample ID","Smoker","Stage","Vital Status","Treatment"]
 
 msk2018_df = clinical_files.get('nsclc_pd1_msk_2018')
+msk2018_df['SMOKER'] = np.where(msk2018_df['SAMPLE_ID'].isin(light_smoker_sample_ids_2017),np.NaN,msk2018_df['SMOKER'])
 msk2018_df['SMOKER'] = msk2018_df['SMOKER'].apply(lambda x: True if x == 'Ever' else False if x == 'Never' else np.NaN)
 msk2018_df['Stage'] = np.NaN
 #all patients treated with ICI
@@ -181,13 +186,21 @@ genie_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment']
 nci_df = clinical_files.get('lung_nci_2022')
 non_luad_sample_ids_nci = nci_df[nci_df['HISTOLOGY'] != 'Adenocarcinomas']['SAMPLE_ID']
 nci_df = nci_df[nci_df["HISTOLOGY"] == "Adenocarcinomas"]
-nci_df['Smoker'] = False
+nci_df.loc[:, 'Smoker'] = False
 # all samples were of primary tumor
-nci_df['Stage'] = nci_df["TUMOR_STAGE"].map(stage_dict).fillna(nci_df["TUMOR_STAGE"])
-nci_df['Overall Survival (Months)'] = nci_df["OS_MONTHS"].fillna("Living")
-nci_df['Treatment'] = False
+nci_df.loc[:, 'Stage'] = nci_df["TUMOR_STAGE"].map(stage_dict).fillna(nci_df["TUMOR_STAGE"])
+nci_df.loc[:, 'Overall Survival (Months)'] = nci_df["OS_MONTHS"].fillna("Living")
+nci_df.loc[:, 'Treatment'] = False
 nci_df = nci_df[["PATIENT_ID",'SAMPLE_ID','Smoker','Stage','Overall Survival (Months)','Treatment']]
 nci_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Overall Survival (Months)','Treatment']
+
+
+cptac_df = clinical_files.get('luad_cptac_2020')
+cptac_df['SMOKING_STATUS'] = cptac_df['SMOKING_STATUS'].apply(lambda x: True if x == 'Smoker' else False if x=='Non-Smoker' else np.NaN)
+cptac_df['STAGE'] = cptac_df['STAGE'].apply(lambda x: str(x).lower())
+cptac_df['Treatment'] = False
+cptac_df = cptac_df[['PATIENT_ID','SAMPLE_ID','SMOKING_STATUS','STAGE','Treatment']]
+cptac_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment']
 
 
 fmad_df = pd.read_csv(os.path.join(location_data,'luad_fm-ad/clinical.tsv'), sep = '\t')
@@ -223,6 +236,6 @@ msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df, nci_df])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df, nci_df, cptac_df])
 
 all_clinical_df.to_csv(merged_clinical_file_name)
