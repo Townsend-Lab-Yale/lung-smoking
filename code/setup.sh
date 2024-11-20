@@ -57,6 +57,7 @@ cd ../data # keep this line if using synapse (above), it is required
 ## GENIE does not allow to download previous versions of data, so we
 ## provide it from our website:
 mkdir genie_9
+cd genie_9
 wget https://misc.cidma.us/data/genie_9/data_clinical_patient.txt
 wget https://misc.cidma.us/data/genie_9/data_clinical_sample.txt
 wget https://misc.cidma.us/data/genie_9/data_mutations_extended_lifted.txt
@@ -65,6 +66,7 @@ wget https://misc.cidma.us/data/genie_9/genomic_information.txt
 echo "...done downloading GENIE data."
 echo ""
 echo ""
+cd ../
 ## TODO: Update to latest genie data
 
 
@@ -79,7 +81,8 @@ declare -a DATASETS=("luad_broad"
                      "luad_mskcc_2015"
                      "nsclc_pd1_msk_2018"
                      "nsclc_tracerx_2017"
-                     "lung_nci_2022")
+                     "lung_nci_2022"
+                     "luad_cptac_2020")
 for DATASET in ${DATASETS[@]}; do
     echo "Obtaining data set $DATASET..."
     curl "${URL}${DATASET}${EXTENSION}" | gunzip -dc | tar -xf -
@@ -104,6 +107,15 @@ mv nsclc_pd1_msk_2018/data_mutations.txt nsclc_pd1_msk_2018/data_mutations_exten
 echo "Renaming data/lung_nci_2022/data_mutations.txt to "`
      `"data/lung_nci_2022/data_mutations_extended.txt for consistency."
 mv lung_nci_2022/data_mutations.txt lung_nci_2022/data_mutations_extended.txt
+echo "Renaming data/nsclc_tracerx_2017/data_mutations.txt to "`
+     `"data/nsclc_tracerx_2017/data_mutations_extended.txt for consistency."
+mv nsclc_tracerx_2017/data_mutations.txt nsclc_tracerx_2017/data_mutations_extended.txt
+echo "Renaming data/luad_tsp/data_mutations.txt to "`
+     `"data/luad_tsp/data_mutations_extended.txt for consistency."
+mv luad_tsp/data_mutations.txt luad_tsp/data_mutations_extended.txt
+echo "Renaming data/luad_cptac_2020/data_mutations.txt to "`
+     `"data/luad_cptac_2020/data_mutations_extended.txt for consistency."
+mv luad_cptac_2020/data_mutations.txt luad_cptac_2020/data_mutations_extended.txt
 echo ""
 echo "...done downloading cBioPortal data."
 echo ""
@@ -179,44 +191,9 @@ echo ""
 cd ../code
 
 
-echo "Changing coordinates of data sets to GRCh 38..."
-echo ""
-echo "Checking if liftOver is available..."
-if ! command -v liftOver &> /dev/null
-then
-    echo "To change coordinates the liftOver command-line program is required."
-    echo ""
-    echo "The liftOver program is free for non-profit academic research use."
-    echo "Visit https://genome-store.ucsc.edu/ for details."
-    echo ""
-    echo "Read the terms and conditions in:"
-    echo "https://genome-store.ucsc.edu/media/eula/2022/01/30/GB_EULA_2020.pdf"
-
-    echo ""
-    osystem=`uname -s`
-    case "${osystem}" in
-        Linux*) echo -e "Download liftOver from:\r\n"`
-        `"https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver";;
-        Darwin*) echo echo -e "Download liftOver from:\r\n"`
-        `"https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/liftOver";;
-        *) echo "ERROR: The liftOver program is only available for Linux or Max OSX.";;
-    esac
-    echo ""
-    echo "After downloading liftOver, make it available on your path."
-    read -p "Press enter to continue or Ctrl-C to abort."
-else
-    echo "liftOver is already installed."
-fi
-echo ""
-source .venv/bin/activate
-python liftover.py
-echo "...done changing coordinates."
-echo ""
-echo ""
-
-
 echo "Merging MAF and clinical files..."
 echo ""
+source .venv/bin/activate
 python prepare_maf_data.py
 python merge_MAF_clinical.py
 python store_panel_info.py
