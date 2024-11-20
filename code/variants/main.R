@@ -22,9 +22,9 @@ trim_oncogenes = FALSE
 
 #' Create CESA object for mutation rate calculation and MAF construction
 #' Output locations: 
-#'   'data/pan_data_cesa_for_cancer_epistasis.rds'
+#'   'data/pan_data_cesa.rds'
 #'   'data/(panel_)(non)smoking_sample_ids.txt'
-#'   'output/(non)smoking_(w_panel_)mutation_rates.txt'
+#'   'output/(non)smoking_mutation_rates.txt'
 print('Creating CESA object for mutation rate calculation and MAF cleaning')
 source('create_cesa_for_epistasis.R')
 
@@ -35,7 +35,7 @@ gene_mut_rate_df[,gene := toupper(gene)]
 
 #' Calculate trinucleotide mutation proportions across the whole genome in preparation for calculating variant mutation rates
 
-cesa = load_cesa(paste0(location_data,"pan_data_cesa_for_cancer_epistasis.rds"))
+cesa = load_cesa(paste0(location_data,"pan_data_cesa.rds"))
 smoking_samples = fread(paste0(location_data, 'smoking_sample_ids.txt'), header=F)[[1]]
 nonsmoking_samples = fread(paste0(location_data, 'nonsmoking_sample_ids.txt'), header=F)[[1]]
 panel_smoking_samples = fread(paste0(location_data, 'panel_smoking_sample_ids.txt'), header=F)[[1]]
@@ -119,7 +119,8 @@ if(save_results){fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_
 #' Output location: 'output/cesR_maf_for_epistasis_analysis.txt'
 print("Filtering MAF")
 maf_file = read.csv(paste0(location_output,"merged_luad_maf.txt"))
-colnames(maf_file)[2] = 'Tumor_Sample_Barcode'; colnames(maf_file)[7] <- 'Tumor_Allele'
+maf_file = maf_file %>% dplyr::rename('Tumor_Sample_Barcode' = 'Sample.ID',
+                                      'Tumor_Allele' = 'Tumor_Seq_Allele2')
 
 final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, variants_per_gene, save_results)
 
