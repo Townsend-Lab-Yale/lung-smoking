@@ -32,6 +32,8 @@ df2 = pd.read_csv(os.path.join(location_data,'luad_tcga/exposure.tsv'), sep="\t"
 clinical_files['luad_tcga'] = pd.merge(df1, df2, on="case_id")
 #merging on basis of patient ID
 
+clinical_files['yale_luad'] = pd.read_csv(os.path.join(location_data,'yale_luad/data_clinical_sample.txt'), sep="\t") \
+                                .rename(columns={'patient_name':'Patient ID','tumor_name':'Sample ID'})
 
 stage_dict = {'I':'1','IA':'1a','IB':'1b','II':'2','IIA':'2a','IIB':'2b','III':'3','IIIA':'3a','IIIB':'3b','IV':'4'}
 
@@ -211,6 +213,14 @@ fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
 fmad_df = fmad_df[['case_id']]
 fmad_df.columns = ['Sample ID']
 
+yale_df = clinical_files.get('yale_luad')
+non_yale_sample_ids = yale_df['Sample ID'][~yale_df['Sample ID'].str.startswith('MDA')]
+yale_df = yale_df[yale_df['Sample ID'].str.startswith('MDA')]
+yale_df['Smoker'] = np.NaN
+yale_df['Stage'] = np.NaN
+yale_df['Treatment'] = np.NaN
+yale_df = yale_df[['Sample ID','Smoker','Stage','Treatment']]
+
 #removing repeated patients between msk 2017 and msk 2018, keeping msk 2018
 merged_temp = pd.merge(msk2017_df, msk2018_df, on = 'Patient ID', how = 'inner')
 dup_patient_ids_1718 = merged_temp['Patient ID']
@@ -236,6 +246,7 @@ msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, tracer_df_sampled, genie_df, fmad_df, nci_df, cptac_df])
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, 
+                             tracer_df_sampled, genie_df, fmad_df, nci_df, cptac_df, yale_df])
 
 all_clinical_df.to_csv(merged_clinical_file_name)

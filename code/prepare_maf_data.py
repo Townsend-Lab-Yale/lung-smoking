@@ -17,14 +17,17 @@ from filter_clinical_data import non_luad_sample_ids_msk2018
 from filter_clinical_data import non_luad_sample_ids_tracer
 from filter_clinical_data import non_luad_sample_ids_genie
 from filter_clinical_data import non_luad_sample_ids_nci
+from filter_clinical_data import non_yale_sample_ids
 
 
-from locations import full_maf_file_names_lifted as maf_file_names
+
+from locations import full_maf_file_names as maf_file_names
 from locations import location_gene_panels
 from locations import merged_maf_file_name
 
 
 data_sets_sample_id_col_names ={key:'case_id' if key in ['TCGA', 'FM-AD']
+                                else 'tumor_name' if key == 'Yale'
                                 else None
                                 for key in maf_file_names.keys()}
 
@@ -52,6 +55,7 @@ and mutations.
             -'Genie'
             -'NCI'
             -'FM-AD'
+            -'Yale'
 
     :type tumor_col_name: str
     :param tumor_col_name: Name of the column in the data that
@@ -163,6 +167,7 @@ dfs['NCI'] = dfs['NCI'][~dfs['NCI']['Sample ID'].isin(non_luad_sample_ids_nci)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(non_luad_sample_ids_fmad)]
 dfs['FM-AD'] = dfs['FM-AD'][~dfs['FM-AD']['Sample ID'].isin(fmad_non_primary)]
 
+dfs['Yale'] = dfs['Yale'][~dfs['Yale']['Sample ID'].isin(non_yale_sample_ids)]
 
 ## Merge data
 
