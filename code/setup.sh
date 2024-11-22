@@ -34,26 +34,11 @@ echo ""
 
 echo "Downloading data..."
 echo ""
+cd ../data ## assuming we are running the code from /code
 
 
 echo "Downloading GENIE data..."
 echo ""
-# echo -e "GENIE requires a username and password, "`
-#      `"because you have to accept their terms to "`
-#      `"download the data set first. If you do not "`
-#      `"have done so yet, go to:\r\n"`
-#      `"https://www.synapse.org/#!Synapse:syn24179660\r\n"`
-#      `"to register."
-# source .venv/bin/activate
-# python get_synapse_data.py
-# deactivate
-# echo "...done downloading GENIE data."
-# echo ""
-# echo ""
-
-
-cd ../data # keep this line if using synapse (above), it is required
-           # for the downloading other files to the proper directory
 ## GENIE does not allow to download previous versions of data, so we
 ## provide it from our website:
 mkdir genie_9
@@ -67,7 +52,6 @@ echo "...done downloading GENIE data."
 echo ""
 echo ""
 cd ../
-## TODO: Update to latest genie data
 
 
 echo "Downloading cBioPortal data..."
