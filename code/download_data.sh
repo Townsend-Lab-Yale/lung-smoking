@@ -92,7 +92,7 @@ echo ""
 echo "Downloading Yale data..."
 echo ""
 mkdir 'yale_luad'
-cd 'luad_tcga'
+cd 'yale_luad'
 wget https://misc.cidma.us/data/yale_luad/data_clinical_sample.txt
 wget https://misc.cidma.us/data/yale_luad/data_mutations_extended.txt
 echo "...done downloading Yale data."
