@@ -205,13 +205,20 @@ cptac_df = cptac_df[['PATIENT_ID','SAMPLE_ID','SMOKING_STATUS','STAGE','Treatmen
 cptac_df.columns = ['Patient ID','Sample ID','Smoker','Stage','Treatment']
 
 
-fmad_df = pd.read_csv(os.path.join(location_data,'luad_fm-ad/clinical.tsv'), sep = '\t')
-non_luad_sample_ids_fmad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
-fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
-fmad_non_primary = fmad_df[fmad_df['classification_of_tumor'] != 'primary']['case_id']
-fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
-fmad_df = fmad_df[['case_id']]
-fmad_df.columns = ['Sample ID']
+fmad_file_path = os.path.join(location_data,'luad_fm-ad/clinical.tsv')
+## code should run only if file was downloaded:
+if os.path.exists(fmad_file_path):
+    fmad_df = pd.read_csv(fmad_file_path, sep = '\t')
+    non_luad_sample_ids_fmad = fmad_df[fmad_df['primary_diagnosis'] != 'Adenocarcinoma, NOS']['case_id']
+    fmad_df = fmad_df[fmad_df['primary_diagnosis'] == 'Adenocarcinoma, NOS']
+    fmad_non_primary = fmad_df[fmad_df['classification_of_tumor'] != 'primary']['case_id']
+    fmad_df = fmad_df[fmad_df['classification_of_tumor'] == 'primary']
+    fmad_df = fmad_df[['case_id']]
+    fmad_df.columns = ['Sample ID']
+else:
+    fmad_df = pd.DataFrame(columns=['Sample ID'])
+    non_luad_sample_ids_fmad = pd.Series(dtype=object)
+    fmad_non_primary = pd.Series(dtype=object)
 
 yale_df = clinical_files.get('yale_luad')
 non_yale_sample_ids = yale_df['Sample ID'][~yale_df['Sample ID'].str.startswith('MDA')]
@@ -246,7 +253,7 @@ msk2018_df = msk2018_df.drop(columns='Patient ID')
 
 """TSP not included because desired information is not in dataset and is not currently accessible"""
 
-all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df, 
+all_clinical_df = pd.concat([broad_df, tcga_df, oncosg_df, msk2015_df, msk2017_df, msk2018_df,
                              tracer_df_sampled, genie_df, fmad_df, nci_df, cptac_df, yale_df])
 
 all_clinical_df.to_csv(merged_clinical_file_name)

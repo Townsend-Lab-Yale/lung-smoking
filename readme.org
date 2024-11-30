@@ -42,18 +42,6 @@ and follow the instructions.
 - [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
 - [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
 
-* TODO [0/3] Before publishing                                      :waiting:
-
-- [ ] Check differences between cancer_epistasis theory.py and
-  cancer_epistasis.py
-
-- [ ] Remove access to the files at misc.cidma.us/data and provide
-  instructions on how to download each file that are is not accessible
-  via cBioPortal or synapse.
-
-- [ ] Check with Stephen status of package lift_coords and change it
-  from the requirements (currently requires access to a private repo).
-
 * Introduction
 
 "If our aim is to understand cancer evolution, we cannot ignore the

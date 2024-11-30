@@ -38,7 +38,7 @@ def import_maf_data(db,
                     sample_id_col_name=None,
                     clear_silent=True):
     """Build a data frame with relevant information including sample IDs
-and mutations.
+    and mutations.
 
     :typed db: str or list
     :param db: Name of the data set or list containing multiple data
@@ -76,57 +76,101 @@ and mutations.
 
     """
 
+    dfs = []
     if isinstance(db, list):
-        dfs = [pd.read_csv(maf_file_names[x],
-                           sep="\t",
-                           comment="#")
-               for x in db]
-        dfs = [df.assign(Source=x)
-               for df, x in zip(dfs, db)]
-        data = pd.concat(dfs, ignore_index=True)
+        for x in db:
+            file_path = maf_file_names[x]
+            if x == 'FM-AD' and not os.path.exists(file_path):
+                # File does not exist, create an empty DataFrame
+                print(f"File for '{x}' not found. Creating an empty DataFrame.")
+                df = pd.DataFrame(columns=[
+                    'Sample ID', 'Chromosome', 'Start_Position', 'Mutation',
+                    'Reference_Allele', 'Tumor_Seq_Allele2', 'Source', 'Variant_Classification'
+                ])
+            else:
+                # File exists, read the data
+                df = pd.read_csv(file_path, sep="\t", comment="#")
+                df = df.assign(Source=x)
+
+            dfs.append(df)
+
+        # Concatenate all DataFrames
+        data = pd.concat(dfs, ignore_index=True, sort=False)
+
     else:
-        data = pd.read_csv(maf_file_names[db],
-                           sep="\t",
-                           comment="#")
-        data = data.assign(Source=db)
+        file_path = maf_file_names[db]
+        if db == 'FM-AD' and not os.path.exists(file_path):
+            # File does not exist, create an empty DataFrame
+            print(f"File for '{db}' not found. Creating an empty DataFrame.")
 
-    if clear_silent:
-        data = data[data['Variant_Classification'] != 'Silent']
-
-    if tumor_col_name is None:
-        if 'Tumor_Seq_Allele2' in data.columns:
-            tumor_col_name = 'Tumor_Seq_Allele2'
-        elif 'Tumor_Allele' in data.columns:
-            tumor_col_name = 'Tumor_Allele'
+            data = pd.DataFrame(columns=[
+                'Sample ID', 'Chromosome', 'Start_Position', 'Mutation',
+                'Reference_Allele', 'Tumor_Seq_Allele2', 'Source',
+                'Variant_Classification'])
         else:
-            raise Exception("Unknown tumor allele. "
-                            "Provide variable 'tumor_col_name'")
+            # File exists, read the data
+            data = pd.read_csv(file_path, sep="\t", comment="#")
+            data = data.assign(Source=db)
 
-    if sample_id_col_name is None:
-        if 'Tumor_Sample_Barcode' in data.columns:
-            sample_id_col_name = 'Tumor_Sample_Barcode'
-        elif 'Unique_Patient_Identifier' in data.columns:
-            sample_id_col_name = 'Unique_Patient_Identifier'
-        else:
-            raise Exception("Unknown sample identifier. "
-                            "Provide variable 'sample_id_col_name'")
+    if not data.empty:
+        if clear_silent and 'Variant_Classification' in data.columns:
+            data = data[data['Variant_Classification'] != 'Silent']
 
-    # removes 'chr' when there:
-    data['Chromosome'] = data.apply(
-        lambda x: str(x['Chromosome']).split("chr")[-1], axis=1)
-    # includes new column with unique description of mutation
-    data['Mutation'] = data.apply(
-        lambda x: "{}:{} {}>{}".format(
-            x['Chromosome'],
-            x['Start_Position'],
-            x['Reference_Allele'],
-            x[tumor_col_name]),
-        axis=1)
+        if tumor_col_name is None:
+            if 'Tumor_Seq_Allele2' in data.columns:
+                tumor_col_name = 'Tumor_Seq_Allele2'
+            elif 'Tumor_Allele' in data.columns:
+                tumor_col_name = 'Tumor_Allele'
+            else:
+                raise Exception("Unknown tumor allele. "
+                                "Provide variable 'tumor_col_name'")
 
-    cols_except_id =  (['Chromosome', 'Start_Position', 'Mutation', 'Reference_Allele', tumor_col_name, 'Source']
-                       + (['Variant_Classification'] if not clear_silent else []))
-    data = data[[sample_id_col_name] + cols_except_id]
-    data.columns = ['Sample ID'] + cols_except_id
+        if sample_id_col_name is None:
+            if 'Tumor_Sample_Barcode' in data.columns:
+                sample_id_col_name = 'Tumor_Sample_Barcode'
+            elif 'Unique_Patient_Identifier' in data.columns:
+                sample_id_col_name = 'Unique_Patient_Identifier'
+            else:
+                raise Exception("Unknown sample identifier. "
+                                "Provide variable 'sample_id_col_name'")
+
+        # Remove 'chr' prefix if present
+        if 'Chromosome' in data.columns:
+            data['Chromosome'] = data['Chromosome'].astype(str).str.replace('chr', '', regex=False)
+
+        # Create a unique mutation description
+        data['Mutation'] = data.apply(
+            lambda x: "{}:{} {}>{}".format(
+                x['Chromosome'],
+                x['Start_Position'],
+                x['Reference_Allele'],
+                x[tumor_col_name]),
+            axis=1)
+
+        # Prepare the list of columns to keep
+        cols_except_id = ['Chromosome', 'Start_Position', 'Mutation',
+                          'Reference_Allele', tumor_col_name, 'Source']
+        if not clear_silent and 'Variant_Classification' in data.columns:
+            cols_except_id.append('Variant_Classification')
+
+        # Select and rename columns
+        data = data[[sample_id_col_name] + cols_except_id]
+        data.columns = ['Sample ID'] + cols_except_id
+
+    else:
+        # Handle the case where data is empty
+        if tumor_col_name is None:
+            tumor_col_name = 'Tumor_Seq_Allele2'  # Default column name
+        if sample_id_col_name is None:
+            sample_id_col_name = 'Tumor_Sample_Barcode'  # Default column name
+
+        # Create empty DataFrame with expected columns
+        cols_except_id = ['Chromosome', 'Start_Position', 'Mutation',
+                          'Reference_Allele', tumor_col_name, 'Source']
+        if not clear_silent:
+            cols_except_id.append('Variant_Classification')
+
+        data = pd.DataFrame(columns=['Sample ID'] + cols_except_id)
 
     return data
 
