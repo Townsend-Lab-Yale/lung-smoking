@@ -23,9 +23,12 @@ Broad_maf <- Broad_maf[is.na(problem)]
 Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
 
-print('    FMAD')
-FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
-FMAD_maf <- FMAD_maf[is.na(problem)]
+if('FM-AD' in names(maf_list)){
+  include_fmad = TRUE
+  print('    FMAD')
+  FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
+  FMAD_maf <- FMAD_maf[is.na(problem)]
+}
 
 print('    Genie')
 Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, keep_extra_columns = T)
@@ -96,7 +99,7 @@ gene_granges <- rtracklayer::import(paste0(location_data, "gencode.v38lift37.bas
 location_bed <- paste0(location_data,'bed_files/')
 location_gene_panels <- paste0(location_data,'gene_panels/')
 
-if(!file.exists(paste0(location_bed,"fmad_targets.bed"))){
+if(include_fmad & !file.exists(paste0(location_bed,"fmad_targets.bed"))){
   fmad_genes <- unique(fread(paste0(location_gene_panels,"foundation_one.txt"))$Hugo_Symbol)
   fmad_granges <- gene_granges[gene_granges$gene_name %in% fmad_genes, ]
   fmad_granges <- fmad_granges[fmad_granges$type %in% c('CDS','stop_codon'),]
@@ -159,7 +162,6 @@ Genie_maf <- merge(Genie_maf, genie_panels_used, by.x = 'Unique_Patient_Identifi
 Genie_maf <- split(Genie_maf, Genie_maf$`Sequence Assay ID`)
 
 preloaded_maf = rbind(rbindlist(Broad_maf), 
-                      FMAD_maf, 
                       rbindlist(Genie_maf), 
                       MSK2015_maf, 
                       rbindlist(MSK2017_maf), 
@@ -172,6 +174,12 @@ preloaded_maf = rbind(rbindlist(Broad_maf),
                       CPTAC_maf,
                       Yale_maf,
                       fill = T)
+
+if(include_fmad){
+  preloaded_maf = rbind(preloaded_maf, 
+                      FMAD_maf
+                      fill = T)
+}
 
 if(save_results){
   fwrite(preloaded_maf, paste0(location_data, 'all_preloaded_mafs.txt'))
@@ -199,10 +207,12 @@ print('    CPTAC')
 cesa <- load_maf(cesa, maf = CPTAC_maf, maf_name = 'CPTAC')
 print('    Yale')
 cesa <- load_maf(cesa, maf = Yale_maf, maf_name = 'Yale')
-print('    FMAD')
-cesa <- load_maf(cesa, maf = FMAD_maf, coverage = 'targeted', 
+if(include_fmad){
+  print('    FMAD')
+  cesa <- load_maf(cesa, maf = FMAD_maf, coverage = 'targeted', 
                 covered_regions = paste0(location_bed,"fmad_targets.bed"), covered_regions_name = 'fmad_regions', covered_regions_padding = 100,
                 maf_name = 'FMAD') #padding based on 23 variants having distance from interval between 10 and 100.
+}
 print('    MSK2017')
 cesa <- load_maf(cesa, maf = MSK2017_maf$IMPACT341, coverage = 'targeted', 
                 covered_regions = paste0(location_bed,"msk341_targets.bed"), covered_regions_name = 'msk341_regions', covered_regions_padding = 100,
