@@ -17,9 +17,6 @@ location_output = '../../output/'
 
 save_results = TRUE
 
-recurrent_variants_only = FALSE
-trim_oncogenes = FALSE
-
 #' Create CESA object for mutation rate calculation and MAF construction
 #' Output locations: 
 #'   'data/pan_data_cesa.rds'
@@ -63,24 +60,6 @@ variants_per_gene = merge(cesa_maf, preloaded_maf[is.na(problem) & Variant_Class
                           all=F)
 # excluding all non-SNVs
 variants_per_gene = variants_per_gene[top_gene %in% gene_mut_rate_df$gene & variant_type == 'snv' & !is.na(variant_id), .(top_gene, variant_id)]
-
-if(recurrent_variants_only){
-    # excluding non-recurrent variants
-    variants_per_gene = variants_per_gene[, .N, by=.(top_gene, variant_id)][N>1]
-}
-
-if(trim_oncogenes){
-  #' excluding non-recurrent variants if the gene is likely an oncogene (max 
-  #' variant prevalence accounts for more than 6% of all variants)
-  
-  oncogene_threshold = 0.06
-  
-  var_counts = variants_per_gene[, .N, by=.(top_gene, variant_id)]
-  likely_oncogenes = var_counts[,max(N)/sum(N) > oncogene_threshold & max(N)>1,by=top_gene][(V1),top_gene]
-  
-  variants_per_gene = rbind(variants_per_gene[top_gene %in% likely_oncogenes, .N, by=.(top_gene, variant_id)][N>1],
-                            variants_per_gene[!(top_gene %in% likely_oncogenes), .N, by=.(top_gene, variant_id)])
-}
 
 
 #' Calculate variant level mutation rates
