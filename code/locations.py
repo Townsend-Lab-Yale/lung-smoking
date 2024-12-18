@@ -11,6 +11,8 @@ location_figures = os.path.abspath(
                  "figures/"))
 """Location of directory that contains figures for the project."""
 
+if not os.path.exists(location_figures):
+    os.mkdir(location_figures)
 
 location_data = os.path.abspath(
     os.path.join(os.path.dirname(__file__),
@@ -25,6 +27,8 @@ location_output = os.path.abspath(
                  "output/"))
 """Location of directory that contains output for the model."""
 
+if not os.path.exists(location_output):
+    os.mkdir(location_output)
 
 data_sets_directories = {
     'TSP':'luad_tsp',
