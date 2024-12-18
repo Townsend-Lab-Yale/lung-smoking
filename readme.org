@@ -28,123 +28,16 @@ directory run
 #+end_src
 and follow the instructions.
 
-* Data decisions
+* Analysis
 
-- TCGA has smoking as pack years. It has NA values but not 0. We will
-  be assuming that NA means no smoking, i.e., that there was
-  information for smoking for all participants
+To run the analysis, within the ==code== directory run
+#+begin_src shell
+  cd variants
+  Rscript main.R
+  cd ../
+  source .venv/bin/activate
+  python main.py
+#+end_src
 
-* Sources of genes in consideration
-
-- [[https://www.sciencedirect.com/science/article/pii/S1470204515000777#][Genomic alterations in lung adenocarcinoma]]
-- [[https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3092285/][The Genomics of Lung Adenocarcinoma]]
-- [[https://www.nature.com/articles/nature13385][Comprehensive molecular profiling of lung adenocarcinoma]]
-- [[https://genome.cshlp.org/content/22/11/2109.full][The transcriptional landscape and mutational profile of lung adenocarcinoma]]
-- [[https://www.sciencedirect.com/science/article/pii/S1556086416309273][Comprehensive Characterization of Oncogenic Drivers in Asian Lung Adenocarcinoma]]
-
-* Introduction
-
-"If our aim is to understand cancer evolution, we cannot ignore the
-environment in which a cancer cell evolves." Genetic and non-genetic
-clonal diversity in cancer evolution by James R. M. Black and Nicholas
-McGranahan
-
-* For introduction
-
-There is a need for using information about co-ocurrence of mutations
-in a clinical setting, particularly of KRAS occurs with other
-mutations in lung cancer (although this is NSCLC): K-ras Mutation
-Subtypes in NSCLC and Associated Co-occuring Mutations in Other
-Oncogenic Pathways
-https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
-
-* For discussion
-
-A paragraph about copy numbers, or just check comparing results with
-copy number with or without a lot(?).
-
-This paper didn't find a difference between smokers and non-smokers in
-the co-ocurrence of mutationss with KRAS: K-ras Mutation Subtypes in
-NSCLC and Associated Co-occuring Mutations in Other Oncogenic Pathways
-https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
-
-
-More on KRAS
-https://www.sciencedirect.com/science/article/pii/S0923753423006567
-
-Differences in selection might caused directly by something other than
-smoking, for example non-smokers are older and aging could be directly
-responsible for most of the difference in selection between smokers
-and non-smokers. But it is clear (is it?) that smoking is the factor
-that causes those differences.
-
-
-Evidence that synthetic lethality underlies the mutual exclusivity of
-oncogenic KRAS and EGFR mutations in lung adenocarcinoma
-https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4478584/
-
-
-K-ras Mutation Subtypes in NSCLC and Associated Co-occuring Mutations
-in Other Oncogenic Pathways
-https://www.jto.org/article/S1556-0864(18)33532-9/fulltext
-
-
-TP53 mutations are associated with the development of distant
-metastases and poor diagnosis and are more common in smokers: Genomic
-analysis of early-stage lung cancer reveals a role for TP53 mutations
-in distant metastasis
-https://www.nature.com/articles/s41598-022-21448-1
-
-
-If we take a look at KRAS effect on other mutations and OS: "Mutations
-in KEAP1 and SMARCA4, but not STK11, were associated with metastatic
-disease and poor OS. Functional STK11 loss, however, may contribute to
-poor outcomes in KEAP1MUT tumors." Molecular markers of metastatic
-disease in KRAS mutant lung adenocarcinoma
-https://www.sciencedirect.com/science/article/pii/S0923753423006567
-
-We can run a model with KRAS, KEAP1, STK11 and maybe SMARCA4 check if
-the above is true.
-
-
-Comparative bioinformatic analysis of KRAS, STK11 and KEAP1
-(co-)mutations in non-small cell lung cancer with a special focus on
-KRAS G12C
-https://www.lungcancerjournal.info/article/S0169-5002(23)00899-1/fulltext
-
-
-KRAS can be bunched together: "Comparing size distributions of tumors of each tumor sup- pressor
-genotype revealed consistent effects between KRAS G12C- and KRAS
-G12D-driven lung tumors." Oncogenic context shapes the ﬁtness
-landscape of tumor suppression
-https://www.nature.com/articles/s41467-023-42156-y
-
-Compare selection coefficients with graph that contains KRAS + TSGs
-(Figure 2A)
-
-Check genes that interact differently with EGFR and BRAF and do
-pairwise epistasis (maybe + TP53) to compare if we get the same
-results.
-
-
-Impact of the STK11/KRAS co-mutation on the response to immunotherapy
-in a real-world pan-cancer cohort
-https://journals.sagepub.com/doi/full/10.1177/03008916231204441
-
-
-Whole-genome sequencing reveals the molecular implications of the
-stepwise progression of lung adenocarcinoma
-https://www.nature.com/articles/s41467-023-43732-y
-
-
-Fully accessible fitness landscape of oncogene-negative lung
-adenocarcinoma https://www.pnas.org/doi/10.1073/pnas.2303224120
-
-
-Distinct patterns of somatic genome alterations in lung
-adenocarcinomas and squamous cell carcinomas
-https://www.nature.com/articles/ng.3564
-
-* Possible reviewers
-
-Teresa Landi (suggested by Jeff on the slack channel [2022-08-22 Mon])
+Results can be analyzed using the provided jupyter notebooks in the
+==result_analysis== directory.
