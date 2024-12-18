@@ -23,7 +23,7 @@ Broad_maf <- Broad_maf[is.na(problem)]
 Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | cosmic_site_tier %in% 1:3)]
 Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
 
-if('FM-AD' in names(maf_list)){
+if('FM-AD' %in% names(maf_list)){
   include_fmad = TRUE
   print('    FMAD')
   FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
@@ -98,6 +98,8 @@ gene_granges <- rtracklayer::import(paste0(location_data, "gencode.v38lift37.bas
 
 location_bed <- paste0(location_data,'bed_files/')
 location_gene_panels <- paste0(location_data,'gene_panels/')
+
+if(!dir.exists(location_bed)) {dir.create(location_bed)}
 
 if(include_fmad & !file.exists(paste0(location_bed,"fmad_targets.bed"))){
   fmad_genes <- unique(fread(paste0(location_gene_panels,"foundation_one.txt"))$Hugo_Symbol)
@@ -177,7 +179,7 @@ preloaded_maf = rbind(rbindlist(Broad_maf),
 
 if(include_fmad){
   preloaded_maf = rbind(preloaded_maf, 
-                      FMAD_maf
+                      FMAD_maf,
                       fill = T)
 }
 
