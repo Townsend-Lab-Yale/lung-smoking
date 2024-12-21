@@ -92,12 +92,12 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
             geom_point(aes(size=freq*100, color=freq*100)) + 
             scale_color_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) +
             scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) + 
-            #scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), fancy_scientific)) +
+            #scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), scientific_expr)) +
             guides(color=guide_legend(title="Prevalence", nrow=1), size = guide_legend(title="Prevalence",nrow=1)) +
             theme_classic() +
             theme(
-                axis.title.y = element_text(size = 18),
-                axis.title.x = element_text(size = 18),
+                axis.title.y = element_text(size = 16),
+                axis.title.x = element_text(size = 16),
                 axis.ticks.y = element_blank(),
                 axis.text.y = element_text(size = 14, face="italic"),
                 #axis.text.x = element_text(angle = 90),
@@ -143,7 +143,7 @@ get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
     return(gxe_effects)
 }
 
-get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Smoker" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2])}
+get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Smoker" = hue_pal()(2)[1], "smoking_plus" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2], "nonsmoking_plus" = hue_pal()(2)[2])}
 
 plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=TRUE){
     
@@ -181,7 +181,7 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
             # geom_point(data = df %>% filter(key=="pan_data", method == mu_method), aes(x=reorder(gene, -gamma_mle),y=gamma_mle)) + 
             # geom_errorbar(data = df %>% filter(key=="pan_data", method == mu_method), aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0.5) +
             scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
-            scale_y_continuous(labels = fancy_scientific) +
+            scale_y_continuous(labels = scientific_expr) +
             labs(x = "Gene", y = "Scaled selection coefficient", title = "Selection intensity for SNVs in ever-smoker and never-smoker LUAD", fill = "Smoker status") +
             theme_classic() +
             theme(
@@ -633,7 +633,7 @@ plot_interactions_from_df = function(df, custom_order=FALSE, log_scale=FALSE,tit
                     size="Sample count") +
             scale_alpha_manual(values = alpha_palette, name="Significant Difference in Selection") +
             scale_fill_viridis_c(name="Ratio of Selection") +
-            scale_y_continuous(labels = fancy_scientific) +
+            scale_y_continuous(labels = scientific_expr) +
             theme_classic() +
             theme(plot.title = element_text(size = 24, hjust=0.5),
                     axis.title = element_text(size = 20),
@@ -716,7 +716,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         size="Number of samples\nwith both mutations") +
                 scale_alpha_manual(values = alpha_palette, name="Significant difference in selection") +
                 scale_fill_manual(values = fill_palette, name = "Genetic context") +
-                scale_y_continuous(labels = fancy_scientific) +
+                scale_y_continuous(labels = scientific_expr) +
                 theme_classic() +
                 theme(plot.title = element_text(size = 24, hjust=0.5),
                         axis.title = element_text(size = 24),
@@ -804,7 +804,7 @@ plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labe
                     guides(fill = "none") + 
                     theme(axis.text.y=element_text(size=18, hjust=0.5), axis.title.y=element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank(), 
                         axis.ticks.x = element_line(colour = "grey50", linewidth=2)) +
-                    scale_y_continuous(labels = fancy_scientific, limits = c(0, gamma_mle_ceiling_env2), breaks = seq(0, gamma_mle_ceiling_env2, by = 1e5), 
+                    scale_y_continuous(labels = scientific_expr, limits = c(0, gamma_mle_ceiling_env2), breaks = seq(0, gamma_mle_ceiling_env2, by = 1e5), 
                                 expand=expand_scale(mult = c(0, 0),add = c(0, 2e4)))
                     
     env1_legend = get_legend(env1_plot)
@@ -815,7 +815,7 @@ plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labe
                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank(),
                         legend.box = "horizontal") + 
                     scale_y_break(c(gamma_mle_ceiling_env2 + 1e5, gamma_ceiling_env2-2e5), space=2, expand=FALSE) +
-                    scale_y_reverse(labels = fancy_scientific, limits = c (gamma_ceiling_env2,0), breaks = seq(0, gamma_ceiling_env2, by = 1e5),
+                    scale_y_reverse(labels = scientific_expr, limits = c (gamma_ceiling_env2,0), breaks = seq(0, gamma_ceiling_env2, by = 1e5),
                                     expand = c(0, 0)) + 
                     theme(
                         axis.text.x.top = element_blank(),
@@ -833,6 +833,8 @@ plot_interactions_by_env = function(env1_df, env2_df, interactions_to_plot, labe
 # Plotting singular comparisons of pairwise epistasis between two environments
 
 plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
+    y_scale_factor=1e-5
+
     smoking_df %>% bind_rows(nonsmoking_df, .id="key") %>% filter(tested_combo == paste0(gt,"_",mg)) %>%
     mutate(key = ifelse(key==1, "Ever-smoker","Never-smoker")) %>%
     mutate(x_label = ifelse(epistatic_gt == "WT", "WT", "Mut"),
@@ -851,10 +853,11 @@ plot_gge_interaction = function(mg, gt, smoking_df, nonsmoking_df){
             geom_vline(xintercept = 2.5, lty=2,col="grey") +
             scale_size_continuous(range=c(2,8)) +
             scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
-            scale_y_continuous(labels=function(x)x/1e4) +
+            expand_limits(y = 0) +
+            scale_y_continuous(labels=function(y)y*y_scale_factor) +
             # scale_size_continuous() +
             #scale_size_binned(n.breaks = 2) +
-            labs(y=TeX(r'(Scaled selection coefficient $(\times 10^{4})$)'), x=paste0('*',gt,'* genotype'),title= paste0('Selection for *',mg,'* mutations'), size="") +#"Sample count") +
+            labs(y=TeX(r'(Scaled selection coefficient $(\times 10^{5})$)'), x=paste0('*',gt,'* genotype'),title= paste0('Selection for *',mg,'* mutations'), size="") +#"Sample count") +
             guides(size=guide_legend(nrow=1), fill="none") +#guide_legend(override.aes = list(size=6))) +
             theme_classic() +
             theme(
@@ -1037,7 +1040,7 @@ plot_multi_gene_effects = function(df, strict=TRUE, interactions_to_plot=NULL){
             scale_fill_manual(values = fill_palette, name="Genetic Context") +
             scale_size_manual(values = size_palette, name="Genetic Context") +
             guides(alpha="none") + 
-            scale_y_continuous(labels=fancy_scientific) +
+            scale_y_continuous(labels=scientific_expr) +
             theme_classic() +
             theme(plot.title = element_text(size = 24, hjust=0.5),
                         axis.title = element_text(size = 20),
@@ -1137,10 +1140,13 @@ fancy_scientific = function(l) {
     l = format(l, scientific = TRUE)
     l = gsub("^0(.*)e(.*)", "0", l) # Just show 0 when is 0e...
     l = gsub("^(.*)e", "'\\1'e", l)
+    l = gsub("\'","",l)
     l = gsub("\\+","",l) # modification to remove unnecessary pluses
     l = gsub("e", "%*%10^", l)
-    return(parse(text=l))
+    return(l)
 }
+
+scientific_expr = function(l){parse(text=fancy_scientific(l))}
 
 log_labels = function(l) {
     l = format(l, scientific = TRUE)
@@ -1249,78 +1255,3 @@ load_M2_results = function(mu_method, lower_bound = 1e-2){
 
     return(gammas_df)
 }
-
-# Old code, no longer used, expect in older analysis files
-
-# # checks for epistatic interactions from any genotype, not just WT
-# # only returns significant interactions
-
-# check_ci_overlap = function(data, test_gge) {
-#   # order from low to high
-#   #   this minimizes the number of comparisons that need to be checked
-#   #   since if a row's upper bound is less than the next upper bound,
-#   #   then the it is impossible for the lower bound of the row to be greater
-#   #   than the next row's upper bound.
-#   data = data[order(data$gamma_ci_high), ]
-  
-#   non_overlaps = data.table()
-  
-#   n = nrow(data)
-  
-#   # iterate through each row, checking if the next rows' lower 
-#   # bounds are greater than the current row's upper bound
-#   for (i in 1:(n - 1)) {
-#     var1 <- data[i]
-#     candidates <- data[(i + 1):n, ]
-#     candidates <- candidates[candidates$gamma_ci_low > var1$gamma_ci_high, ]
-    
-#     if(nrow(candidates) > 0) {
-#       for(j in 1:nrow(candidates)) {
-#         row = data.table(lower = var1$from, 
-#                         upper = candidates$from[j], 
-#                         ratio = candidates$gamma_mle[j]/var1$gamma_mle,
-#                         lower_gt = var1$from_gt, 
-#                         upper_gt = candidates$from_gt[j],
-#                         under_neg_sel = var1$gamma_mle < 1)
-#         if(test_gge) {
-#             row$lower_key = var1$key
-#             row$upper_key = candidates$key[j]
-#         }
-#         non_overlaps = rbind(non_overlaps, row)
-#       }
-#     }
-#   }
-#   if(nrow(non_overlaps) > 0) {
-#     non_overlaps$mutated_gene = var1$mutated_gene
-#     non_overlaps$gene_set = var1$gene_set
-#   }
-
-#   return(non_overlaps)
-# }
-
-# get_epistasis_results = function(gammas_df, test_gge = FALSE){
-#     gammas_df_list = 
-#         gammas_df %>% 
-#         select(key, gene_set, mutated_gene, from, from_gt, gamma_mle, gamma_ci_low, gamma_ci_high) %>%
-#         split(gammas_df %>% mutate(id = paste0(gene_set,":",mutated_gene)) %>% pull(id))
-
-#     if(test_gge){
-#         gammas_df_list = gammas_df_list[unlist(lapply(gammas_df_list, function(df) nrow(df) == 8))]
-#     }
-
-#     epistasis_results = rbindlist(lapply(gammas_df_list, function(df) check_ci_overlap(df, test_gge) ))
-
-#     return(epistasis_results)
-# }
-
-# summarize_epistasis_results = function(epistasis_results, exclude_synergy_with_TP53 = TRUE){
-#     summarized_results = epistasis_results %>%
-#         group_by(lower_gt, upper_gt, mutated_gene) %>%
-#         summarize(median_ratio = round(median(ratio),3),
-#                 sd_ratio = round(sqrt(var(ratio)),3), 
-#                 rel_sd = round(sqrt(var(ratio))/median(ratio),3), 
-#                 n = n()) %>%
-#         ungroup()
-    
-#     return(summarized_results)
-# }
