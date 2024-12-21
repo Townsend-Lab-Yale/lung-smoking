@@ -15,9 +15,8 @@ remotes::install_github("Townsend-Lab-Yale/cancereffectsizeR@*release",
 
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install(version = "3.17") # this is so that it works with R version 4.3
+BiocManager::install(version = "3.17", ask=FALSE) # this is so that it works with R version 4.3
 
-library(BiocManager)
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 
 remotes::install_github("Townsend-Lab-Yale/ces.refset.hg19")
