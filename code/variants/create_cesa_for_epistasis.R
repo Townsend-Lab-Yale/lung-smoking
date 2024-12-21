@@ -24,11 +24,11 @@ Broad_maf <- Broad_maf[germline_variant_site == F & (repetitive_region == F | co
 Broad_maf <- Broad_maf[!Unique_Patient_Identifier %in% c("LUAD-B01169","LUAD-D01382")]
 
 if('FM-AD' %in% names(maf_list)){
-  include_fmad = TRUE
+  include_fmad <- TRUE
   print('    FMAD')
   FMAD_maf <- cancereffectsizeR::preload_maf(maf = maf_list$`FM-AD`, ces.refset.hg19, chain_file = liftover_file, keep_extra_columns = T)
   FMAD_maf <- FMAD_maf[is.na(problem)]
-}
+} else {include_fmad <- FALSE}
 
 print('    Genie')
 Genie_maf <- cancereffectsizeR::preload_maf(maf = maf_list$Genie, refset = ces.refset.hg19, keep_extra_columns = T)
