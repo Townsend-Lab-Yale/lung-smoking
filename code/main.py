@@ -519,6 +519,8 @@ def set_output_location(extension):
     :param extension: path extension to append to location_output
     """
     global location_output
+    from locations import location_output
+    
     location_output = os.path.join(location_output, extension)
     
     if not os.path.exists(location_output):
@@ -656,13 +658,13 @@ if __name__ == "__main__":
          keys = results_keys,
          mu_method="variant",
          pathways=False,
-         extension=os.path.join("final","subset"))
+         extension=os.path.join("model_results","subset"))
     
     main(genes=all_genes,
          num_per_combo=1,
          keys = results_keys,
          mu_method="variant",
          pathways=False,
-         extension=os.path.join("final","all"))
+         extension=os.path.join("model_results","all"))
     print("")
     print('Done running main.')

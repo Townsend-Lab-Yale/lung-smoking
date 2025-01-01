@@ -14,11 +14,8 @@ library(glue)
 library(stringr)
 
 
-# location_output = "../../output/"
-# location_variant_output = glue("{location_output}/output_for_transfer/genes/cesR/")
-# location_variant_output = glue("{location_output}/output_for_transfer/genes/variant/")
-location_variant_output = glue("variant_results/")
-location_cesR_output = glue("cesR_results/")
+location_variant_output = "variant_results/"
+location_cesR_output = "cesR_results/"
 
 # M = 1
 load_M1_results = function(mu_method){
