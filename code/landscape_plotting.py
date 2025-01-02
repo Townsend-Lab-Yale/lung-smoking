@@ -5,8 +5,8 @@ from scipy.special import binom
 
 from itertools import permutations
 
+import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from cancer_epistasis import convert_samples_to_dict
 
@@ -18,16 +18,26 @@ from locations import location_figures
 from locations import default_mutation_names
 
 
-mutation_colors = [cm.get_cmap("tab20c")(x)
-                   for x in np.linspace(0, 1, 20)]
-"""Colors to use for each mutation in the figures. Can handle up to 20
+default_mutation_colors = [matplotlib.colormaps["tab20c"](x)
+                           for x in np.linspace(0, 1, 20)]
+"""Default colors to use for each mutation in the figures. Can handle up to 20
 mutations."""
-mutation_colors = (mutation_colors[0::4]
-                   + mutation_colors[3::4]
-                   + mutation_colors[1::4]
-                   + mutation_colors[2::4])
+default_mutation_colors = (default_mutation_colors[0::4]
+                           + default_mutation_colors[3::4]
+                           + default_mutation_colors[1::4]
+                           + default_mutation_colors[2::4])
 
-
+color_blue = default_mutation_colors[0]
+color_orange = default_mutation_colors[1]
+color_green = default_mutation_colors[2]
+color_purple = default_mutation_colors[3]
+color_gray = default_mutation_colors[4]
+color_red = matplotlib.colormaps["tab10"](3)
+color_brown = matplotlib.colormaps["tab10"](5)
+color_light_purple = matplotlib.colormaps["tab10"](6)
+color_chartreuse = matplotlib.colormaps["tab10"](8)
+color_light_blue = matplotlib.colormaps["tab10"](9)
+color_yellow = matplotlib.colormaps["Set3"](1)
 
 def positions_landscape_left_to_right(M):
 
@@ -167,6 +177,7 @@ def plot_landscape(arrows, circle_areas,
                    name_y_offsets=None,
                    multiplier_figsize=1.57,
                    multiplier_font_size=1,
+                   mutation_colors=None,
                    plot_name=None):
     """Plot a mutation landscape with the fluxes, selection
     coefficients or mutation rates (arrow widths) and the counts of
@@ -213,6 +224,11 @@ def plot_landscape(arrows, circle_areas,
         the function :fun:`positions_landscape` is called to produce
         the positions.
 
+    :type mutation_colors: list or NoneType
+    :param mutation_colors: List with the colors to use for the
+        arrows. If None is provided use
+        :const:`default_mutation_colors`.
+
     :type plot_name: str or NoneType
     :param plot_name: Name of the file to save the plot. If None
         (default), just call it 'landscape.png'.
@@ -231,8 +247,12 @@ def plot_landscape(arrows, circle_areas,
     else:
         mutation_names_sep = '\n'
 
-    colors = {i*(0,)+(1,)+(M-i-1)*(0,):mutation_colors[i]
-              for i in range(M)}
+    if mutation_colors is None:
+        colors = {i*(0,)+(1,)+(M-i-1)*(0,):default_mutation_colors[i]
+                  for i in range(M)}
+    else:
+        colors = {i*(0,)+(1,)+(M-i-1)*(0,):mutation_colors[i]
+                  for i in range(M)}
 
     fig_width_pt = 345.0  # Get this from LaTeX using \showthe\columnwidth
     inches_per_pt = 1.0/72.27               # Convert pt to inches

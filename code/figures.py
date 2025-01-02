@@ -1,8 +1,8 @@
 import os
 import numpy as np
 from scipy.optimize import curve_fit
+import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from statsmodels.graphics.mosaicplot import mosaic
 
@@ -1217,7 +1217,7 @@ kenfield_data = {(cancer_type, 'Non-smoker'):table_values[0]
 kenfield_data.update({(cancer_type, 'Smoker'):np.sum(table_values[1:])
                       for cancer_type, table_values in kenfield_table_2.items()})
 
-cancer_type_colors = [cm.get_cmap("tab10")(x)
+cancer_type_colors = [matplotlib.colormaps["tab10"](x)
                       for x in np.linspace(0, 1, 10)]
 
 # Create a mosaic plot using statsmodels
