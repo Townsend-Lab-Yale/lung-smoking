@@ -17,6 +17,14 @@ library(stringr)
 location_variant_output = "variant_results/"
 location_cesR_output = "cesR_results/"
 
+subset_genes = c("TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
+                "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
+                "SMARCA4", "SMAD4", "ALK",   "ARID1A", "APC",
+                "MET",     "RB1",   "SETD2", "BRCA2",  "MGA",
+                "GNAS")
+
+smoking_comparison_keys = c("smoking_plus","nonsmoking_plus")
+
 # M = 1
 load_M1_results = function(mu_method){
     if(mu_method == "cesR"){location_output = location_cesR_output}
@@ -140,7 +148,8 @@ get_genes_with_gxe_effects = function(df, mu_method, include_panel_data){
     return(gxe_effects)
 }
 
-get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Smoker" = hue_pal()(2)[1], "smoking_plus" = hue_pal()(2)[1], "Never-smoker" = hue_pal()(2)[2], "nonsmoking_plus" = hue_pal()(2)[2])}
+get_smoker_nonsmoker_palette = function(){c("Ever-smoker" = hue_pal()(2)[1], "Smoker" = hue_pal()(2)[1], "smoking_plus" = hue_pal()(2)[1], "smoking" = hue_pal()(2)[1], 
+                                            "Never-smoker" = hue_pal()(2)[2], "nonsmoking_plus" = hue_pal()(2)[2], "nonsmoking" = hue_pal()(2)[2])}
 
 plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=TRUE){
     
@@ -663,15 +672,18 @@ plot_interactions_from_df = function(df, custom_order=FALSE, log_scale=FALSE,tit
 
 plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selection_df, genes=NULL,ceiling=NULL){
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.2)
-    fill_palette = c("WT" = "purple", "Antagonism" = brewer.pal(n = 3, name = "RdYlBu")[1], "Synergism"=brewer.pal(n = 3, name = "RdYlBu")[3])
+    fill_palette = c("WT" = "red", "Mutant genotype\n([gene] mutated)" = "darkgray")
 
     tmp = interaction_df %>%
+        filter(signif) %>%
         filter(if(!is.null(genes)) {mutated_gene %in% genes} else TRUE) %>%
         group_by(mutated_gene, epistatic_gt == "WT") %>%
             arrange(gamma_mle, .by_group=TRUE) %>%
             mutate(nudge_dist = scale((1:n())/n()**(1/0.8), scale=FALSE),
                         label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.15,nudge_dist-0.15))  %>%
         ungroup()
+
+    tmp = tmp %>% rowwise() %>% mutate(label_y_position = ifelse(gamma_mle<1,0,min(gamma_ci_high+5e4,ceiling))) %>% ungroup()
 
     tmp = tmp %>%
         filter(epistatic_gt != "WT") %>%
@@ -682,7 +694,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         filter(epistatic_gt == "WT") %>% 
                         group_by(mutated_gene) %>% 
                         summarize(from_count = mean(from_count), to_count=mean(to_count)), by = "mutated_gene")) %>% 
-        mutate(context = ifelse(epistatic_gt == "WT","WT","Non-WT\n([gene] mutated)"),
+        mutate(context = ifelse(epistatic_gt == "WT","WT","Mutant genotype\n([gene] mutated)"),
                 color = ifelse(epistatic_gt=="WT","WT",ifelse(ratio>1,"Synergism","Antagonism")))
 
     gamma_order = tmp %>% filter(context=="WT") %>% arrange(gamma_mle) %>% pull(mutated_gene)
@@ -700,12 +712,16 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                             linewidth=0.2,
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
                 geom_point(
-                            aes(fill=color, size=to_count),
+                            aes(fill=context),
+                            size=3,
                             shape=21, color="black",
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
                 geom_text(data=tmp %>% filter(context!="WT", signif), 
-                                                aes(label=epistatic_gt),
-                                                position=position_nudge(tmp %>% filter(context!="WT", signif) %>% pull(label_nudge_dist)),
+                                                # aes(label=epistatic_gt),
+                                                # position=position_nudge(tmp %>% filter(context!="WT", signif) %>% pull(label_nudge_dist)),
+                                                aes(label=paste0('[',epistatic_gt,']'), y=0.1),
+                                                position=position_nudge(x=tmp %>% filter(context!="WT", signif) %>% pull(nudge_dist), 
+                                                                        y=tmp %>% filter(context!="WT", signif) %>% pull(label_y_position)),
                                                 size = 5,
                                                 check_overlap = TRUE,
                                                 fontface="italic") +

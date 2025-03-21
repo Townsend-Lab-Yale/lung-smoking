@@ -16,7 +16,7 @@ def convert_samples_to_dict(samples):
 
 def plot_trajectory(gene_list, dataset_key, param="selection",
                     fluxes_mles=None,selection_mles=None,mu_dict=None,all_samples=None,
-                    scale_circle_areas=0.02,multiplier_font_size=3,scale_arrows=None):
+                    scale_circle_areas=0.02,multiplier_font_size=3,scale_arrows=None,mutation_colors=None):
     if not isinstance(gene_list,list):
         raise TypeError("`gene_list` must be a list of genes")
     if param not in ["fixation","mutation","selection"]: 
@@ -45,6 +45,7 @@ def plot_trajectory(gene_list, dataset_key, param="selection",
         include_n_circles=True,
         scale_circle_areas=scale_circle_areas,
         multiplier_font_size=multiplier_font_size,
+        mutation_colors=mutation_colors,
         plot_name='trajectory' + '_' + dataset_key + '_' + '_'.join(gene_tuple) + '_' + param
     )
     return p
