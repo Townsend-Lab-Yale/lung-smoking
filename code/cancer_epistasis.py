@@ -896,6 +896,193 @@ def p_value_gamma_xy_equal_1(samples,
 
 
 
+
+
+def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
+                                        x1y1,
+                                        x2y2,
+                                        mu_y1_minus_x1,
+                                        mu_y2_minux_x2,
+                                        lambdas_h1=None,
+                                        upper_bound_priors=1,
+                                        return_lambdas_estimates=False,
+                                        verbose=False,
+                                        kwargs=None):
+    """Estimate the probability of a null hypothesis of two gammas,
+    gamma_x1y1 and gamma_x2y2, being equal to each other.
+
+    :type samples: numpy.ndarray
+    :param samples: One dimensional array with the samples. It should
+        be of the same size as S, and have in each entry the number of
+        individuals that have the respective mutation combination.
+
+    :type x1y1: tuple
+    :param x1y1: One of the two tuples with the somatic genotype from
+        and to that will be compared. Each element of the tuple should
+        be tuple of 0s and 1s of size M, where the samples are divided
+        into combinations of mutations in M genes (or categories).
+
+    :type x2y2: tuple
+    :param x2y2: One of the two tuples with the somatic genotype from
+        and to that will be compared. Each element of the tuple should
+        be tuple of 0s and 1s of size M, where the samples are divided
+        into combinations of mutations in M genes (or categories).
+
+    :type mu_y1_minux_x1: float
+    :param mu_y1_minux_x1: Mutation rate of the mutation gained by
+        moving to the somatic genotype y1 when coming from the
+        genotype x1.
+
+    :type mu_y2_minux_x2: float
+    :param mu_y2_minux_x2: Mutation rate of the mutation gained by
+        moving to the somatic genotype y2 when coming from the
+        genotype x2.
+
+    :type lambdas_h1: numpy.ndarray or NoneType
+    :param lambdas_h1: Estimates of the fluxes informed by `samples'
+        under H_1, that is, when gamma_x1y1 and gamma_x2y2 are
+        different from each other. It is optional, otherwise they are
+        computed.
+
+    :type upper_bound_priors: float
+    :param upper_bound_priors: Upper bound for the uniform prior used
+        for each lambda for the model.
+
+    :type kwargs: dict
+    :param kwargs: Dictionary of keyword arguments to pass to the pymc3
+        find_MAP function.
+
+    :type return_lambdas_estimates: bool
+    :param return_lambdas_estimates: If True, return the lambda
+        estimates H_1
+
+    :type verbose: bool
+    :param verbose: If True, print information on the lambda and
+        loglikehood estimates under H_0 and H_1
+
+    :rtype: numpy.float64 or tuple
+    :return: p-value of the null hypothesis, or if
+        return_lambdas_estimates is True, a tuple with the p-value,
+        and the lambdas estimates under the H0 hypothesis.
+
+    """
+
+    M = int(np.log2(len(samples))) # 2^M is the number mutation combinations
+    S = build_S_as_array(M)
+
+    positive_lambdas_indices =  obtain_pos_lambdas_indices(S)
+    ordered_pos_lambdas = order_pos_lambdas(S)
+    x1y1_index = ordered_pos_lambdas.index(x1y1)
+    x2y2_index = ordered_pos_lambdas.index(x2y2)
+
+    ## for concatanation later we need the smallest one:
+    if x1y1_index < x2y2_index:
+        xy_index = x1y1_index
+        other_xy_index = x2y2_index
+        ratio_gammas = mu_y2_minux_x2/mu_y1_minux_x1
+    else:
+        xy_index = x2y2_index
+        other_xy_index = x1y1_index
+        ratio_gammas = mu_y1_minux_x1/mu_y2_minux_x2
+
+    number_samples = int(np.sum(samples))
+
+    ## Our H_0 is that the specific gamma_xy is equal to 1. First, we
+    ## compute the lambdas that would maximize such the likelihood
+    ## under H0
+
+
+    if M == 1:
+        ## then there are no two gammas to compare
+        raise Exception("If M=1, there is only one gamma")
+
+    else:
+        ## one lambda will be a function of the another gamma:
+        ## lambda_x2y2 = lambda_x1y1/mu_y1_minux_x1 * mu_y2_minux_x2
+        ## the other lambdas that are model specific
+
+        number_positive_lambdas = int(np.sum(positive_lambdas_indices)-1)
+
+        with pm.Model():
+
+            ## We set an uninformative prior for the lambdas:
+            positive_lambdas = pm.Uniform(
+                name="other_lambdas",
+                lower=0,
+                upper=upper_bound_priors,
+                shape=number_positive_lambdas)
+
+            lambda_xy = pm.Uniform(
+                name="lambda_xy",
+                lower=0,
+                upper=upper_bound_prior_shared,
+                shape=1)
+
+            other_lambda_xy = lambda_xy * ratio_gammas
+
+            concatenated_lambdas = tt.concatenate([
+                positive_lambdas[:xy_index],
+                lambda_xy,
+                positive_lambdas[xy_index:other_xy_index],
+                other_lambda_xy,
+                positive_lambdas[other_xy_index:]])
+
+            Ps = compute_Ps_at_T_tens(concatenated_lambdas)
+
+            likelihood = pm.Multinomial(name="samples",
+                                        p=Ps,
+                                        n=number_samples,
+                                        observed=samples)
+            if kwargs is None:
+                kwargs = {}
+
+            results_map_h0 = pm.find_MAP(**kwargs)
+
+        lambdas_h0 = np.concatenate([
+            results_map_h0['other_lambdas'][:xy_index],
+            results_map_h0['lambda_xy'],
+            results_map_h0['other_lambdas'][xy_index:other_xy_index],
+            results_map_h0['lambda_xy']*ratio_gammas,
+            results_map_h0['other_lambdas'][other_xy_index:]])
+
+    if verbose:
+        print(f"lambdas under H_0: {lambdas_h0}")
+
+
+    ## Now that we have the lambdas that maximize the likelihood under
+    ## H0, we compute the actual likelihood
+
+    logp_h0 = multinomial.logpmf(samples, number_samples, compute_Ps_at_T(lambdas_h0))
+
+    if verbose:
+        print(f"loglikelihood under h0: {logp_h0}")
+
+
+    ## Our H_1 is that the gamma_xy is different, which would come
+    ## from separate MLE calculation with samples1 and samples2
+
+    ## If lambdas are not provided we need to compute them
+    if lambdas_h1 is None:
+        lambdas_h1 = estimate_lambdas(samples, draws=1,
+                                      ## this will fail if bounds are
+                                      ## set specifically for each lambda
+                                      upper_bound_prior=upper_bound_priors)['lambdas']
+        if verbose:
+            print(f"lambdas under H_1: {lambdas_h1}")
+
+    logp_h1 = multinomial.logpmf(samples, number_samples, compute_Ps_at_T(lambdas_h1))
+    if verbose:
+        print(f"loglikehood under h1: {logp_h1}")
+
+    ## Now we compute the probability of H0 using Wilk's theorem
+    D = 2*(logp_h1-logp_h0)
+    if return_lambdas_estimates:
+        return (chi2.sf(D, 1), lambdas_h1)
+    else:
+        return chi2.sf(D, 1)
+
+
+
 ## ** Other methods to handle the results
 
 def convert_samples_to_dict(samples):
