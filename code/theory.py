@@ -1,6 +1,5 @@
 import numpy as np
 from itertools import product
-from scipy.special import binom
 
 
 # Numbers of possible positive lambdas (I doubt M would ever be >20)
