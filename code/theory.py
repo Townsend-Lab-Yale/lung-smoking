@@ -4,9 +4,9 @@ from scipy.special import binom
 
 
 # Numbers of possible positive lambdas (I doubt M would ever be >20)
-numbers_positive_lambdas = [np.sum([binom(n, i)*i
-                                    for i in range(n+1)]).astype(int)
-                            for n in range(0, 20+1)]
+## np.sum([binom(n, i)*i = 2^(n-1)*n
+## proof is in the readme.org file
+numbers_positive_lambdas = [int(M*2**(M-1)) for M in range(21)]
 """List with number of possible positive lambdas per mutation number
 M.
 
