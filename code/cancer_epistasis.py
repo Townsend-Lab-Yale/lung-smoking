@@ -233,7 +233,7 @@ def estimate_lambdas(samples, upper_bound_prior=3, draws=10000,
 
         positive_lambdas_indices = obtain_pos_lambdas_indices(S)
 
-        number_positive_lambdas = np.sum(positive_lambdas_indices)
+        number_positive_lambdas = int(np.sum(positive_lambdas_indices))
 
         number_samples = np.sum(samples)
 
@@ -749,6 +749,7 @@ def p_value_same_gamma_xy(samples1,
         return chi2.sf(D, 1)
 
 
+
 def p_value_gamma_xy_equal_1(samples,
                              xy,
                              mu_y_minus_x,
@@ -1194,7 +1195,8 @@ def compute_gammas(lambdas, mus):
     :type lambdas: dict
     :param lambdas: Dictionary with the fluxes, indexed by a pair of
         tuples representing the mutation combination where the flux is
-        coming from and going to.
+        coming from and going to. Each flux can be represented by a
+        single estimate or by confidence interval given as a list.
 
     :type mus: dict
     :param mus: Dictionary with the mutation rates indexed by a tuple
@@ -1209,7 +1211,10 @@ def compute_gammas(lambdas, mus):
 
     """
     gammas = {
-        xy:flux/mus[tuple(np.array(xy[1])-np.array(xy[0]))]
+        xy:([flux[0]/mus[tuple(np.array(xy[1])-np.array(xy[0]))],
+             flux[1]/mus[tuple(np.array(xy[1])-np.array(xy[0]))]]
+            if isinstance(flux, list) else
+            flux/mus[tuple(np.array(xy[1])-np.array(xy[0]))])
         for xy, flux in lambdas.items()}
     return gammas
 
