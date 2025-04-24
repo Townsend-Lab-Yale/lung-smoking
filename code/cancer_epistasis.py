@@ -19,11 +19,14 @@ priors for the fluxes are uninformative uniform distributions.
 import os
 import numpy as np
 
-
 import pymc as pm
 import pytensor.tensor as tt
 from pytensor.compile.ops import as_op
 
+from scipy.optimize import fsolve
+
+from scipy.stats import chi2
+from scipy.stats import multinomial
 
 from theory import numbers_positive_lambdas
 from theory import build_S_as_array
@@ -31,11 +34,6 @@ from theory import build_S_with_tuples
 from theory import obtain_pos_lambdas_indices
 from theory import order_pos_lambdas
 from theory import generate_paths
-
-from scipy.optimize import fsolve
-
-from scipy.stats import chi2
-from scipy.stats import multinomial
 
 random_seed = 777
 """Random seed to feed the random generators, to be able to replicate
@@ -1248,6 +1246,8 @@ def compute_log_lh(positive_lambdas, samples):
     return np.sum(samples*np.log(Ps))
 
 
+## ** Methods to estimate confidence intervals
+
 def asymp_CI_lambda(lambda_index, lambdas_mle, samples, ci=0.95, tol=10**(-6)):
     """Compute an asymptomatic confidence interval for the flux indexed by
     `lambda_index`.
@@ -1319,7 +1319,7 @@ def asymp_CI_lambdas(lambdas_mle, samples, ci=0.95, tol=10**(-6),
 
     for lambda_index in range(len(lambdas_mle)):
         if print_progress:
-            print(f"Computing CI for lambda {lambda_index}/{len(lambdas_mle)}")
+            print(f"computing CI for flux {lambda_index}/{len(lambdas_mle)}")
         CIs.append(asymp_CI_lambda(lambda_index,
                                    lambdas_mle,
                                    samples,
@@ -1327,6 +1327,7 @@ def asymp_CI_lambdas(lambdas_mle, samples, ci=0.95, tol=10**(-6),
                                    tol=tol))
 
     return CIs
+
 
 
 ## * Probability of each trajectory
