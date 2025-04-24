@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from statsmodels.graphics.mosaicplot import mosaic
 
 from cancer_epistasis import order_genes_by_result_values
-from cancer_epistasis import epistatic_ratios_3rd_gene_effects
+from epistatic_ratios import epistatic_ratios_3rd_gene_effects
 
 from locations import location_figures
 from locations import location_output
@@ -23,7 +23,7 @@ from load_results import load_results
 from cancer_epistasis import convert_samples_to_dict
 from cancer_epistasis import convert_mus_to_dict
 from cancer_epistasis import order_genes_by_result_values
-from cancer_epistasis import epistatic_ratios_3rd_gene_effects
+from epistatic_ratios import epistatic_ratios_3rd_gene_effects
 
 
 from landscape_plotting import plot_landscape

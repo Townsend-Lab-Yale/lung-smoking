@@ -12,7 +12,7 @@ the epistatic ratio: the ratio between
 import os
 import numpy as np
 
-from cancer_epistasis import epistatic_ratios_2_matrix
+from epistatic_ratios import epistatic_ratios_2_matrix
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
