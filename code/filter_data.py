@@ -70,7 +70,7 @@ def filter_db_for_key(key, db):
 
     """
     if key == 'pan_data':
-        return db
+        return db[db['Sample ID'].isin(smoking_sample_ids + panel_smoking_sample_ids + nonsmoking_sample_ids + panel_nonsmoking_sample_ids)]
     elif key == 'smoking':
         return db[db['Sample ID'].isin(smoking_sample_ids)]
     elif key == 'nonsmoking':
@@ -84,6 +84,3 @@ genes_per_sample = pd.read_csv(genes_per_sample_file_name)
 
 key_filtered_dbs = {key: filter_db_for_key(key, genes_per_sample)
                    for key in results_keys}
-
-dbs_filtered_for_TP53_KRAS = {key: filter_samples_for_genes(['TP53','KRAS'], db)
-                              for key, db in key_filtered_dbs.items()}
