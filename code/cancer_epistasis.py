@@ -106,6 +106,8 @@ def compute_Ps_at_T(positive_lambdas):
 
     positive_lambdas_indices = obtain_pos_lambdas_indices(S)
 
+    if isinstance(positive_lambdas, dict):
+        positive_lambdas = np.array(list(positive_lambdas.values()))
     lambdas[positive_lambdas_indices] = positive_lambdas
 
     lambdas[np.eye(len(S), len(S), dtype=bool)] = -np.sum(lambdas, axis=0)
@@ -818,7 +820,7 @@ def p_value_gamma_xy_equal_1(samples,
 
     if M == 1:
         ## then the there is no extra lambda to compute
-        lambdas_h0 = [mu_y_minux_x]
+        lambdas_h0 = [mu_y_minus_x]
 
     else:
         ## when M > 1 then one lambda is equal to mu, and other
@@ -977,11 +979,11 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
     if x1y1_index < x2y2_index:
         xy_index = x1y1_index
         other_xy_index = x2y2_index
-        ratio_gammas = mu_y2_minux_x2/mu_y1_minux_x1
+        ratio_gammas = mu_y2_minux_x2/mu_y1_minus_x1
     else:
         xy_index = x2y2_index
         other_xy_index = x1y1_index
-        ratio_gammas = mu_y1_minux_x1/mu_y2_minux_x2
+        ratio_gammas = mu_y1_minus_x1/mu_y2_minux_x2
 
     number_samples = int(np.sum(samples))
 
@@ -995,7 +997,7 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
         raise Exception("If M=1, there is only one gamma")
 
     else:
-        ## one lambda will be a function of the another gamma:
+        ## one lambda will be a function of the other gamma:
         ## lambda_x2y2 = lambda_x1y1/mu_y1_minux_x1 * mu_y2_minux_x2
         ## the other lambdas that are model specific
 
@@ -1013,15 +1015,30 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
             lambda_xy = pm.Uniform(
                 name="lambda_xy",
                 lower=0,
-                upper=upper_bound_prior_shared,
+                upper=upper_bound_priors,
                 shape=1)
 
             other_lambda_xy = lambda_xy * ratio_gammas
 
-            concatenated_lambdas = tt.concatenate([
+            # # temporary hardcoding
+            # if (xy_index, other_xy_index) == (1, 2):
+            #     concatenated_lambdas = tt.concatenate([
+            #         positive_lambdas[:xy_index],
+            #         lambda_xy,
+            #         other_lambda_xy,
+            #         positive_lambdas[other_xy_index:]])
+            # elif (xy_index, other_xy_index) == (0, 3):
+            #     concatenated_lambdas = tt.concatenate([
+            #         lambda_xy,
+            #         positive_lambdas[xy_index:other_xy_index],
+            #         other_lambda_xy])
+            # else: 
+            #     raise ValueError("xy_index and other_xy_index are not 1 and 2 or 0 and 3")
+    
+            concatenated_lambdas = tt.concatenate([ # issue is that concatenated_lambdas is length 5 instead of 4
                 positive_lambdas[:xy_index],
                 lambda_xy,
-                positive_lambdas[xy_index:other_xy_index],
+                positive_lambdas[xy_index+1:other_xy_index],
                 other_lambda_xy,
                 positive_lambdas[other_xy_index:]])
 
@@ -1039,7 +1056,7 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
         lambdas_h0 = np.concatenate([
             results_map_h0['other_lambdas'][:xy_index],
             results_map_h0['lambda_xy'],
-            results_map_h0['other_lambdas'][xy_index:other_xy_index],
+            results_map_h0['other_lambdas'][xy_index+1:other_xy_index],
             results_map_h0['lambda_xy']*ratio_gammas,
             results_map_h0['other_lambdas'][other_xy_index:]])
 
