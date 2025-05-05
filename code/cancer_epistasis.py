@@ -500,8 +500,8 @@ def p_value_same_lambda_xy(samples1,
 def p_value_same_gamma_xy(samples1,
                           samples2,
                           xy,
-                          mu1_y_minux_x,
-                          mu2_y_minux_x,
+                          mu1_y_minus_x,
+                          mu2_y_minus_x,
                           lambdas1_h1=None,
                           lambdas2_h1=None,
                           upper_bound_priors1=1,
@@ -531,13 +531,13 @@ def p_value_same_gamma_xy(samples1,
         of 0s and 1s of size M, where the samples are divided into
         combinations of mutations in M genes (or categories).
 
-    :type mu1_y_minux_x: float
-    :param mu1_y_minux_x: Mutation rate for `samples1' of the mutation
+    :type mu1_y_minus_x: float
+    :param mu1_y_minus_x: Mutation rate for `samples1' of the mutation
         gained by moving to the somatic genotype y when coming from
         the genotype x.
 
-    :type mu2_y_minux_x: float
-    :param mu2_y_minux_x: Mutation rate for `samples2' of the mutation
+    :type mu2_y_minus_x: float
+    :param mu2_y_minus_x: Mutation rate for `samples2' of the mutation
         gained by moving to the somatic genotype y when coming from
         the genotype x.
 
@@ -615,7 +615,7 @@ def p_value_same_gamma_xy(samples1,
 
         lambda1_from_gamma_shared = fsolve(equation_to_solve,
                                            lambda1_initial_guess,
-                                           args=(mu2_y_minux_x/mu1_y_minux_x,
+                                           args=(mu2_y_minus_x/mu1_y_minus_x,
                                                  samples1[1],  # n1
                                                  samples1[0],  # N1-n1
                                                  samples2[1],  # n2
@@ -623,9 +623,9 @@ def p_value_same_gamma_xy(samples1,
 
         lambdas1_h0 = lambda1_from_gamma_shared
 
-        lambdas2_h0 = lambda1_from_gamma_shared * mu2_y_minux_x/mu1_y_minux_x
+        lambdas2_h0 = lambda1_from_gamma_shared * mu2_y_minus_x/mu1_y_minus_x
 
-        gamma_xy_h0 = lambda1_from_gamma_shared/mu1_y_minux_x
+        gamma_xy_h0 = lambda1_from_gamma_shared/mu1_y_minus_x
 
     else:
         ## when M > 1 then there is one shared gamma that determines
@@ -654,7 +654,7 @@ def p_value_same_gamma_xy(samples1,
                 upper=upper_bound_prior_shared,
                 shape=1)
 
-            lambda2_from_gamma_shared = lambda1_from_gamma_shared/mu1_y_minux_x * mu2_y_minux_x
+            lambda2_from_gamma_shared = lambda1_from_gamma_shared/mu1_y_minus_x * mu2_y_minus_x
 
             concatenated_lambdas1 = tt.concatenate([
                 positive_lambdas1[:xy_index],
@@ -690,10 +690,10 @@ def p_value_same_gamma_xy(samples1,
 
         lambdas2_h0 = np.concatenate([
             results_map_h0['lambdas2'][:xy_index],
-            results_map_h0['lambda1_from_gamma_shared']/mu1_y_minux_x * mu2_y_minux_x,
+            results_map_h0['lambda1_from_gamma_shared']/mu1_y_minus_x * mu2_y_minus_x,
             results_map_h0['lambdas2'][xy_index:]])
 
-        gamma_xy_h0 = results_map_h0['lambda1_from_gamma_shared']/mu1_y_minux_x
+        gamma_xy_h0 = results_map_h0['lambda1_from_gamma_shared']/mu1_y_minus_x
 
     if verbose:
         print(f"lambdas1 under H_0: {lambdas1_h0}")
@@ -772,8 +772,8 @@ def p_value_gamma_xy_equal_1(samples,
         and 1s of size M, where the samples are divided into
         combinations of mutations in M genes (or categories).
 
-    :type mu_y_minux_x: float
-    :param mu_y_minux_x: Mutation rate of the mutation gained by
+    :type mu_y_minus_x: float
+    :param mu_y_minus_x: Mutation rate of the mutation gained by
         moving to the somatic genotype y when coming from the genotype
         x.
 
@@ -902,7 +902,7 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
                                         x1y1,
                                         x2y2,
                                         mu_y1_minus_x1,
-                                        mu_y2_minux_x2,
+                                        mu_y2_minus_x2,
                                         lambdas_h1=None,
                                         upper_bound_priors=1,
                                         return_lambdas_estimates=False,
@@ -928,13 +928,13 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
         be tuple of 0s and 1s of size M, where the samples are divided
         into combinations of mutations in M genes (or categories).
 
-    :type mu_y1_minux_x1: float
-    :param mu_y1_minux_x1: Mutation rate of the mutation gained by
+    :type mu_y1_minus_x1: float
+    :param mu_y1_minus_x1: Mutation rate of the mutation gained by
         moving to the somatic genotype y1 when coming from the
         genotype x1.
 
-    :type mu_y2_minux_x2: float
-    :param mu_y2_minux_x2: Mutation rate of the mutation gained by
+    :type mu_y2_minus_x2: float
+    :param mu_y2_minus_x2: Mutation rate of the mutation gained by
         moving to the somatic genotype y2 when coming from the
         genotype x2.
 
@@ -979,11 +979,11 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
     if x1y1_index < x2y2_index:
         xy_index = x1y1_index
         other_xy_index = x2y2_index
-        ratio_gammas = mu_y2_minux_x2/mu_y1_minus_x1
+        ratio_gammas = mu_y2_minus_x2/mu_y1_minus_x1
     else:
         xy_index = x2y2_index
         other_xy_index = x1y1_index
-        ratio_gammas = mu_y1_minus_x1/mu_y2_minux_x2
+        ratio_gammas = mu_y1_minus_x1/mu_y2_minus_x2
 
     number_samples = int(np.sum(samples))
 
@@ -998,7 +998,7 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
 
     else:
         ## one lambda will be a function of the other gamma:
-        ## lambda_x2y2 = lambda_x1y1/mu_y1_minux_x1 * mu_y2_minux_x2
+        ## lambda_x2y2 = lambda_x1y1/mu_y1_minus_x1 * mu_y2_minus_x2
         ## the other lambdas that are model specific
 
         number_positive_lambdas = int(np.sum(positive_lambdas_indices)-1)
@@ -1020,22 +1020,7 @@ def p_value_gamma_x1y1_equal_gamma_x2y2(samples,
 
             other_lambda_xy = lambda_xy * ratio_gammas
 
-            # # temporary hardcoding
-            # if (xy_index, other_xy_index) == (1, 2):
-            #     concatenated_lambdas = tt.concatenate([
-            #         positive_lambdas[:xy_index],
-            #         lambda_xy,
-            #         other_lambda_xy,
-            #         positive_lambdas[other_xy_index:]])
-            # elif (xy_index, other_xy_index) == (0, 3):
-            #     concatenated_lambdas = tt.concatenate([
-            #         lambda_xy,
-            #         positive_lambdas[xy_index:other_xy_index],
-            #         other_lambda_xy])
-            # else: 
-            #     raise ValueError("xy_index and other_xy_index are not 1 and 2 or 0 and 3")
-    
-            concatenated_lambdas = tt.concatenate([ # issue is that concatenated_lambdas is length 5 instead of 4
+            concatenated_lambdas = tt.concatenate([
                 positive_lambdas[:xy_index],
                 lambda_xy,
                 positive_lambdas[xy_index+1:other_xy_index],
