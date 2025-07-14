@@ -95,8 +95,8 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
 
         plot = plot + 
             geom_point(aes(size=freq*100, color=freq*100)) + 
-            scale_color_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) +
-            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) + 
+            scale_color_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,41)) +
+            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,41)) + 
             #scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), scientific_expr)) +
             guides(color=guide_legend(title="Prevalence", nrow=1), size = guide_legend(title="Prevalence",nrow=1)) +
             theme_classic() +

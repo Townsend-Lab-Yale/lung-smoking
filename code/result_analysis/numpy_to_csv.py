@@ -25,8 +25,8 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
         mu_dict = load_results('mutations','cesR')
     elif mu_method == 'variant': 
         location_output = "variant_results"
-        mu_dict = load_results('mutations','variant')
-    os.mkdir(location_output)
+        mu_dict = load_results('mutations','variant',extension=extension)
+    os.makedirs(location_output, exist_ok=True)
 
     all_samples = load_results('samples', extension=subset_extension)
 
