@@ -377,7 +377,7 @@ def plot_landscape(arrows, circle_areas,
              for Sj in S}
 
 
-    names[M*(0,)] = 'normal'
+    names[M*(0,)] = '\emptyset'
     for x, name in names.items():
         ax.text((pts[x][0]+name_x_offsets[x]
                  if name_x_offsets is not None else
