@@ -385,8 +385,8 @@ def plot_landscape(arrows, circle_areas,
                 (pts[x][1]+name_y_offsets[x]
                  if name_y_offsets is not None else
                  pts[x][1]),
-                (name + f"\n($n={circle_areas[x]}$)" if include_n_circles
-                 else name),
+                (("(${\varnothing}$)" if name == 'normal' else name) + f"\n($n={circle_areas[x]}$)" if include_n_circles
+                 else ("${\varnothing}$" if name == 'normal' else name)),
                 # color=x if x != (1, 1, 1) else "Black",
                 color="Black",
                 ha='center',

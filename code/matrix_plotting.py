@@ -119,11 +119,11 @@ def plot_epistatic_ratios_2_matrices(results_nonsmoking,
     ax_smoking.set_aspect('equal', adjustable='box')
 
     ax_smoking.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size)
+    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size, style='italic')
     ax_smoking.set_xlabel("Context (mutated gene in somatic genotype)", fontsize=axis_title_size)
 
     ax_smoking.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax_smoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size)
+    ax_smoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size, style='italic')
     ax_smoking.set_ylabel("Mutation under selection", fontsize=axis_title_size)
 
     ax_smoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
@@ -150,11 +150,11 @@ def plot_epistatic_ratios_2_matrices(results_nonsmoking,
     ax_nonsmoking.set_aspect('equal', adjustable='box')
 
     ax_nonsmoking.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size)
+    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size, style='italic')
     ax_nonsmoking.set_xlabel("Context (mutated gene in somatic genotype)", fontsize=axis_title_size)
 
     ax_nonsmoking.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size)
+    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size, style='italic')
     ax_nonsmoking.set_ylabel("Mutation under selection", fontsize=axis_title_size)
 
     ax_nonsmoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)

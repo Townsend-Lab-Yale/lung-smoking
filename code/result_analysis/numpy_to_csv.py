@@ -172,3 +172,60 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     sample_df = sample_df[['key','gene'] + [str(x) for x in build_S_with_tuples(1)]]
 
     sample_df.to_csv(os.path.join(location_output, 'M1_all_samples_per_combination.csv'),index=False)
+    
+def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
+    if extension is None: subset_extension = "subset"
+    else: subset_extension = os.path.join(extension,"subset")
+
+    if mu_method == 'cesR': location_output = "cesR_results"
+    elif mu_method == 'variant': location_output = "variant_results"
+    os.makedirs(location_output, exist_ok=True)
+
+    fluxes_mles = load_results('fluxes','mles',subset_extension)
+    fluxes_cis = load_results('fluxes','cis',subset_extension)
+
+    selection_mles = load_results('selections','mles',subset_extension)
+    selection_cis = load_results('selections','cis',subset_extension)
+
+    all_samples = load_results('samples',extension=subset_extension)
+
+    flux_df = pd.json_normalize(fluxes_mles,sep='|').T.reset_index()
+    flux_df.columns = ['index','flux_mle']
+
+    tmp = pd.json_normalize(fluxes_cis,sep='|').T.reset_index()
+    tmp.columns = ['index','flux_cis']
+    tmp['flux_ci_low'] = tmp['flux_cis'].apply(lambda x: x[0])
+    tmp['flux_ci_high'] = tmp['flux_cis'].apply(lambda x: x[1])
+    tmp = tmp.drop('flux_cis',axis=1)
+
+    flux_df = pd.merge(flux_df,tmp,on='index')
+    flux_df[['key','gene','mutation']] = flux_df['index'].str.split('|', expand=True)
+    flux_df['gene'] = flux_df['gene'].str.strip(",()'")
+    flux_df = flux_df[['key','gene','flux_mle','flux_ci_low','flux_ci_high']]
+    flux_df.to_csv(os.path.join(location_output, 'M1_gene_fluxes.csv'), index=False)
+
+    gamma_df = pd.json_normalize(selection_mles,sep='|').T.reset_index()
+    gamma_df.columns = ['index','gamma_mle']
+
+    tmp = pd.json_normalize(selection_cis,sep='|').T.reset_index()
+    tmp.columns = ['index','gamma_cis']
+    tmp['gamma_ci_low'] = tmp['gamma_cis'].apply(lambda x: x[0])
+    tmp['gamma_ci_high'] = tmp['gamma_cis'].apply(lambda x: x[1])
+    tmp = tmp.drop('gamma_cis',axis=1)
+
+    gamma_df = pd.merge(gamma_df,tmp,on='index')
+    gamma_df[['key','gene','mutation']] = gamma_df['index'].str.split('|', expand=True)
+    gamma_df['gene'] = gamma_df['gene'].str.strip(",()'")
+    gamma_df['method'] = mu_method
+    gamma_df = gamma_df[['method','key','gene','gamma_mle','gamma_ci_low','gamma_ci_high']]
+    gamma_df.to_csv(os.path.join(location_output, 'M1_gene_gammas.csv'), index=False)
+
+    sample_df = pd.json_normalize(all_samples,sep='|').T.reset_index().rename(columns={0:'counts'})
+    sample_df[['key','gene_set']] = sample_df['index'].str.split('|', expand=True)
+    sample_df = sample_df.drop('index',axis=1)
+    sample_df['gene_set'] = sample_df['gene_set'].str.strip(",()'")
+    sample_df[[str(x) for x in build_S_with_tuples(1)]] = sample_df['counts'].apply(pd.Series)
+    sample_df['gene'] = sample_df['gene_set'].str.replace("'","")
+    sample_df = sample_df[['key','gene'] + [str(x) for x in build_S_with_tuples(1)]]
+
+    sample_df.to_csv(os.path.join(location_output, 'M1_samples_per_combination.csv'),index=False)

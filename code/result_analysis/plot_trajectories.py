@@ -24,7 +24,7 @@ def plot_trajectory(gene_list, dataset_key, param="selection",
     if scale_arrows is None:
         if param == "fixation": scale_arrows = 1
         elif param == "mutation": scale_arrows = 0.5*10**6
-        elif param == "selection": scale_arrows = 0.5*10**(-6)
+        elif param == "selection": scale_arrows = 0.25*10**(-6)
     
     gene_tuple = tuple(gene_list)
 

@@ -94,11 +94,11 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
         } else {stop("var_to_plot must be selection (selection intensity), fixation (mutation acquisition rate), mutation (mutation rate), or frequency (mutation frequency)")}
 
         plot = plot + 
-            geom_point(aes(size=freq*100, color=freq*100)) + 
-            scale_color_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) +
-            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,40)) + 
+            geom_point(aes(size=freq*100, fill=freq*100), shape=21, color="black", stroke=0.25) + 
+            scale_fill_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,NA)) +
+            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,NA)) + 
             #scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), scientific_expr)) +
-            guides(color=guide_legend(title="Prevalence", nrow=1), size = guide_legend(title="Prevalence",nrow=1)) +
+            guides(fill=guide_legend(title="Prevalence", nrow=1), size = guide_legend(title="Prevalence",nrow=1)) +
             theme_classic() +
             theme(
                 axis.title.y = element_text(size = 16),
@@ -172,7 +172,7 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
             values_from = gamma_mle
         ) %>%
         rowwise() %>% mutate(diff_ns = ifelse(include_panel_data, nonsmoking_plus - smoking_plus, nonsmoking-smoking), max_sel = ifelse(include_panel_data, max(nonsmoking_plus, smoking_plus), max(nonsmoking, smoking))) %>%
-        arrange(diff_ns<0, ifelse(diff_ns>0, desc(max_sel), max_sel)) %>%
+        arrange(diff_ns>0, ifelse(diff_ns<0, desc(max_sel), max_sel)) %>%
         pull(gene)
 
     plotting_df = plotting_df %>% mutate(gene = factor(gene, levels = ranked_genes))
@@ -180,7 +180,7 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
     raw_gamma_plot = 
         plotting_df %>%
             mutate(key = ifelse(str_detect(key,"nonsmoking"), "Never-smoker", ifelse(str_detect(key,"smoking"),"Ever-smoker","")),
-                    key = factor(key, levels = c("Never-smoker","Ever-smoker"))) %>%
+                    key = factor(key, levels = c("Ever-smoker","Never-smoker"))) %>%
             ggplot(aes(x = gene, y = gamma_mle, group=key)) +
             geom_col(aes(fill = key), alpha = 0.7, position="dodge", width = 0.75) +
             geom_errorbar(aes(ymin = gamma_ci_low, ymax = gamma_ci_high), position=position_dodge(width=0.75), width = 0) +
@@ -188,7 +188,7 @@ plot_GxE_results = function(df, mu_method, ratio_plot=TRUE, include_panel_data=T
             # geom_errorbar(data = df %>% filter(key=="pan_data", method == mu_method), aes(ymin = gamma_ci_low, ymax = gamma_ci_high), width=0.5) +
             scale_fill_manual(values = get_smoker_nonsmoker_palette()) +
             scale_y_continuous(labels = scientific_expr) +
-            labs(x = "Gene", y = "Scaled selection coefficient", title = "Selection intensity for SNVs in ever-smoker and never-smoker LUAD", fill = "Smoker status") +
+            labs(x = "Gene", y = "Scaled selection coefficient", title = "Selection intensity for SNVs in ever-smoker and never-smoker LUAD", fill = "Smoking history") +
             theme_classic() +
             theme(
                 axis.title = element_text(size = 18),
@@ -670,7 +670,7 @@ plot_interactions_from_df = function(df, custom_order=FALSE, log_scale=FALSE,tit
     return(plot)
 }
 
-plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selection_df, genes=NULL,ceiling=NULL){
+plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selection_df, genes=NULL,ceiling=NULL,low_gamma_label_adjustment=NULL){
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.2)
     fill_palette = c("WT" = "red", "Mutant genotype\n([gene] mutated)" = "darkgray")
 
@@ -683,7 +683,13 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.15,nudge_dist-0.15))  %>%
         ungroup()
 
-    tmp = tmp %>% rowwise() %>% mutate(label_y_position = ifelse(gamma_mle<1,0,min(gamma_ci_high+5e4,ceiling))) %>% ungroup()
+    if(is.null(low_gamma_label_adjustment)){
+        low_gamma_label_adjustment = 1.2e5
+    }
+
+    tmp = tmp %>% rowwise() %>% 
+            mutate(label_y_position = ifelse(gamma_mle<1, low_gamma_label_adjustment, min(ceiling, ifelse(gamma_ci_high-gamma_mle <= 5e4, gamma_ci_high+1e5, gamma_ci_high+5e4)))) %>% 
+            ungroup()
 
     tmp = tmp %>%
         filter(epistatic_gt != "WT") %>%
