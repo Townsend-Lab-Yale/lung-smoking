@@ -672,7 +672,8 @@ plot_interactions_from_df = function(df, custom_order=FALSE, log_scale=FALSE,tit
 
 plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selection_df, genes=NULL,ceiling=NULL,low_gamma_label_adjustment=NULL){
     alpha_palette = c("TRUE" = 1, "FALSE" = 0.2)
-    fill_palette = c("WT" = "red", "Mutant genotype\n([gene] mutated)" = "darkgray")
+    fill_palette = c("WT" = "green1", "Mutant genotype\n([gene] mutated)" = "darkgray")
+    size_palette = c("WT" = 4, "Mutant genotype\n([gene] mutated)" = 3)
 
     tmp = interaction_df %>%
         filter(signif) %>%
@@ -718,8 +719,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                             linewidth=0.2,
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
                 geom_point(
-                            aes(fill=context),
-                            size=3,
+                            aes(fill=context, size=context),
                             shape=21, color="black",
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
                 geom_text(data=tmp %>% filter(context!="WT", signif), 
@@ -735,6 +735,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         size="Number of samples\nwith both mutations") +
                 scale_alpha_manual(values = alpha_palette, name="Significant difference in selection") +
                 scale_fill_manual(values = fill_palette, name = "Genetic context") +
+                scale_size_manual(values = size_palette, name = "Genetic context") +
                 scale_y_continuous(labels = scientific_expr) +
                 theme_classic() +
                 theme(plot.title = element_text(size = 24, hjust=0.5),
@@ -746,8 +747,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         legend.text = element_text(size = 20),
                         legend.title = element_text(size = 20),
                         panel.grid.major.y = element_line(color="gray",linewidth=0.75, linetype=3)) +
-                guides(fill = guide_legend(title.position="top", title.hjust = 0.5, order=1, override.aes = list(size=6)),
-                        size = guide_legend(title.position="top", title.hjust = 0.5, order=2),
+                guides(fill = guide_legend(title.position="top", title.hjust = 0.5, override.aes = list(size=c(6,8))),
                         alpha = "none")+#guide_legend(title.position="top", title.hjust = 0.5)) + 
                 coord_flip()
     return(plot)
