@@ -110,19 +110,19 @@ fluxes_cis = {
 
 ## * Compute selection coefficients with epistasis
 
-def compute_gammas(lambdas, mu):
+def compute_gammas_no_epi(lambdas, mu):
     if isinstance(lambdas, float):
         return lambdas/mu
     elif isinstance(lambdas, list):
         return [lambdas[0]/mu, lambdas[1]/mu]
     elif isinstance(lambdas, dict):
-        return {x_y:compute_gammas(the_lambda, mu)
+        return {x_y:compute_gammas_no_epi(the_lambda, mu)
                 for x_y, the_lambda in lambdas.items()}
 
 
 selection_mles = {
-    key:{gene:compute_gammas(fluxes_mles[key][gene],
-                             mutation_rates[key][gene])
+    key:{gene:compute_gammas_no_epi(fluxes_mles[key][gene],
+                                    mutation_rates[key][gene])
          for gene in set.intersection(
                  set(fluxes_mles[key].keys()),
                  set([gene.upper() for gene in mutation_rates[key].keys()]))}
@@ -130,8 +130,8 @@ selection_mles = {
 
 
 selection_cis = {
-    key:{gene:compute_gammas(fluxes_cis[key][gene],
-                             mutation_rates[key][gene])
+    key:{gene:compute_gammas_no_epi(fluxes_cis[key][gene],
+                                    mutation_rates[key][gene])
          for gene in set.intersection(
                  set(fluxes_cis[key].keys()),
                  set([gene.upper() for gene in mutation_rates[key].keys()]))}
