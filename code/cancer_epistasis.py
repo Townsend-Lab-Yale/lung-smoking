@@ -1218,12 +1218,6 @@ def compute_gammas(lambdas, mus):
     return gammas
 
 
-def compute_CI_gamma(lambda_cis, mus):
-    gamma_CIs = {
-        xy:[bound/mus[tuple(np.array(xy[1])-np.array(xy[0]))] for bound in ci]
-        for xy, ci in lambda_cis.items()}
-    return gamma_CIs
-
 
 def compute_log_lh(positive_lambdas, samples):
     """Not really the log likelihood but that plus a constant (that
