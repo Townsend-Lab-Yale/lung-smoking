@@ -1110,7 +1110,9 @@ def convert_samples_to_dict(samples):
 
 
 def convert_mus_to_dict(mus,
-                        genes=None)
+                        genes=None,
+                        tmbs=None,
+                        samples=None):
     """Convert mutation rates per gene to per somatic genotype jump.
 
     Under the assumption that the mus are not genotype dependent.
@@ -1122,6 +1124,17 @@ def convert_mus_to_dict(mus,
     :param genes: List with the genes to extract. If None is provided,
         all genes from the `mus` keys are extracted in the dictionary
         order.
+
+    :type tmbs: dict or None
+    :param tmbs: Dictionary with the average tumor mutation burden per
+        genotype.
+
+    :type samples: dict or None
+    :param samples: Dictionary with the samples, indexed by tuples of
+        1's and 0's representing whether the mutation occur fot the
+        gene or not. These are used to get averages when
+        tmbs is provided, otherwise it does not play a
+        role.
 
     :rtype: dict
     :return: Dictionary with the mutation rates, indexed by a pair of
@@ -1139,10 +1152,26 @@ def convert_mus_to_dict(mus,
 
     xys = order_pos_lambdas(S)
 
-    results_as_dict = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
-                       for xy in xys}
+    # These are the mus under the assumption of no changes in mutation
+    # rate with somatic genotype, meaning they are the average gene
+    # mutation rate of the mutation that is gained from x to y
+    mus_full = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
+                for xy in xys}
 
-    return results_as_dict
+    # When average tumor mutation burdens per somatic genotype are
+    # provided then we assume that:
+    # mu_{x->y} = mu_{y-x} * TMB_{x,y} / TMB_all
+    if tmbs is not None:
+        tmb_per_xy = {xy:((samples[xy[0]]*tmbs[xy[0]]+samples[xy[1]]*tmbs[xy[1]])
+                          / (samples[xy[0]]+samples[xy[1]]))
+                      for xy in xys}
+        N = sum(samples.values())
+        tmb_all_ave = sum([samples[x]*tmb/N
+                           for x, tmb in tmbs.items()])
+        mus_full = {xy:mu*tmb_per_xy[xy]/tmb_all_ave
+                    for xy, mu in mus_full.items()}
+
+    return mus_full
 
 
 def convert_lambdas_to_dict(results):
@@ -1204,10 +1233,12 @@ def compute_gammas(lambdas, mus):
         single estimate or by confidence interval given as a list.
 
     :type mus: dict
-    :param mus: Dictionary with the mutation rates indexed by a tuple
-        of 0's and one 1, representing which mutation the respective
-        rate represents. It is assumed that the mutation rates do not
-        change via epistatic effects
+    :param mus: Dictionary with the mutation rates indexed by jumps
+        (the same pair tuples as described above for `lambdas`). It
+        can also be the legacy version, indexed by a tuple of 0's and
+        one 1, representing which mutation the respective rate
+        represents (when it is assumed that the mutation rates do not
+        change via epistatic effects).
 
     :rtype: dict
     :return: Dictionary with the selection coefficients, indexed by a
@@ -1215,14 +1246,17 @@ def compute_gammas(lambdas, mus):
         flux is coming from and going to.
 
     """
-    gammas = {
-        xy:([flux[0]/mus[tuple(np.array(xy[1])-np.array(xy[0]))],
-             flux[1]/mus[tuple(np.array(xy[1])-np.array(xy[0]))]]
-            if isinstance(flux, list) else
-            flux/mus[tuple(np.array(xy[1])-np.array(xy[0]))])
-        for xy, flux in lambdas.items()}
-    return gammas
+    if len(mus) < len(lambdas):  # then we are on the legacy case
+        mus = {xy:mus[tuple(np.array(xy[1])-np.array(xy[0]))]
+               for xy in lambdas.keys()}
 
+    gammas = {
+        xy:([flux[0]/mus[xy], flux[1]/mus[xy]]
+            if isinstance(flux, list) else
+            flux/mus[xy])
+        for xy, flux in lambdas.items()}
+
+    return gammas
 
 
 def compute_log_lh(positive_lambdas, samples):
