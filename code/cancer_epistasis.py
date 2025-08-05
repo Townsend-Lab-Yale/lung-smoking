@@ -154,7 +154,7 @@ def compute_Ps_at_T(positive_lambdas):
 
 
 ## as_op is a decorator that transforms functions so that they can be
-## used in pymc3 models. It could use the syntatic sugar:
+## used in pymc models. It could use the syntatic sugar:
 ##
 ## @as_op
 ## compute_Ps_at_T
@@ -1109,16 +1109,19 @@ def convert_samples_to_dict(samples):
     return results_as_dict
 
 
-def convert_mus_to_dict(mus, genes):
-    """Convert a dictionary of mus with all mus per gene, to another
-    dictionary with keys equal to each possible jumps under the
-    assumption that the mus are not genotype dependent.
+def convert_mus_to_dict(mus,
+                        genes=None)
+    """Convert mutation rates per gene to per somatic genotype jump.
+
+    Under the assumption that the mus are not genotype dependent.
 
     :type mus: dict
     :param mus: Dictionary with mutation rates per gene.
 
-    :type genes: list
-    :param genes: List with the genes to extract.
+    :type genes: list or None
+    :param genes: List with the genes to extract. If None is provided,
+        all genes from the `mus` keys are extracted in the dictionary
+        order.
 
     :rtype: dict
     :return: Dictionary with the mutation rates, indexed by a pair of
@@ -1126,6 +1129,9 @@ def convert_mus_to_dict(mus, genes):
         coming from and going to.
 
     """
+
+    if genes is None:
+        genes = list(mus.keys())
 
     M = len(genes)
 
