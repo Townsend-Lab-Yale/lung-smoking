@@ -1115,8 +1115,6 @@ def convert_mus_to_dict(mus,
                         samples=None):
     """Convert mutation rates per gene to per somatic genotype jump.
 
-    Under the assumption that the mus are not genotype dependent.
-
     :type mus: dict
     :param mus: Dictionary with mutation rates per gene.
 
@@ -1127,14 +1125,14 @@ def convert_mus_to_dict(mus,
 
     :type tmbs: dict or None
     :param tmbs: Dictionary with the average tumor mutation burden per
-        genotype.
+        genotype. It should be of size 2^M, where M is the number of
+        `genes`. It should be indexed by genotypes represented as
+        tuples of 1's and 0's indicating whether the mutation occur
+        for the gene or not.
 
     :type samples: dict or None
-    :param samples: Dictionary with the samples, indexed by tuples of
-        1's and 0's representing whether the mutation occur fot the
-        gene or not. These are used to get averages when
-        tmbs is provided, otherwise it does not play a
-        role.
+    :param samples: Dictionary with the samples. Same size (2^M) and
+        keys as `tmbs`.
 
     :rtype: dict
     :return: Dictionary with the mutation rates, indexed by a pair of
@@ -1227,10 +1225,13 @@ def compute_gammas(lambdas, mus):
     """Compute the selection coefficients.
 
     :type lambdas: dict
-    :param lambdas: Dictionary with the fluxes, indexed by a pair of
-        tuples representing the mutation combination where the flux is
-        coming from and going to. Each flux can be represented by a
-        single estimate or by confidence interval given as a list.
+    :param lambdas: Dictionary with the substituion rates (fluxes),
+        indexed by a pair of tuples, the first representing the
+        somatic genotype (as a tuple of 0s and 1s) where the lambda is
+        coming from, and the second representing the somatic genotype
+        where the lambda is going to. Each lambda value can be
+        represented by a single estimate or by its confidence interval
+        given as a list.
 
     :type mus: dict
     :param mus: Dictionary with the mutation rates indexed by jumps
@@ -1242,8 +1243,10 @@ def compute_gammas(lambdas, mus):
 
     :rtype: dict
     :return: Dictionary with the selection coefficients, indexed by a
-        pair of tuples representing the mutation combination where the
-        flux is coming from and going to.
+        pair of tuples representing the somatic genotype where the
+        selection is ocurring and the final somatic genotype (the one
+        where the selection is ocurring plus the new mutation
+        obtained).
 
     """
     if len(mus) < len(lambdas):  # then we are on the legacy case
