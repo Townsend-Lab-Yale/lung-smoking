@@ -17,7 +17,6 @@ from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
 
 from cancer_epistasis import compute_gammas
-from cancer_epistasis import compute_CI_gamma
 
 from theory import build_S_as_array
 from theory import order_pos_lambdas
@@ -498,7 +497,7 @@ def compute_all_gammas(key, all_lambdas, mus,
             lambdas_mles[combo],
             mu_combo)
 
-        gammas_cis[combo] = compute_CI_gamma(
+        gammas_cis[combo] = compute_gammas(
             lambdas_cis[combo],
             mu_combo)
 
@@ -520,9 +519,9 @@ def set_output_location(extension):
     """
     global location_output
     from locations import location_output
-    
+
     location_output = os.path.join(location_output, extension)
-    
+
     if not os.path.exists(location_output):
         os.makedirs(location_output)
 
@@ -659,7 +658,7 @@ if __name__ == "__main__":
          mu_method="variant",
          pathways=False,
          extension=os.path.join("model_results","subset"))
-    
+
     main(genes=all_genes,
          num_per_combo=1,
          keys = results_keys,

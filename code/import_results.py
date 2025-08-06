@@ -67,26 +67,26 @@ selection_ne_cis['nonsmoking_plus'] = pd.read_csv(
 
 ## * Compute fluxes, without epistasis
 
-def compute_lambdas(gammas, mu):
+def compute_lambdas_no_epi(gammas, mu):
     if isinstance(gammas, float):
         return gammas*mu
     elif isinstance(gammas, list):
         return [gammas[0]*mu, gammas[1]*mu]
     elif isinstance(gammas, dict):
-        return {x_y:compute_gammas(the_gamma, mu)
+        return {x_y:compute_lambdas_no_epi(the_gamma, mu)
                 for x_y, the_gamma in gammas.items()}
 
 
 ## TODO: Fix bug. Keys here are not matching here.
 # fluxes_ne_mles = {
-#     key:{gene:compute_lambdas(selection_ne_mles[key][gene],
+#     key:{gene:compute_lambdas_no_epi(selection_ne_mles[key][gene],
 #                               mutation_rates[key][gene])
 #          for gene in selection_ne_mles[key].keys()}
 #     for key in ['smoking', 'nonsmoking', 'smoking_plus', 'nonsmoking_plus']}
 
 
 # fluxes_ne_cis = {
-#     key:{gene:compute_lambdas(selection_ne_cis[key][gene],
+#     key:{gene:compute_lambdas_no_epi(selection_ne_cis[key][gene],
 #                               mutation_rates[key][gene])
 #          for gene in selection_ne_cis[key].keys()}
 #     for key in results_keys}
@@ -110,19 +110,19 @@ fluxes_cis = {
 
 ## * Compute selection coefficients with epistasis
 
-def compute_gammas(lambdas, mu):
+def compute_gammas_no_epi(lambdas, mu):
     if isinstance(lambdas, float):
         return lambdas/mu
     elif isinstance(lambdas, list):
         return [lambdas[0]/mu, lambdas[1]/mu]
     elif isinstance(lambdas, dict):
-        return {x_y:compute_gammas(the_lambda, mu)
+        return {x_y:compute_gammas_no_epi(the_lambda, mu)
                 for x_y, the_lambda in lambdas.items()}
 
 
 selection_mles = {
-    key:{gene:compute_gammas(fluxes_mles[key][gene],
-                             mutation_rates[key][gene])
+    key:{gene:compute_gammas_no_epi(fluxes_mles[key][gene],
+                                    mutation_rates[key][gene])
          for gene in set.intersection(
                  set(fluxes_mles[key].keys()),
                  set([gene.upper() for gene in mutation_rates[key].keys()]))}
@@ -130,8 +130,8 @@ selection_mles = {
 
 
 selection_cis = {
-    key:{gene:compute_gammas(fluxes_cis[key][gene],
-                             mutation_rates[key][gene])
+    key:{gene:compute_gammas_no_epi(fluxes_cis[key][gene],
+                                    mutation_rates[key][gene])
          for gene in set.intersection(
                  set(fluxes_cis[key].keys()),
                  set([gene.upper() for gene in mutation_rates[key].keys()]))}

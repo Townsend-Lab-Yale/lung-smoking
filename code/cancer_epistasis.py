@@ -154,7 +154,7 @@ def compute_Ps_at_T(positive_lambdas):
 
 
 ## as_op is a decorator that transforms functions so that they can be
-## used in pymc3 models. It could use the syntatic sugar:
+## used in pymc models. It could use the syntatic sugar:
 ##
 ## @as_op
 ## compute_Ps_at_T
@@ -1109,16 +1109,30 @@ def convert_samples_to_dict(samples):
     return results_as_dict
 
 
-def convert_mus_to_dict(mus, genes):
-    """Convert a dictionary of mus with all mus per gene, to another
-    dictionary with keys equal to each possible jumps under the
-    assumption that the mus are not genotype dependent.
+def convert_mus_to_dict(mus,
+                        genes=None,
+                        tmbs=None,
+                        samples=None):
+    """Convert mutation rates per gene to per somatic genotype jump.
 
     :type mus: dict
     :param mus: Dictionary with mutation rates per gene.
 
-    :type genes: list
-    :param genes: List with the genes to extract.
+    :type genes: list or None
+    :param genes: List with the genes to extract. If None is provided,
+        all genes from the `mus` keys are extracted in the dictionary
+        order.
+
+    :type tmbs: dict or None
+    :param tmbs: Dictionary with the average tumor mutation burden per
+        genotype. It should be of size 2^M, where M is the number of
+        `genes`. It should be indexed by genotypes represented as
+        tuples of 1's and 0's indicating whether the mutation occur
+        for the gene or not.
+
+    :type samples: dict or None
+    :param samples: Dictionary with the samples. Same size (2^M) and
+        keys as `tmbs`.
 
     :rtype: dict
     :return: Dictionary with the mutation rates, indexed by a pair of
@@ -1127,16 +1141,35 @@ def convert_mus_to_dict(mus, genes):
 
     """
 
+    if genes is None:
+        genes = list(mus.keys())
+
     M = len(genes)
 
     S = build_S_as_array(M)
 
     xys = order_pos_lambdas(S)
 
-    results_as_dict = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
-                       for xy in xys}
+    # These are the mus under the assumption of no changes in mutation
+    # rate with somatic genotype, meaning they are the average gene
+    # mutation rate of the mutation that is gained from x to y
+    mus_full = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
+                for xy in xys}
 
-    return results_as_dict
+    # When average tumor mutation burdens per somatic genotype are
+    # provided then we assume that:
+    # mu_{x->y} = mu_{y-x} * TMB_{x,y} / TMB_all
+    if tmbs is not None:
+        tmb_per_xy = {xy:((samples[xy[0]]*tmbs[xy[0]]+samples[xy[1]]*tmbs[xy[1]])
+                          / (samples[xy[0]]+samples[xy[1]]))
+                      for xy in xys}
+        N = sum(samples.values())
+        tmb_all_ave = sum([samples[x]*tmb/N
+                           for x, tmb in tmbs.items()])
+        mus_full = {xy:mu*tmb_per_xy[xy]/tmb_all_ave
+                    for xy, mu in mus_full.items()}
+
+    return mus_full
 
 
 def convert_lambdas_to_dict(results):
@@ -1192,37 +1225,41 @@ def compute_gammas(lambdas, mus):
     """Compute the selection coefficients.
 
     :type lambdas: dict
-    :param lambdas: Dictionary with the fluxes, indexed by a pair of
-        tuples representing the mutation combination where the flux is
-        coming from and going to. Each flux can be represented by a
-        single estimate or by confidence interval given as a list.
+    :param lambdas: Dictionary with the substituion rates (fluxes),
+        indexed by a pair of tuples, the first representing the
+        somatic genotype (as a tuple of 0s and 1s) where the lambda is
+        coming from, and the second representing the somatic genotype
+        where the lambda is going to. Each lambda value can be
+        represented by a single estimate or by its confidence interval
+        given as a list.
 
     :type mus: dict
-    :param mus: Dictionary with the mutation rates indexed by a tuple
-        of 0's and one 1, representing which mutation the respective
-        rate represents. It is assumed that the mutation rates do not
-        change via epistatic effects
+    :param mus: Dictionary with the mutation rates indexed by jumps
+        (the same pair tuples as described above for `lambdas`). It
+        can also be the legacy version, indexed by a tuple of 0's and
+        one 1, representing which mutation the respective rate
+        represents (when it is assumed that the mutation rates do not
+        change via epistatic effects).
 
     :rtype: dict
     :return: Dictionary with the selection coefficients, indexed by a
-        pair of tuples representing the mutation combination where the
-        flux is coming from and going to.
+        pair of tuples representing the somatic genotype where the
+        selection is ocurring and the final somatic genotype (the one
+        where the selection is ocurring plus the new mutation
+        obtained).
 
     """
+    if len(mus) < len(lambdas):  # then we are on the legacy case
+        mus = {xy:mus[tuple(np.array(xy[1])-np.array(xy[0]))]
+               for xy in lambdas.keys()}
+
     gammas = {
-        xy:([flux[0]/mus[tuple(np.array(xy[1])-np.array(xy[0]))],
-             flux[1]/mus[tuple(np.array(xy[1])-np.array(xy[0]))]]
+        xy:([flux[0]/mus[xy], flux[1]/mus[xy]]
             if isinstance(flux, list) else
-            flux/mus[tuple(np.array(xy[1])-np.array(xy[0]))])
+            flux/mus[xy])
         for xy, flux in lambdas.items()}
+
     return gammas
-
-
-def compute_CI_gamma(lambda_cis, mus):
-    gamma_CIs = {
-        xy:[bound/mus[tuple(np.array(xy[1])-np.array(xy[0]))] for bound in ci]
-        for xy, ci in lambda_cis.items()}
-    return gamma_CIs
 
 
 def compute_log_lh(positive_lambdas, samples):
