@@ -14,24 +14,56 @@ smoking using an aggregated dataset of LUAD genomes.
   (https://github.com/pyenv/pyenv) to be able to have exactly the same
   version (3.9.5) as the tested, but otherwise at least 3.7 so that
   the order of dictionaries is preserved.
-- R (in debian or ubuntu install the packages r-base and r-base-dev)
+- R (at least version 4.0; in debian or ubuntu install the packages r-base and r-base-dev)
 - the development files for libcurl (OpenSSL flavour) are required for
   many R packages including RCurl (that is required for
   cancereffectsizeR). In debian or ubuntu install the
   libcurl4-openssl-dev package
 
+* Installation
+
+To install this repository, clone it with
+
+#+begin_src shell
+  git clone https://github.com/Townsend-Lab-Yale/lung-smoking.git
+#+end_src
+
+or if the Github CLI tool is installed,
+
+#+begin_src shell
+  gh repo clone Townsend-Lab-Yale/lung-smoking
+#+end_src
+
+Expected time: a few seconds
+
 * Setup
 
-To prepare the system for running the analysis, within the ==code==
+To prepare the system for running the analysis, within the =code=
 directory run
 #+begin_src shell
   ./setup.sh
 #+end_src
 and follow the instructions.
 
+Expected time: a few minutes
+
+* Demo
+
+To run a short demo to confirm correct setup of the software, within
+the =code= directory run 
+#+begin_src shell
+  cd variants
+  Rscript demo.R
+  cd ../
+  source .venv/bin/activate
+  python demo.py
+#+end_src
+
+Expected time: around twenty minutes
+
 * Analysis
 
-To run the analysis, within the ==code== directory run
+To run the analysis, within the =code= directory run
 #+begin_src shell
   cd variants
   Rscript main.R
@@ -40,5 +72,10 @@ To run the analysis, within the ==code== directory run
   python main.py
 #+end_src
 
-Results can be analyzed using the provided jupyter notebooks in the
-==result_analysis== directory.
+Results can be analyzed using the Jupyter notebooks provided in the
+=result_analysis= directory.
+
+To obtain the gene expression results, run through the
+Jupyter notebook =differential_expression.ipynb= in the =code= directory.
+
+Expected time: a few hours
