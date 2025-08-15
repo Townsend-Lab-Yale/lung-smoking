@@ -377,7 +377,7 @@ def plot_landscape(arrows, circle_areas,
              for Sj in S}
 
 
-    names[M*(0,)] = '\emptyset'
+    names[M*(0,)] = 'normal'
     for x, name in names.items():
         ax.text((pts[x][0]+name_x_offsets[x]
                  if name_x_offsets is not None else
@@ -385,8 +385,8 @@ def plot_landscape(arrows, circle_areas,
                 (pts[x][1]+name_y_offsets[x]
                  if name_y_offsets is not None else
                  pts[x][1]),
-                (("(${\varnothing}$)" if name == 'normal' else name) + f"\n($n={circle_areas[x]}$)" if include_n_circles
-                 else ("${\varnothing}$" if name == 'normal' else name)),
+                (("${\\varnothing}$" if name == 'normal' else name) + f"\n($n={circle_areas[x]}$)" if include_n_circles
+                 else ("${\\varnothing}$" if name == 'normal' else name)),
                 # color=x if x != (1, 1, 1) else "Black",
                 color="Black",
                 ha='center',
