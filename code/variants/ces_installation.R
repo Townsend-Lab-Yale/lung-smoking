@@ -8,14 +8,15 @@
 
 options(timeout = 600)
 
-install.packages("remotes", repos = "http://cran.us.r-project.org")
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+install.packages("remotes")
 
 remotes::install_github("Townsend-Lab-Yale/cancereffectsizeR@*release",
   dependencies = TRUE)
 
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install(version = "3.17", ask=FALSE) # this is so that it works with R version 4.3
+BiocManager::install()
 
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 
