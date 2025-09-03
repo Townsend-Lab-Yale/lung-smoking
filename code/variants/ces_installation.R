@@ -16,7 +16,6 @@ remotes::install_github("Townsend-Lab-Yale/cancereffectsizeR@*release",
 
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install()
 
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 
