@@ -15,6 +15,7 @@ from count_combinations import updated_compute_samples
 from cancer_epistasis import estimate_lambdas
 from cancer_epistasis import asymp_CI_lambdas
 from cancer_epistasis import convert_lambdas_to_dict
+from cancer_epistasis import convert_mus_to_dict
 
 from cancer_epistasis import compute_gammas
 
@@ -484,8 +485,9 @@ def compute_all_gammas(key, all_lambdas, mus,
         # if M == 3
 
         if not pathways:
-            mu_combo = {(i*(0,) + (1,) + (M-i-1)*(0,)): mus[combo[i]]
-                for i in range(M)}
+            mu_combo = convert_mus_to_dict(
+                mus,
+                combo)
         else:
             subset_pathway_genes_dict = {pathway:pathway_genes_dict[pathway] for pathway in combo}
             gene_indices = [i for i, included in enumerate(subset_pathway_genes_dict.values()) if len(included) == 1]
