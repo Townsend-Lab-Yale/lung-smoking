@@ -40,7 +40,7 @@ def import_maf_data(db,
     """Build a data frame with relevant information including sample IDs
     and mutations.
 
-    :typed db: str or list
+    :type db: str or list
     :param db: Name of the data set or list containing multiple data
         set names. Data files names available thus far are:
 

@@ -649,8 +649,15 @@ def main(genes=None,
             if (recompute_samples_per_combination
                 or not os.path.exists(os.path.join(location_output,f"{key}_samples.npy"))):
                 print(f"Computing number of samples per combination for {key}...")
-                all_counts[key] = compute_samples_for_all_combinations(genes, key, num_per_combo, mus.keys(),
-                                                                    pathways, chunksize, print_info, save_results)
+                all_counts[key] = compute_samples_for_all_combinations(
+                    genes,
+                    key,
+                    num_per_combo,
+                    mus.keys(),
+                    pathways,
+                    chunksize,
+                    print_info,
+                    save_results)
             else:
                 print(f"Loading counts per combination for {key}...")
                 all_counts[key] = np.load(os.path.join(location_output,f"{key}_samples.npy"),
@@ -661,16 +668,23 @@ def main(genes=None,
 
             print(f"Estimating all epistatic models for {key}...")
             print("")
-            lambdas_mles, lambdas_cis = compute_all_lambdas(key, all_counts, flexible_last_layer, chunksize, save_results)
+            lambdas_mles, lambdas_cis = compute_all_lambdas(
+                key,
+                all_counts,
+                flexible_last_layer,
+                chunksize,
+                save_results)
             all_lambdas[(key, 'mles')] = lambdas_mles
             all_lambdas[(key, 'cis')] = lambdas_cis
 
         else:
             print(f"Loading epistatic model results for {key}...")
-            all_lambdas[(key, 'mles')] = np.load(os.path.join(location_output,f"{key}_fluxes_mles.npy"),
-                                                 allow_pickle=True).item()
-            all_lambdas[(key, 'cis')] = np.load(os.path.join(location_output,f"{key}_fluxes_cis.npy"),
-                                                 allow_pickle=True).item()
+            all_lambdas[(key, 'mles')] = np.load(
+                os.path.join(location_output,f"{key}_fluxes_mles.npy"),
+                allow_pickle=True).item()
+            all_lambdas[(key, 'cis')] = np.load(
+                os.path.join(location_output,f"{key}_fluxes_cis.npy"),
+                allow_pickle=True).item()
         print(f"done estimating all epistatic models for {key}.")
         print("")
         print("")
@@ -678,9 +692,20 @@ def main(genes=None,
         print(f"Computing selection coefficients for {key}...")
         print("")
         if pathways:
-            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, genes, save_results=save_results)
+            gammas_mles, gammas_cis = compute_all_gammas(
+                key,
+                all_lambdas,
+                mus,
+                pathways,
+                genes,
+                save_results=save_results)
         else: # if just genes
-            gammas_mles, gammas_cis = compute_all_gammas(key, all_lambdas, mus, pathways, save_results=save_results)
+            gammas_mles, gammas_cis = compute_all_gammas(
+                key,
+                all_lambdas,
+                mus,
+                pathways,
+                save_results=save_results)
         all_gammas[(key, 'mles')] = gammas_mles
         all_gammas[(key, 'cis')] = gammas_cis
         print(f"done computing selection coefficients for {key}.")
@@ -690,21 +715,31 @@ def main(genes=None,
 
     return all_counts, all_lambdas, all_gammas
 
-if __name__ == "__main__":
+
+
+
+
+def run_main():
     print("Running main...")
     print("")
     main(genes=subset_genes,
          num_per_combo=set(range(1,4)),
-         keys = results_keys,
+         keys=results_keys,
          mu_method="variant",
          pathways=False,
-         extension=os.path.join("model_results","subset"))
+         extension=os.path.join("model_results",
+                                "subset"))
 
     main(genes=all_genes,
          num_per_combo=1,
-         keys = results_keys,
+         keys=results_keys,
          mu_method="variant",
          pathways=False,
-         extension=os.path.join("model_results","all"))
+         extension=os.path.join("model_results",
+                                "all"))
     print("")
     print('Done running main.')
+
+
+if __name__ == "__main__":
+    run_main()
