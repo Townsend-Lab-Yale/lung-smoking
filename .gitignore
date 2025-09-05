@@ -17,3 +17,10 @@
 /data/nsclc_tracerx_2017/
 /data/yale_luad/
 /output/
+/data/all_preloaded_mafs.txt
+/data/bed_files/
+/data/nonsmoking_sample_ids.txt
+/data/pan_data_cesa.rds
+/data/panel_nonsmoking_sample_ids.txt
+/data/panel_smoking_sample_ids.txt
+/data/smoking_sample_ids.txt
