@@ -34,6 +34,45 @@ from filter_data import filter_samples_for_genes
 from pymc.exceptions import SamplingError
 
 
+
+def compute_tmb(source=None):
+    """Compute the tumor mutation burden per sample.
+
+    If source is None then restrict to only that source
+
+    """
+    from locations import merged_maf_file_name
+    maf = pd.read_csv(merged_maf_file_name)
+    if source is not None:
+        maf = maf[maf['Source'] == source]
+
+    out = maf.groupby('Sample ID')['Start_Position'].size()
+
+    return out
+
+
+def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
+
+    if key is None:
+        key = 'pan_data'
+
+    df = key_filtered_dbs[key].copy()
+
+    if source is not None:
+        df = df[df['Source'] == source]
+
+    df = df.set_index('Sample ID')
+
+    df['genotype'] = df[combo].apply(tuple, axis=1)
+
+    df['tmb'] = tmbs[df.index]
+
+    return (df.groupby('genotype')['tmb'].mean().to_dict(),
+            df.groupby('genotype')['tmb'].count().to_dict())
+
+
+
+
 all_genes = list(pd.read_csv(gene_list_file, header=None)[0])
 all_genes = [gene.upper() for gene in all_genes]
 
