@@ -1165,7 +1165,8 @@ def convert_mus_to_dict(mus,
                       for xy in xys}
         N = sum(samples.values())
         tmb_all_ave = sum([samples[x]*tmb/N
-                           for x, tmb in tmbs.items()])
+                           for x, tmb in tmbs.items()
+                           if not np.isnan(tmb)])
         mus_full = {xy:mu*tmb_per_xy[xy]/tmb_all_ave
                     for xy, mu in mus_full.items()}
 
