@@ -77,6 +77,27 @@ def compute_tmb(source=None):
 
 
 def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
+    """Compute mean TMB and counts per genotype, including empty combos.
+
+    Builds genotype tuples from `combo`, then groups TMB by those tuples.
+    Missing genotype combinations are included with count 0 and mean NaN.
+
+    Parameters
+    ----------
+    tmbs : pd.Series
+        TMB values indexed by 'Sample ID'.
+    combo : list[str] | tuple[str, ...]
+        Columns that define the genotype (e.g., ('KRAS', 'EGFR')).
+    key : str | None, optional
+        Key for `key_filtered_dbs`. Defaults to 'pan_data'.
+    source : str | None, optional
+        If given, restrict to rows with df['Source'] == source.
+
+    Returns
+    -------
+    tuple[dict[tuple, float], dict[tuple, int]]
+        (mean_tmb_dict, count_dict). Means are NaN for empty groups.
+    """
     from theory import build_S_with_tuples
 
     if key is None:
