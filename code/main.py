@@ -36,9 +36,34 @@ from pymc.exceptions import SamplingError
 
 
 def compute_tmb(source=None):
-    """Compute the tumor mutation burden per sample.
+    """Compute tumor mutation burden (TMB) per sample.
 
-    If source is None then restrict to only that source
+    This function reads the merged MAF file defined in
+    :const:`locations.merged_maf_file_name` and counts the number of
+    mutation entries (rows) for each sample. The count of mutations is
+    used as a proxy for tumor mutation burden (TMB).
+
+    Parameters
+    ----------
+    source : str or None, optional
+        If provided, restricts the calculation to mutations whose
+        'Source' column matches this value. If None (default), use
+        all available sources.
+
+    Returns
+    -------
+    pandas.Series
+        A Series indexed by 'Sample ID' where each value is the
+        number of mutations (rows in the MAF) observed for that
+        sample.
+
+    Notes
+    -----
+    - The function uses the 'Start_Position' column to count the
+      number of mutations per sample.
+    - Requires that the merged MAF file contains at least the columns
+      'Sample ID', 'Source', and 'Start_Position', and it is expected
+      that it is already filtered for only SNVs.
 
     """
     from locations import merged_maf_file_name
