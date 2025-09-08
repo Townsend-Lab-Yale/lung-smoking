@@ -67,7 +67,7 @@ def compute_tmb(source=None):
 
     """
     from locations import merged_maf_file_name
-    maf = pd.read_csv(merged_maf_file_name)
+    maf = pd.read_csv(merged_maf_file_name, low_memory=False)
     if source is not None:
         maf = maf[maf['Source'] == source]
 
