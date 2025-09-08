@@ -75,6 +75,12 @@ def compute_tmb(source=None):
 
     return out
 
+all_tmbs = compute_tmb(source="TCGA") # we restrict to TCGA to have
+                                      # all TMB from the same methods,
+                                      # if you change this, be sure to
+                                      # change it below when
+                                      # ave_tmb_and_samples_per_genotype
+                                      # is called in compute_all_gammas
 
 def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
     """Compute mean TMB and counts per genotype, including empty combos.
@@ -584,9 +590,24 @@ def compute_all_gammas(key, all_lambdas, mus,
         # if M == 3
 
         if not pathways:
-            mu_combo = convert_mus_to_dict(
-                mus,
-                combo)
+            tmbs_for_mus, samples_for_mus = ave_tmb_and_samples_per_genotype(
+                all_tmbs,
+                combo=combo,
+                key=key,
+                source="TCGA") # we restrict to TCGA to have all TMB
+                               # from the same methods
+
+            if len(combo) > 1:
+                mu_combo = convert_mus_to_dict(
+                    mus,
+                    combo,
+                    tmbs_for_mus,
+                    samples_for_mus)
+            else:
+                mu_combo = convert_mus_to_dict(
+                    mus,
+                    combo)
+
         else:
             subset_pathway_genes_dict = {pathway:pathway_genes_dict[pathway] for pathway in combo}
             gene_indices = [i for i, included in enumerate(subset_pathway_genes_dict.values()) if len(included) == 1]
