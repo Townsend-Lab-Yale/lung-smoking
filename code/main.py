@@ -77,6 +77,7 @@ def compute_tmb(source=None):
 
 
 def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
+    from theory import build_S_with_tuples
 
     if key is None:
         key = 'pan_data'
@@ -88,13 +89,26 @@ def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
 
     df = df.set_index('Sample ID')
 
-    df['genotype'] = df[combo].apply(tuple, axis=1)
+    # Build genotype tuples, e.g., (0, 1)
+    df['genotype'] = df[list(combo)].apply(tuple, axis=1)
 
-    df['tmb'] = tmbs[df.index]
+    # Align TMBs and attach
+    df['tmb'] = tmbs.reindex(df.index)
 
-    return (df.groupby('genotype')['tmb'].mean().to_dict(),
-            df.groupby('genotype')['tmb'].count().to_dict())
+    # All possible tuples
+    all_genos = build_S_with_tuples(len(combo))
 
+    # Make genotype a categorical with all categories
+    df['genotype'] = pd.Categorical(df['genotype'],
+                                    categories=all_genos,
+                                    ordered=True)
+
+    # Group with observed=False to keep empty categories
+    grp = df.groupby('genotype', observed=False)['tmb']
+    mean_tmb = grp.mean().to_dict()   # NaN for empty
+    counts = grp.count().to_dict()    # 0 for empty
+
+    return mean_tmb, counts
 
 
 
