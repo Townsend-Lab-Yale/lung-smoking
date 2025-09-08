@@ -1110,67 +1110,125 @@ def convert_samples_to_dict(samples):
 
 
 def convert_mus_to_dict(mus,
-                        genes=None,
+                        genes,
                         tmbs=None,
-                        samples=None):
-    """Convert mutation rates per gene to per somatic genotype jump.
+                        samples=None,
+                        empty_policy: str = "skip"):
+    """Convert gene-level mus to per-genotype mutation rates.
 
-    :type mus: dict
-    :param mus: Dictionary with mutation rates per gene.
+    Builds mu_{x->y} for all relevant x, y (x,y in {0,1}^M, y-x has
+    exactly one 1). If `tmbs` and `samples` are provided, rescales by
+    the relative average TMB at x and y.
 
-    :type genes: list or None
-    :param genes: List with the genes to extract. If None is provided,
-        all genes from the `mus` keys are extracted in the dictionary
-        order.
+    Parameters
+    ----------
+    mus : dict[str, float]
+        Gene-level mutation rates, keyed by gene name.
+    genes : list[str] or None, optional
+        Genes to restrict the mus, and to set the order for the
+        tuples. If `genes` is None then mus.keys() are used, but
+        likely this is a very long list and it won't work.
+    tmbs : dict[tuple[int, ...], float] or None, optional
+        Average TMB per genotype x (size 2^M). Use NaN for genotypes
+        with no samples. The dictionary should be indexed by tuples of
+        0s and 1s representing each genotype, where it there is 0 or 1
+        in the i-th position if there is mutation i-th gene of `genes`
+        for that genotype.
+    samples : dict[tuple[int, ...], int] or None, optional
+        Sample counts per genotype x (size 2^M). Same keys as tmbs.
+    empty_policy : {"nan", "skip", "prior"}, optional
+        What to do when a both x and y have zero samples for a jump xy or
+        both their TMB inputs are missing.
+        - "skip": leave unadjusted base mu_{y-x} (default).
+        - "nan": set mu_{x->y} to NaN.
 
-    :type tmbs: dict or None
-    :param tmbs: Dictionary with the average tumor mutation burden per
-        genotype. It should be of size 2^M, where M is the number of
-        `genes`. It should be indexed by genotypes represented as
-        tuples of 1's and 0's indicating whether the mutation occur
-        for the gene or not.
+    Returns
+    -------
+    dict[tuple[tuple[int, ...], tuple[int, ...]], float]
+        Map from (x,y) to mu_{x->y}.
 
-    :type samples: dict or None
-    :param samples: Dictionary with the samples. Same size (2^M) and
-        keys as `tmbs`.
+    Notes
+    -----
+    Base mus are the per-gene mutation rates under no-genotype-effect:
+        mu_{x->y} = mus[gene_added]
 
-    :rtype: dict
-    :return: Dictionary with the mutation rates, indexed by a pair of
-        tuples representing the mutation combination where the flux is
-        coming from and going to.
+    If TMB info is provided:
+        mu_{x->y} = mus[gene_added] * T_jump / T_overall
+    where T_jump is the sample-weighted mean of TMB at x and y.
+
+    `tmbs` and `samples` likely come from
+    func:`ave_tmb_and_samples_per_genotype`
 
     """
+    import math # to give nan values
 
     if genes is None:
         genes = list(mus.keys())
 
     M = len(genes)
+    S = build_S_as_array(M)  # array of all genotypes
+    xys = order_pos_lambdas(S)  # list of relevant (x,y)
 
-    S = build_S_as_array(M)
+    # Base mus are just the base mutation rate of the gene gained by
+    # the jump
+    mus_full = {
+        xy:mus[genes[
+            list(np.array(xy[1]) - np.array(xy[0])).index(1)]]
+        for xy in xys}
 
-    xys = order_pos_lambdas(S)
+    # No TMB scaling requested
+    if tmbs is None or samples is None:
+        return mus_full
 
-    # These are the mus under the assumption of no changes in mutation
-    # rate with somatic genotype, meaning they are the average gene
-    # mutation rate of the mutation that is gained from x to y
-    mus_full = {xy:mus[genes[list(np.array(xy[1])-np.array(xy[0])).index(1)]]
-                for xy in xys}
+    # Helper: safe weighted average TMB at jump
+    def ave_tmb_at_xy(x, y):
+        nx = samples.get(x, 0) or 0
+        ny = samples.get(y, 0) or 0
+        tx = tmbs.get(x, math.nan)
+        ty = tmbs.get(y, math.nan)
 
-    # When average tumor mutation burdens per somatic genotype are
-    # provided then we assume that:
-    # mu_{x->y} = mu_{y-x} * TMB_{x,y} / TMB_all
-    if tmbs is not None:
-        tmb_per_xy = {xy:((samples[xy[0]]*tmbs[xy[0]]+samples[xy[1]]*tmbs[xy[1]])
-                          / (samples[xy[0]]+samples[xy[1]]))
-                      for xy in xys}
-        N = sum(samples.values())
-        tmb_all_ave = sum([samples[x]*tmb/N
-                           for x, tmb in tmbs.items()
-                           if not np.isnan(tmb)])
-        mus_full = {xy:mu*tmb_per_xy[xy]/tmb_all_ave
-                    for xy, mu in mus_full.items()}
+        # If both counts zero, nothing to learn
+        if nx == 0 and ny == 0:
+            return math.nan
 
-    return mus_full
+        # Use only endpoints with positive counts
+        ws = []
+        vals = []
+        if nx > 0 and not math.isnan(tx):
+            ws.append(nx)
+            vals.append(tx)
+        if ny > 0 and not math.isnan(ty):
+            ws.append(ny)
+            vals.append(ty)
+
+        if not ws:  # both missing/NaN
+            return math.nan
+
+        return float(np.average(vals, weights=ws))
+
+    # Overall average TMB across observed genotypes
+    wsum = 0.0
+    tsum = 0.0
+    for x, n in samples.items():
+        t = tmbs.get(x, math.nan)
+        if n and not math.isnan(t):
+            wsum += n
+            tsum += n * t
+    tmb_all = tsum / wsum if wsum > 0 else math.nan
+
+    out = {}
+    for xy, mu in mus_full.items():
+        x, y = xy
+        tmb_xy = ave_tmb_at_xy(x, y)
+        if math.isnan(tmb_xy) or math.isnan(tmb_all):
+            if empty_policy == "skip":
+                out[xy] = mu
+            else:  # "nan"
+                out[xy] = math.nan
+        else:
+            out[xy] = mu * (tmb_xy / tmb_all)
+
+    return out
 
 
 def convert_lambdas_to_dict(results):
