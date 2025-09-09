@@ -34,6 +34,175 @@ from filter_data import filter_samples_for_genes
 from pymc.exceptions import SamplingError
 
 
+from pathlib import Path
+
+def compare_tmb_distributions(
+        source1: str,
+        source2: str,
+        *,
+        log_eps: float = 1e-6,
+        n_perm: int = 20000,
+        calibrate: bool = True,
+        quantiles: int = 99,
+        show: bool = True,
+        save_path=None,
+        figsize=(10, 8),
+        random_state: int = 0) -> dict:
+    """
+    Compare unpaired TMB distributions from two sources on the log scale and plot.
+
+    Plots (log scale):
+      - Histogram overlay (density)
+      - ECDF overlay
+      - QQ plot (source2 vs source1)
+    Optionally calibrates source1 → source2 on the log scale (median + IQR)
+    and overlays the calibrated source in ECDF/QQ.
+
+    Parameters
+    ----------
+    source1, source2 : str
+        Labels understood by `compute_tmb`.
+    log_eps : float, default 1e-6
+        Small constant added before log to avoid -inf at zero.
+    n_perm : int, default 20000
+        Resamples for permutation test on median difference (log scale).
+    calibrate : bool, default True
+        If True, compute robust alpha/beta (median/IQR) to map source1 onto source2.
+    quantiles : int, default 99
+        Number of quantile points for QQ plot (use 1..99%).
+    show : bool, default True
+        If True, call plt.show(); if False, close the figures (useful in batch).
+    save_path : str | Path | None
+        If provided, save figures to this directory (files auto-named).
+    figsize : tuple, default (10, 8)
+        Figure size in inches.
+    random_state : int, default 0
+        Seed for permutation test.
+
+    Returns
+    -------
+    dict
+        Summary stats for raw (and, if `calibrate=True`, calibrated) comparisons.
+    """
+    from scipy import stats
+    # ---- pull unpaired TMB data ----
+    tmb1 = compute_tmb(source1).to_numpy(dtype=float)
+    tmb2 = compute_tmb(source2).to_numpy(dtype=float)
+    if len(tmb1) < 2 or len(tmb2) < 2:
+        raise ValueError("Need ≥ 2 samples per source to compare distributions.")
+
+    # ---- work on log scale ----
+    x = np.log(tmb1 + log_eps)
+    y = np.log(tmb2 + log_eps)
+
+    # ---- tests on log scale (unpaired) ----
+    ks = stats.ks_2samp(x, y, alternative="two-sided", mode="auto")
+    ad = stats.anderson_ksamp([x, y])               # .statistic, .significance_level
+    bf = stats.levene(x, y, center="median")        # spread equality (robust)
+    wd = stats.wasserstein_distance(x, y)
+
+    # permutation test for median difference
+    def stat_med(a, b): return np.median(a) - np.median(b)
+    pt = stats.permutation_test((x, y), statistic=stat_med,
+                                vectorized=False, n_resamples=n_perm,
+                                random_state=random_state)
+
+    results = dict(
+        n1=len(x), n2=len(y),
+        mean_log1=float(np.mean(x)), mean_log2=float(np.mean(y)),
+        median_log1=float(np.median(x)), median_log2=float(np.median(y)),
+        KS_D=float(ks.statistic), KS_p=float(ks.pvalue),
+        AD_A2=float(ad.statistic), AD_p=float(ad.significance_level),
+        Levene_median_p=float(bf.pvalue),
+        Wasserstein_log=float(wd),
+        Perm_p_median=float(pt.pvalue),
+    )
+
+    # ---- optional: robust location–scale calibration (source1 → source2) ----
+    x_cal = None
+    if calibrate:
+        iqrx = np.percentile(x, 75) - np.percentile(x, 25)
+        iqry = np.percentile(y, 75) - np.percentile(y, 25)
+        beta = (iqry / iqrx) if iqrx > 0 else 1.0
+        alpha = np.median(y) - beta * np.median(x)
+        x_cal = alpha + beta * x
+
+        ks_c = stats.ks_2samp(x_cal, y, alternative="two-sided", mode="auto")
+        ad_c = stats.anderson_ksamp([x_cal, y])
+
+        results.update(dict(
+            calib_alpha=float(alpha), calib_beta=float(beta),
+            KS_cal_D=float(ks_c.statistic), KS_cal_p=float(ks_c.pvalue),
+            AD_cal_A2=float(ad_c.statistic), AD_cal_p=float(ad_c.significance_level),
+        ))
+
+    # ---- plots ----
+    def _ecdf(z):
+        z = np.sort(z)
+        return z, np.arange(1, len(z)+1) / len(z)
+
+    qgrid = np.linspace(0.01, 0.99, quantiles)
+    qx = np.quantile(x, qgrid)
+    qy = np.quantile(y, qgrid)
+    if x_cal is not None:
+        qx_cal = np.quantile(x_cal, qgrid)
+
+    # Figure 1: hist + ECDF
+    fig1, axes = plt.subplots(2, 1, figsize=figsize, constrained_layout=True)
+
+    # Hist overlay (density)
+    axes[0].hist(x, bins=50, density=True, alpha=0.5, label=f"{source1} (log)")
+    axes[0].hist(y, bins=50, density=True, alpha=0.5, label=f"{source2} (log)")
+    axes[0].set_xlabel("log(TMB + ε)")
+    axes[0].set_ylabel("Density")
+    axes[0].legend()
+    axes[0].set_title("Histogram (log scale)")
+
+    # ECDF overlay
+    zx, ecdfx = _ecdf(x)
+    zy, ecdfy = _ecdf(y)
+    axes[1].plot(zx, ecdfx, label=f"{source1}")
+    axes[1].plot(zy, ecdfy, label=f"{source2}")
+    if x_cal is not None:
+        zc, ecdfc = _ecdf(x_cal)
+        axes[1].plot(zc, ecdfc, linestyle="--", label=f"{source1} (calibrated)")
+    axes[1].set_xlabel("log(TMB + ε)")
+    axes[1].set_ylabel("ECDF")
+    axes[1].legend()
+    axes[1].set_title("ECDF (log scale)")
+
+    # Figure 2: QQ plot (source2 vs source1), with calibration line and y=x
+    fig2, ax2 = plt.subplots(1, 1, figsize=(6.5, 6), constrained_layout=True)
+    ax2.scatter(qx, qy, s=14, alpha=0.7, label="Quantiles")
+    # y = x reference
+    tmin, tmax = min(qx.min(), qy.min()), max(qx.max(), qy.max())
+    t = np.array([tmin, tmax])
+    ax2.plot(t, t, linestyle=":", label="y = x")
+    # best linear fit (on quantiles)
+    m, b = np.polyfit(qx, qy, 1)
+    ax2.plot(t, m*t + b, linestyle="--", label=f"fit: y={b:.2g}+{m:.2g}x")
+    # show calibrated quantiles if available
+    if x_cal is not None:
+        ax2.scatter(qx_cal, qy, s=12, alpha=0.6, label="Quantiles (calibrated)")
+
+    ax2.set_xlabel(f"{source1} quantiles (log)")
+    ax2.set_ylabel(f"{source2} quantiles (log)")
+    ax2.set_title("QQ plot (log scale)")
+    ax2.legend()
+
+    # save/show
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.mkdir(parents=True, exist_ok=True)
+        fig1.savefig(save_path / f"tmb_{source1}_vs_{source2}__hist_ecdf.png", dpi=300)
+        fig2.savefig(save_path / f"tmb_{source1}_vs_{source2}__qq.png", dpi=300)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig1); plt.close(fig2)
+
+    return results
+
 
 def compute_tmb(source=None):
     """Compute tumor mutation burden (TMB) per sample.
@@ -45,10 +214,12 @@ def compute_tmb(source=None):
 
     Parameters
     ----------
-    source : str or None, optional
+    source : str or list or None, optional
+
         If provided, restricts the calculation to mutations whose
-        'Source' column matches this value. If None (default), use
-        all available sources.
+        'Source' column matches this value. If None (default), use all
+        available sources. If it is a list all sources in the list are
+        included. If it is the
 
     Returns
     -------
@@ -69,11 +240,16 @@ def compute_tmb(source=None):
     from locations import merged_maf_file_name
     maf = pd.read_csv(merged_maf_file_name, low_memory=False)
     if source is not None:
-        maf = maf[maf['Source'] == source]
+        if isinstance(source, str) and source == "WES":
+            source = ['TCGA', 'OncoSG', 'CPTAC', 'Yale', 'TracerX', 'MSK2015']
+        elif not isinstance(source, (list, tuple, set)):
+            source = [source]
+        maf = maf[maf['Source'].isin(source)]
 
     out = maf.groupby('Sample ID')['Start_Position'].size()
 
     return out
+
 
 all_tmbs = compute_tmb(source="TCGA") # we restrict to TCGA to have
                                       # all TMB from the same methods,
@@ -142,13 +318,12 @@ def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
 all_genes = list(pd.read_csv(gene_list_file, header=None)[0])
 all_genes = [gene.upper() for gene in all_genes]
 
-subset_genes = ["TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
-                "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
-                "SMARCA4", "SMAD4", "ALK",   "ARID1A", "APC",
-                "MET",     "RB1",   "SETD2", "BRCA2",  "MGA",
-                "GNAS"]
+subset_genes = ["TP53", "KRAS", "EGFR", "BRAF", "CTNNB1", "KEAP1",
+                "STK11", "ATM", "PIK3CA", "RBM10", "SMARCA4", "SMAD4",
+                "ALK", "ARID1A", "APC", "MET", "RB1", "SETD2",
+                "BRCA2", "MGA", "GNAS"]
 
-N_CORES = 12#int(os.getenv("SLURM_CPUS_ON_NODE"))
+N_CORES = os.cpu_count() - 4 #int(os.getenv("SLURM_CPUS_ON_NODE"))
 
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
@@ -803,21 +978,22 @@ def main(genes=None,
 def run_main():
     print("Running main...")
     print("")
-    main(genes=subset_genes,
-         num_per_combo=set(range(1,4)),
-         keys=results_keys,
-         mu_method="variant",
-         pathways=False,
-         extension=os.path.join("model_results",
-                                "subset"))
+    out_subset_genes = main(genes=subset_genes,
+                            num_per_combo=set(range(1, 4)),
+                            keys=results_keys,
+                            mu_method="variant",
+                            pathways=False,
+                            extension=os.path.join("model_results",
+                                                   "subset"))
+    out_all_genes_M_1 = main(genes=all_genes,
+                             num_per_combo=1,
+                             keys=results_keys,
+                             mu_method="variant",
+                             pathways=False,
+                             extension=os.path.join("model_results",
+                                                    "all"))
 
-    main(genes=all_genes,
-         num_per_combo=1,
-         keys=results_keys,
-         mu_method="variant",
-         pathways=False,
-         extension=os.path.join("model_results",
-                                "all"))
+    return out_subset_genes, out_all_genes_M_1
     print("")
     print('Done running main.')
 
