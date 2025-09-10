@@ -1142,7 +1142,7 @@ def convert_mus_to_dict(mus,
         for that genotype.
     samples : dict[tuple[int, ...], int] or None, optional
         Sample counts per genotype x (size 2^M). Same keys as tmbs.
-    empty_policy : {"nan", "skip", "prior"}, optional
+    empty_policy : {"nan", "skip"}, optional
         What to do when a both x and y have zero samples for a jump xy or
         both their TMB inputs are missing.
         - "skip": leave unadjusted base mu_{y-x} (default).
