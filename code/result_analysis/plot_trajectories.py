@@ -7,6 +7,9 @@ from theory import build_S_as_array
 
 from landscape_plotting import plot_landscape
 
+from main import ave_tmb_and_samples_per_genotype
+from cancer_epistasis import convert_mus_to_dict
+
 def convert_samples_to_dict(samples):
     M = int(np.log2(len(samples))) # 2^M is the number mutation combinations
     S = build_S_as_array(M)
@@ -15,7 +18,7 @@ def convert_samples_to_dict(samples):
     return results_as_dict
 
 def plot_trajectory(gene_list, dataset_key, param="selection",
-                    fluxes_mles=None,selection_mles=None,mu_dict=None,all_samples=None,
+                    fluxes_mles=None,selection_mles=None,mu_dict=None,all_samples=None,all_tmbs=None,
                     scale_circle_areas=0.02,multiplier_font_size=3,scale_arrows=None,mutation_colors=None):
     if not isinstance(gene_list,list):
         raise TypeError("`gene_list` must be a list of genes")
@@ -30,10 +33,12 @@ def plot_trajectory(gene_list, dataset_key, param="selection",
 
     if param == "fixation": values = fluxes_mles[dataset_key][gene_tuple]
     elif param == "mutation": 
-        T = order_pos_lambdas(build_S_as_array(len(gene_list))) # list of transitions
-        T_ = np.array(T)
-        mutated_indices = np.where(T_[:,1] - T_[:,0])[1] # mutated gene for each transition
-        values = {T[i]: mu_dict[dataset_key][gene_tuple[mutated_indices[i]]] for i in range(len(T))} # create dictionary with mutation rates
+        tmbs_for_mus, samples_for_mus = ave_tmb_and_samples_per_genotype(
+                all_tmbs,
+                combo=gene_list,
+                key=dataset_key,
+                source="TCGA")
+        values = convert_mus_to_dict(mu_dict[dataset_key], gene_list, tmbs_for_mus, samples_for_mus)
     elif param == "selection": values = selection_mles[dataset_key][gene_tuple]
 
     p = plot_landscape(
