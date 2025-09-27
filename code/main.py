@@ -33,8 +33,18 @@ from filter_data import filter_samples_for_genes
 
 from pymc.exceptions import SamplingError
 
-
 from pathlib import Path
+
+all_genes = list(pd.read_csv(gene_list_file, header=None)[0])
+all_genes = [gene.upper() for gene in all_genes]
+
+subset_genes = ["TP53", "KRAS", "EGFR", "BRAF", "CTNNB1", "KEAP1",
+                "STK11", "ATM", "PIK3CA", "RBM10", "SMARCA4", "SMAD4",
+                "ALK", "ARID1A", "APC", "MET", "RB1", "SETD2",
+                "BRCA2", "MGA", "GNAS"]
+
+
+N_CORES = os.cpu_count() - 4 #int(os.getenv("SLURM_CPUS_ON_NODE"))
 
 def compare_tmb_distributions(
         source1: str,
@@ -314,21 +324,10 @@ def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
     return mean_tmb, counts
 
 
-
-all_genes = list(pd.read_csv(gene_list_file, header=None)[0])
-all_genes = [gene.upper() for gene in all_genes]
-
-subset_genes = ["TP53", "KRAS", "EGFR", "BRAF", "CTNNB1", "KEAP1",
-                "STK11", "ATM", "PIK3CA", "RBM10", "SMARCA4", "SMAD4",
-                "ALK", "ARID1A", "APC", "MET", "RB1", "SETD2",
-                "BRCA2", "MGA", "GNAS"]
-
-N_CORES = os.cpu_count() - 4 #int(os.getenv("SLURM_CPUS_ON_NODE"))
-
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
         all_genes = list(chain(*combo.values()))
-        db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], print_info=print_info)
+        db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], statprint_info=print_info)
         for pathway, genes in combo.items():
             db[f'{pathway}']=db[genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x)
         counts = updated_compute_samples(db,
@@ -993,10 +992,9 @@ def run_main():
                              extension=os.path.join("model_results",
                                                     "all"))
 
-    return out_subset_genes, out_all_genes_M_1
     print("")
     print('Done running main.')
-
+    return out_subset_genes, out_all_genes_M_1
 
 if __name__ == "__main__":
     run_main()

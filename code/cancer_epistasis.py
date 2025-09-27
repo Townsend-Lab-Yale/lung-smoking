@@ -20,6 +20,9 @@ import os
 import numpy as np
 
 import pymc as pm
+import pytensor as pt
+pt.config.cxx = ""
+
 import pytensor.tensor as tt
 from pytensor.compile.ops import as_op
 
