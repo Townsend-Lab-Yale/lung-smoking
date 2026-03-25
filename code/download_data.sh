@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 echo "Downloading data..."
 echo ""
 cd ../data ## assuming we are running the code from /code
@@ -39,7 +41,7 @@ cd ../
 
 echo "Downloading cBioPortal data..."
 echo ""
-URL="https://cbioportal-datahub.s3.amazonaws.com/"
+URL="https://datahub.assets.cbioportal.org/"
 EXTENSION=".tar.gz"
 declare -a DATASETS=("luad_broad"
                      "lung_msk_2017"
@@ -50,39 +52,26 @@ declare -a DATASETS=("luad_broad"
                      "nsclc_tracerx_2017"
                      "lung_nci_2022"
                      "luad_cptac_2020")
-for DATASET in ${DATASETS[@]}; do
+for DATASET in "${DATASETS[@]}"; do
     echo "Obtaining data set $DATASET..."
-    curl "${URL}${DATASET}${EXTENSION}" | gunzip -dc | tar -xf -
+    curl -fL --retry 3 --retry-delay 2 --show-error --silent \
+        "${URL}${DATASET}${EXTENSION}" | tar -xzf -
     echo "done."
     echo ""
 done
-echo "Renaming data/luad_broad/data_mutations.txt to "`
-     `"data/luad_mskcc_2015/data_mutations_extended.txt for consistency."
-mv luad_broad/data_mutations.txt luad_broad/data_mutations_extended.txt
-echo "Renaming data/luad_mskcc_2015/data_mutations.txt to "`
-     `"data/luad_mskcc_2015/data_mutations_extended.txt for consistency."
-mv luad_mskcc_2015/data_mutations.txt luad_mskcc_2015/data_mutations_extended.txt
-echo "Renaming data/luad_oncosg_2020/data_mutations.txt to "`
-     `"data/luad_oncosg_2020/data_mutations_extended.txt for consistency."
-mv luad_oncosg_2020/data_mutations.txt luad_oncosg_2020/data_mutations_extended.txt
-echo "Renaming data/lung_msk_2017/data_mutations.txt to "`
-     `"data/lung_msk_2017/data_mutations_extended.txt for consistency."
-mv lung_msk_2017/data_mutations.txt lung_msk_2017/data_mutations_extended.txt
-echo "Renaming data/nsclc_pd1_msk_2018/data_mutations.txt to "`
-     `"data/nsclc_pd1_msk_2018/data_mutations_extended.txt for consistency."
-mv nsclc_pd1_msk_2018/data_mutations.txt nsclc_pd1_msk_2018/data_mutations_extended.txt
-echo "Renaming data/lung_nci_2022/data_mutations.txt to "`
-     `"data/lung_nci_2022/data_mutations_extended.txt for consistency."
-mv lung_nci_2022/data_mutations.txt lung_nci_2022/data_mutations_extended.txt
-echo "Renaming data/nsclc_tracerx_2017/data_mutations.txt to "`
-     `"data/nsclc_tracerx_2017/data_mutations_extended.txt for consistency."
-mv nsclc_tracerx_2017/data_mutations.txt nsclc_tracerx_2017/data_mutations_extended.txt
-echo "Renaming data/luad_tsp/data_mutations.txt to "`
-     `"data/luad_tsp/data_mutations_extended.txt for consistency."
-mv luad_tsp/data_mutations.txt luad_tsp/data_mutations_extended.txt
-echo "Renaming data/luad_cptac_2020/data_mutations.txt to "`
-     `"data/luad_cptac_2020/data_mutations_extended.txt for consistency."
-mv luad_cptac_2020/data_mutations.txt luad_cptac_2020/data_mutations_extended.txt
+for DATASET in "${DATASETS[@]}"; do
+    SOURCE_FILE="${DATASET}/data_mutations.txt"
+    TARGET_FILE="${DATASET}/data_mutations_extended.txt"
+    if [[ -f "$SOURCE_FILE" ]]; then
+        echo "Renaming data/${SOURCE_FILE} to data/${TARGET_FILE} for consistency."
+        mv "$SOURCE_FILE" "$TARGET_FILE"
+    elif [[ -f "$TARGET_FILE" ]]; then
+        echo "Using existing data/${TARGET_FILE}."
+    else
+        echo "Expected mutation file not found for ${DATASET}: neither data/${SOURCE_FILE} nor data/${TARGET_FILE} exists." >&2
+        exit 1
+    fi
+done
 echo ""
 echo "...done downloading cBioPortal data."
 echo ""
