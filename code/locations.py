@@ -5,6 +5,10 @@ from string import ascii_uppercase as alphabet
 if '__file__' not in globals():
     __file__ = '.'
 
+
+OUTPUT_SUBDIR_ENV = "LUNG_SMOKING_OUTPUT_SUBDIR"
+"""Environment variable that selects a subdirectory under `output/` for a run."""
+
 location_figures = os.path.abspath(
     os.path.join(os.path.dirname(__file__),
                  "../"
@@ -21,14 +25,24 @@ location_data = os.path.abspath(
 """Location of directory that contains data for the model."""
 
 
-location_output = os.path.abspath(
+location_output_root = os.path.abspath(
     os.path.join(os.path.dirname(__file__),
                  "../"
                  "output/"))
-"""Location of directory that contains output for the model."""
+"""Root directory that contains per-run output folders for the model."""
 
-if not os.path.exists(location_output):
-    os.mkdir(location_output)
+location_output_subdir = os.getenv(OUTPUT_SUBDIR_ENV, "").strip()
+"""Optional run-specific subdirectory under `location_output_root`."""
+
+if location_output_subdir:
+    location_output = os.path.abspath(
+        os.path.join(location_output_root,
+                     location_output_subdir))
+else:
+    location_output = location_output_root
+"""Location of directory that contains output for the current run."""
+
+os.makedirs(location_output, exist_ok=True)
 
 data_sets_directories = {
     'TSP':'luad_tsp',

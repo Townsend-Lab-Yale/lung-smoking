@@ -5,6 +5,22 @@ import pandas as pd
 sys.path.insert(0, '../')
 from theory import build_S_with_tuples
 from load_results import load_results
+from locations import location_output
+
+
+def get_result_analysis_output_dir(mu_method):
+    """Choose the CSV export directory for downstream result comparison."""
+    if mu_method == 'cesR':
+        result_dir_name = "cesR_results"
+    elif mu_method == 'variant':
+        result_dir_name = "variant_results"
+    else:
+        raise ValueError("mu_method must be 'cesR' or 'variant'.")
+
+    if os.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", "").strip():
+        return os.path.join(location_output, result_dir_name)
+
+    return result_dir_name
 
 def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     if extension is None: 
@@ -20,13 +36,15 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     selection_mles = load_results('selections','mles',subset_extension)
     selection_cis = load_results('selections','cis',subset_extension)
 
-    if mu_method == 'cesR': 
-        location_output = "cesR_results"
+    if mu_method == 'cesR':
         mu_dict = load_results('mutations','cesR')
-    elif mu_method == 'variant': 
-        location_output = "variant_results"
+    elif mu_method == 'variant':
         mu_dict = load_results('mutations','variant',extension=extension)
-    os.makedirs(location_output, exist_ok=True)
+    else:
+        raise ValueError("mu_method must be 'cesR' or 'variant'.")
+
+    result_output_dir = get_result_analysis_output_dir(mu_method)
+    os.makedirs(result_output_dir, exist_ok=True)
 
     all_samples = load_results('samples', extension=subset_extension)
 
@@ -35,7 +53,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     mu_df.columns = ['index','mu']
     mu_df[['method','key','gene']] = mu_df['index'].str.split('|', expand=True)
     mu_df = mu_df[['method','key','gene','mu']]
-    mu_df.to_csv(os.path.join(location_output, 'mutation_rates.csv'), index=False)
+    mu_df.to_csv(os.path.join(result_output_dir, 'mutation_rates.csv'), index=False)
 
     # Write fluxes to CSV
     flux_df = pd.json_normalize(fluxes_mles,sep='|').T.reset_index()
@@ -56,16 +74,16 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     M1_flux_df = flux_df[flux_df['second_gene'].isnull()]
     M1_flux_df = M1_flux_df.drop(['second_gene','third_gene'],axis=1).rename(columns={'first_gene':'gene'})
     M1_flux_df = M1_flux_df[['key','gene','flux_mle','flux_ci_low','flux_ci_high']]
-    M1_flux_df.to_csv(os.path.join(location_output, 'M1_gene_fluxes.csv'), index=False)
+    M1_flux_df.to_csv(os.path.join(result_output_dir, 'M1_gene_fluxes.csv'), index=False)
 
     M2_flux_df = flux_df[(flux_df['second_gene'].notnull()) & (flux_df['third_gene'].isnull())]
     M2_flux_df = M2_flux_df.drop('third_gene',axis=1)
     M2_flux_df = M2_flux_df[['key','first_gene','second_gene','mutation','flux_mle','flux_ci_low','flux_ci_high']]
-    M2_flux_df.to_csv(os.path.join(location_output, 'M2_gene_fluxes.csv'), index=False)
+    M2_flux_df.to_csv(os.path.join(result_output_dir, 'M2_gene_fluxes.csv'), index=False)
 
     M3_flux_df = flux_df[flux_df['third_gene'].notnull()]
     M3_flux_df = M3_flux_df[['key','first_gene','second_gene','third_gene','mutation','flux_mle','flux_ci_low','flux_ci_high']]
-    M3_flux_df.to_csv(os.path.join(location_output, 'M3_gene_fluxes.csv'), index=False)
+    M3_flux_df.to_csv(os.path.join(result_output_dir, 'M3_gene_fluxes.csv'), index=False)
 
     # Write gammas to CSV
     gamma_df = pd.json_normalize(selection_mles,sep='|').T.reset_index()
@@ -89,16 +107,16 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     M1_gamma_df = gamma_df[gamma_df['second_gene'].isnull()]
     M1_gamma_df = M1_gamma_df.drop(['second_gene','third_gene'],axis=1).rename(columns={'first_gene':'gene'})
     M1_gamma_df = M1_gamma_df[['method','key','gene','gamma_mle','gamma_ci_low','gamma_ci_high']]
-    M1_gamma_df.to_csv(os.path.join(location_output, 'M1_gene_gammas.csv'), index=False)
+    M1_gamma_df.to_csv(os.path.join(result_output_dir, 'M1_gene_gammas.csv'), index=False)
 
     M2_gamma_df = gamma_df[(gamma_df['second_gene'].notnull()) & (gamma_df['third_gene'].isnull())]
     M2_gamma_df = M2_gamma_df.drop('third_gene',axis=1)
     M2_gamma_df = M2_gamma_df[['method','key','first_gene','second_gene','mutation','gamma_mle','gamma_ci_low','gamma_ci_high']]
-    M2_gamma_df.to_csv(os.path.join(location_output, 'M2_gene_gammas.csv'), index=False)
+    M2_gamma_df.to_csv(os.path.join(result_output_dir, 'M2_gene_gammas.csv'), index=False)
 
     M3_gamma_df = gamma_df[gamma_df['third_gene'].notnull()]
     M3_gamma_df = M3_gamma_df[['method','key','first_gene','second_gene','third_gene','mutation','gamma_mle','gamma_ci_low','gamma_ci_high']]
-    M3_gamma_df.to_csv(os.path.join(location_output, 'M3_gene_gammas.csv'), index=False)
+    M3_gamma_df.to_csv(os.path.join(result_output_dir, 'M3_gene_gammas.csv'), index=False)
 
     # Write samples per combination to CSV
     sample_df = pd.json_normalize(all_samples,sep='|').T.reset_index().rename(columns={0:'counts'})
@@ -121,7 +139,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
             sample_dict[i][['first_gene','second_gene','third_gene']] = sample_dict[i]['gene_set'].str.replace("'","").str.split(', ',expand=True)
             sample_dict[i] = sample_dict[i][['key','first_gene','second_gene','third_gene'] + [str(x) for x in build_S_with_tuples(i)]]
 
-        sample_dict[i].to_csv(os.path.join(location_output, f'M{i}_samples_per_combination.csv'),index=False)
+        sample_dict[i].to_csv(os.path.join(result_output_dir, f'M{i}_samples_per_combination.csv'),index=False)
 
     # Write M=1 for 1200 genes results to CSV
     fluxes_mles = load_results('fluxes','mles',all_extension)
@@ -145,7 +163,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     flux_df[['key','gene','mutation']] = flux_df['index'].str.split('|', expand=True)
     flux_df['gene'] = flux_df['gene'].str.strip(",()'")
     flux_df = flux_df[['key','gene','flux_mle','flux_ci_low','flux_ci_high']]
-    flux_df.to_csv(os.path.join(location_output, 'M1_all_gene_fluxes.csv'), index=False)
+    flux_df.to_csv(os.path.join(result_output_dir, 'M1_all_gene_fluxes.csv'), index=False)
 
     gamma_df = pd.json_normalize(selection_mles,sep='|').T.reset_index()
     gamma_df.columns = ['index','gamma_mle']
@@ -161,7 +179,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     gamma_df['gene'] = gamma_df['gene'].str.strip(",()'")
     gamma_df['method'] = mu_method
     gamma_df = gamma_df[['method','key','gene','gamma_mle','gamma_ci_low','gamma_ci_high']]
-    gamma_df.to_csv(os.path.join(location_output, 'M1_all_gene_gammas.csv'), index=False)
+    gamma_df.to_csv(os.path.join(result_output_dir, 'M1_all_gene_gammas.csv'), index=False)
 
     sample_df = pd.json_normalize(all_samples,sep='|').T.reset_index().rename(columns={0:'counts'})
     sample_df[['key','gene_set']] = sample_df['index'].str.split('|', expand=True)
@@ -171,15 +189,14 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     sample_df['gene'] = sample_df['gene_set'].str.replace("'","")
     sample_df = sample_df[['key','gene'] + [str(x) for x in build_S_with_tuples(1)]]
 
-    sample_df.to_csv(os.path.join(location_output, 'M1_all_samples_per_combination.csv'),index=False)
+    sample_df.to_csv(os.path.join(result_output_dir, 'M1_all_samples_per_combination.csv'),index=False)
     
 def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
     if extension is None: subset_extension = "subset"
     else: subset_extension = os.path.join(extension,"subset")
 
-    if mu_method == 'cesR': location_output = "cesR_results"
-    elif mu_method == 'variant': location_output = "variant_results"
-    os.makedirs(location_output, exist_ok=True)
+    result_output_dir = get_result_analysis_output_dir(mu_method)
+    os.makedirs(result_output_dir, exist_ok=True)
 
     fluxes_mles = load_results('fluxes','mles',subset_extension)
     fluxes_cis = load_results('fluxes','cis',subset_extension)
@@ -202,7 +219,7 @@ def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
     flux_df[['key','gene','mutation']] = flux_df['index'].str.split('|', expand=True)
     flux_df['gene'] = flux_df['gene'].str.strip(",()'")
     flux_df = flux_df[['key','gene','flux_mle','flux_ci_low','flux_ci_high']]
-    flux_df.to_csv(os.path.join(location_output, 'M1_gene_fluxes.csv'), index=False)
+    flux_df.to_csv(os.path.join(result_output_dir, 'M1_gene_fluxes.csv'), index=False)
 
     gamma_df = pd.json_normalize(selection_mles,sep='|').T.reset_index()
     gamma_df.columns = ['index','gamma_mle']
@@ -218,7 +235,7 @@ def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
     gamma_df['gene'] = gamma_df['gene'].str.strip(",()'")
     gamma_df['method'] = mu_method
     gamma_df = gamma_df[['method','key','gene','gamma_mle','gamma_ci_low','gamma_ci_high']]
-    gamma_df.to_csv(os.path.join(location_output, 'M1_gene_gammas.csv'), index=False)
+    gamma_df.to_csv(os.path.join(result_output_dir, 'M1_gene_gammas.csv'), index=False)
 
     sample_df = pd.json_normalize(all_samples,sep='|').T.reset_index().rename(columns={0:'counts'})
     sample_df[['key','gene_set']] = sample_df['index'].str.split('|', expand=True)
@@ -228,4 +245,4 @@ def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
     sample_df['gene'] = sample_df['gene_set'].str.replace("'","")
     sample_df = sample_df[['key','gene'] + [str(x) for x in build_S_with_tuples(1)]]
 
-    sample_df.to_csv(os.path.join(location_output, 'M1_samples_per_combination.csv'),index=False)
+    sample_df.to_csv(os.path.join(result_output_dir, 'M1_samples_per_combination.csv'),index=False)

@@ -1,3 +1,6 @@
+source('../pkg_installation.R')
+install_missing_packages("code/result_analysis", plotting_packages)
+
 library(repr)
 
 library(data.table)
@@ -9,6 +12,8 @@ library(ggrepel)
 library(ggbreak)
 library(scales)
 library(cowplot)
+library(RColorBrewer)
+library(latex2exp)
 
 library(glue)
 library(stringr)
@@ -16,6 +21,12 @@ library(stringr)
 
 location_variant_output = "variant_results/"
 location_cesR_output = "cesR_results/"
+output_subdir = trimws(Sys.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", unset = ""))
+
+if (nzchar(output_subdir)) {
+    location_variant_output = file.path("..", "..", "output", output_subdir, "variant_results", "")
+    location_cesR_output = file.path("..", "..", "output", output_subdir, "cesR_results", "")
+}
 
 subset_genes = c("TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
                 "KEAP1",   "STK11", "ATM",   "PIK3CA", "RBM10",
@@ -601,7 +612,7 @@ process_interaction_df = function(df, interactions_to_plot=NULL, n_interactions=
     interaction_df = interaction_df %>% filter(tested_combo %in% interactions_to_plot)
     interaction_df = interaction_df %>%
                         group_by(tested_combo, epistatic_gt) %>%
-                        mutate(nudge_dist = scale((1:n())/n()**(1/spread), scale=FALSE),
+                        mutate(nudge_dist = as.numeric(scale((1:n())/n()**(1/spread), scale=FALSE)),
                                 combo_name = factor(combo_name, levels = sapply(interactions_to_plot, 
                                                 function(combo){tmp = str_split(combo,'_')[[1]]; 
                                                                         glue("{tmp[length(tmp)]} [{paste(tmp[-length(tmp)],collapse='+')}]")})))
@@ -680,7 +691,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
         filter(if(!is.null(genes)) {mutated_gene %in% genes} else TRUE) %>%
         group_by(mutated_gene, epistatic_gt == "WT") %>%
             arrange(gamma_mle, .by_group=TRUE) %>%
-            mutate(nudge_dist = scale((1:n())/n()**(1/0.8), scale=FALSE),
+            mutate(nudge_dist = as.numeric(scale((1:n())/n()**(1/0.8), scale=FALSE)),
                         label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.15,nudge_dist-0.15))  %>%
         ungroup()
 

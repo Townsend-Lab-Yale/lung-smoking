@@ -13,7 +13,13 @@ source('maf_construction.R')
 #~~~~~~~~~~~~#
 
 location_data = '../../data/'
-location_output = '../../output/'
+output_subdir = trimws(Sys.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", unset = ""))
+if (nzchar(output_subdir)) {
+  location_output = file.path('../../output', output_subdir, '')
+} else {
+  location_output = '../../output/'
+}
+dir.create(location_output, recursive = TRUE, showWarnings = FALSE)
 
 save_results = TRUE
 

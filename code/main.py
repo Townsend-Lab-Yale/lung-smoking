@@ -327,7 +327,7 @@ def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
 def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
     if pathways:
         all_genes = list(chain(*combo.values()))
-        db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], statprint_info=print_info)
+        db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], print_info=print_info)
         for pathway, genes in combo.items():
             db[f'{pathway}']=db[genes].sum(axis='columns').apply(lambda x: 1 if x > 1 else x)
         counts = updated_compute_samples(db,
