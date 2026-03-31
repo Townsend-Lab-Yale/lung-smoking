@@ -8,6 +8,7 @@
 source('trinucleotide_functions.R')
 source('variant_mutation_rate.R')
 source('produce_genes_per_sample.R')
+source('produce_indels_per_sample.R')
 source('maf_construction.R')
 
 #~~~~~~~~~~~~#
@@ -113,3 +114,13 @@ final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, variants_per_gene, 
 #' Output location: 'output/genes_per_sample.txt'
 print("Creating table of samples and mutations")
 samples_genes = produce_genes_per_sample(final_maf, gene_mut_rate_df$gene, save_results)
+
+#' Additionally, create a frameshift-indel table with the same sample universe
+#' as `genes_per_sample.txt` for default frameshift-only exclusion during
+#' fixation-rate counting.
+print("Creating table of samples and frameshift indels")
+samples_indels = produce_indels_per_sample(cesa$maf,
+                                           preloaded_maf,
+                                           gene_mut_rate_df$gene,
+                                           samples_genes,
+                                           save_results)

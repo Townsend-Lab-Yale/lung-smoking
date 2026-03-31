@@ -1,3 +1,4 @@
+import argparse
 import os
 import multiprocessing as mp
 
@@ -29,6 +30,10 @@ from locations import results_keys
 from load_results import load_results
 
 from filter_data import key_filtered_dbs
+from filter_data import refresh_key_filtered_dbs
+from filter_data import get_active_sample_id_overrides
+from filter_data import get_key_filtered_indel_db
+from filter_data import frameshift_table_is_available
 from filter_data import filter_samples_for_genes
 
 from pymc.exceptions import SamplingError
@@ -42,6 +47,8 @@ subset_genes = ["TP53", "KRAS", "EGFR", "BRAF", "CTNNB1", "KEAP1",
                 "STK11", "ATM", "PIK3CA", "RBM10", "SMARCA4", "SMAD4",
                 "ALK", "ARID1A", "APC", "MET", "RB1", "SETD2",
                 "BRCA2", "MGA", "GNAS"]
+
+LEGACY_COUNTING_FLAG_NAME = "keep-frameshift-only-samples"
 
 
 N_CORES = os.cpu_count() - 4 #int(os.getenv("SLURM_CPUS_ON_NODE"))
@@ -324,8 +331,277 @@ def ave_tmb_and_samples_per_genotype(tmbs, combo, key=None, source=None):
     return mean_tmb, counts
 
 
-def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
+def _combo_label(combo):
+    """Render a gene combo as a stable label for diagnostics."""
+    if isinstance(combo, dict):
+        combo = tuple(combo.keys())
+    return " | ".join(combo)
+
+
+def get_computable_gene_inputs(genes,
+                               key,
+                               mus_keys,
+                               pathways=False,
+                               print_info=False):
+    """Determine which genes/pathways can be used for a given run.
+
+    Inputs
+    ------
+    genes:
+        List of genes or a dict of pathways to gene lists.
+    key:
+        Cohort key used to select the current genotype table.
+    mus_keys:
+        Genes with available mutation-rate estimates.
+    pathways:
+        Whether `genes` represents pathways instead of individual genes.
+
+    Outputs
+    -------
+    list or dict
+        The subset of genes/pathways that can be evaluated with the current
+        sample-availability and mutation-rate inputs.
+
+    Assumptions
+    -----------
+    - Missing genes should be dropped before fixation-rate estimation rather
+      than deep inside the model-fitting code.
+    """
     if pathways:
+        all_genes = list(chain(*genes.values()))
+    else:
+        all_genes = genes
+
+    unrepresented_genes = [
+        gene for gene in all_genes
+        if gene not in key_filtered_dbs[key].columns
+    ]
+    if len(unrepresented_genes) > 0:
+        print(f"No sample availability information for the following genes: "
+              f"{str(unrepresented_genes)}."
+              "\nThis may be because there are not mutations in those genes in the data, "
+              "or because the genes are not correctly represented in sequencing data")
+    no_mutation_rate_genes = [
+        gene for gene in all_genes
+        if gene not in mus_keys
+    ]
+    if len(no_mutation_rate_genes) > 0:
+        print(f"No mutation rate available for the following genes: "
+              f"{str(no_mutation_rate_genes)}."
+              "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
+    genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
+    if print_info:
+        print("\n")
+
+    if pathways:
+        pathway_prop_missing = {
+            pathway: (len(set.intersection(set(pathway_genes), genes_to_remove))
+                      / len(pathway_genes))
+            for pathway, pathway_genes in genes.items()}
+        print("Proportion of genes in each "
+              f"pathway for which we can't calculate fluxes: {pathway_prop_missing}")
+        pathways_to_remove = [
+            pathway for pathway, prop_missing in pathway_prop_missing.items()
+            if prop_missing > 0.05
+        ]
+        computable_genes = dict(genes)
+        if len(pathways_to_remove) > 0:
+            print("\n")
+            print("Dropping the following pathways "
+                  "because more than 5% of genes have incalculable fluxes: "
+                  f"{pathways_to_remove}")
+            for pathway in pathways_to_remove:
+                computable_genes.pop(pathway)
+
+        computable_genes = {
+            pathway: list(filter(lambda gene: gene not in genes_to_remove,
+                                 pathway_genes))
+            for pathway, pathway_genes in computable_genes.items()
+        }
+    else:
+        computable_genes = list(filter(lambda gene: gene not in genes_to_remove,
+                                       genes))
+
+    return computable_genes
+
+
+def apply_frameshift_exclusion(combo, key, db):
+    """Exclude samples that are indel-only for any gene in `combo`.
+
+    Inputs
+    ------
+    combo:
+        Iterable of genes in the current fixation-rate calculation.
+    key:
+        Cohort key.
+    db:
+        Cohort- and panel-filtered `genes_per_sample` table for the combo.
+
+    Outputs
+    -------
+    tuple[pandas.DataFrame, dict]
+        The filtered table and a summary row for diagnostics.
+
+    Assumptions
+    -----------
+    - `indels_per_sample.txt` exists and has already been validated to match
+      the sample universe of `genes_per_sample.txt`.
+    - Exclusion is defined gene-by-gene as `SNV == 0` and
+      `frameshift_indel == 1`.
+    """
+    genes = list(combo)
+
+    if not frameshift_table_is_available():
+        raise FileNotFoundError(
+            "Frameshift-only exclusion was requested, but no indel table is "
+            "available for the current run."
+        )
+
+    identity_cols = ['Sample ID', 'Source', 'Panel']
+
+    indel_db = filter_samples_for_genes(genes, get_key_filtered_indel_db(key))
+    indel_subset = indel_db[identity_cols + genes].copy()
+    renamed_indel_cols = {
+        gene: f"{gene}__frameshift_indel"
+        for gene in genes
+    }
+    indel_subset = indel_subset.rename(columns=renamed_indel_cols)
+
+    merged = db.merge(indel_subset, on=identity_cols, how='left')
+    exclusion_masks = {}
+    for gene in genes:
+        indel_col = renamed_indel_cols[gene]
+        merged[indel_col] = merged[indel_col].fillna(0).astype(int)
+        exclusion_masks[gene] = (
+            merged[gene].fillna(0).astype(int).eq(0)
+            & merged[indel_col].eq(1)
+        )
+
+    exclude_mask = np.zeros(len(merged), dtype=bool)
+    for mask in exclusion_masks.values():
+        exclude_mask |= mask.to_numpy()
+
+    filtered_db = merged.loc[~exclude_mask, db.columns].copy()
+
+    summary_row = {
+        'key': key,
+        'combo_label': _combo_label(combo),
+        'model_order': len(genes),
+        'n_before_exclusion': int(len(db)),
+        'n_excluded_total': int(exclude_mask.sum()),
+        'n_after_exclusion': int(len(filtered_db)),
+    }
+    for gene in genes:
+        summary_row[f'n_excluded_due_to_{gene}'] = int(exclusion_masks[gene].sum())
+
+    return filtered_db, summary_row
+
+
+def write_frameshift_exclusion_outputs(summary_rows,
+                                       *,
+                                       output_dir):
+    """Write frameshift-exclusion diagnostics for the current run.
+
+    Inputs
+    ------
+    summary_rows:
+        One summary dictionary per key and gene/gene-pair combination.
+    output_dir:
+        Run-level output directory where diagnostics should be written.
+
+    Outputs
+    -------
+    None. Writes CSV files into `output_dir`.
+    """
+    if not summary_rows:
+        return
+
+    summary_df = pd.DataFrame(summary_rows)
+    summary_df.to_csv(
+        os.path.join(output_dir, 'frameshift_excluded_sample_summary.csv'),
+        index=False,
+    )
+
+    samples_used_df = summary_df[
+        ['key', 'combo_label', 'model_order',
+         'n_before_exclusion', 'n_excluded_total', 'n_after_exclusion']
+    ].copy()
+    samples_used_df.to_csv(
+        os.path.join(output_dir, 'frameshift_samples_used_for_fixation.csv'),
+        index=False,
+    )
+
+    obsolete_files = [
+        'frameshift_exclusion_recurrence_summary.csv',
+        'frameshift_recurrently_excluded_sample_ids.csv',
+    ]
+    for file_name in obsolete_files:
+        file_path = os.path.join(output_dir, file_name)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
+def summarize_frameshift_exclusions(genes,
+                                    key,
+                                    num_per_combo,
+                                    mus_keys,
+                                    *,
+                                    pathways=False,
+                                    print_info=False):
+    """Summarize frameshift-only sample exclusions for each gene/gene pair.
+
+    Inputs
+    ------
+    genes:
+        Genes included in the rerun.
+    key:
+        Cohort key.
+    num_per_combo:
+        Integer or iterable of model orders to summarize.
+    mus_keys:
+        Genes with available mutation-rate estimates.
+
+    Outputs
+    -------
+    list[dict]
+        Summary rows for all evaluated combinations.
+    """
+    if pathways:
+        raise ValueError(
+            "Frameshift-exclusion diagnostics are currently implemented only "
+            "for gene combinations, not pathway aggregation."
+        )
+
+    orders = {num_per_combo} if isinstance(num_per_combo, int) else set(num_per_combo)
+    computable_genes = get_computable_gene_inputs(
+        genes,
+        key,
+        mus_keys,
+        pathways=pathways,
+        print_info=print_info,
+    )
+
+    summary_rows = []
+    for model_order in sorted(orders):
+        for combo in combinations(computable_genes, model_order):
+            db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=False)
+            _, summary_row = apply_frameshift_exclusion(combo, key, db)
+            summary_rows.append(summary_row)
+
+    return summary_rows
+
+
+def filter_and_compute_samples(combo,
+                               key,
+                               pathways=False,
+                               print_info=False,
+                               exclude_frameshift=False):
+    if pathways:
+        if exclude_frameshift:
+            raise ValueError(
+                "Frameshift-only exclusion is currently implemented only for gene "
+                "combinations, not pathway aggregation."
+            )
         all_genes = list(chain(*combo.values()))
         db = filter_samples_for_genes(all_genes, key_filtered_dbs[key], print_info=print_info)
         for pathway, genes in combo.items():
@@ -336,6 +612,8 @@ def filter_and_compute_samples(combo, key, pathways=False, print_info=False):
         combo = tuple(combo.keys())
     else:
         db = filter_samples_for_genes(combo, key_filtered_dbs[key], print_info=print_info)
+        if exclude_frameshift:
+            db, _ = apply_frameshift_exclusion(combo, key, db)
         counts = updated_compute_samples(db,
                                          mutations=list(combo),
                                          print_info=print_info)
@@ -351,7 +629,8 @@ def compute_samples_for_all_combinations(genes=None,
                                          pathways=False,
                                          chunksize=None,
                                          print_info=False,
-                                         save_results=True):
+                                         save_results=True,
+                                         exclude_frameshift=False):
 
     """Compute number of patients with each combination of
     const:`genes`.
@@ -404,7 +683,8 @@ def compute_samples_for_all_combinations(genes=None,
                 mus_keys=mus_keys,
                 pathways=pathways,
                 print_info=print_info,
-                save_results=False)) # results will be saved at the
+                save_results=False,
+                exclude_frameshift=exclude_frameshift)) # results will be saved at the
                                      # end but in a single dictionary
 
             print("")
@@ -418,42 +698,13 @@ def compute_samples_for_all_combinations(genes=None,
         print("Computing samples for all combinations of "
               f"{num_per_combo} from {len(genes)} genes/pathways for {key}...")
         print("\n")
-        unrepresented_genes = [gene for gene in all_genes if gene not in key_filtered_dbs[key].columns]
-        if len(unrepresented_genes) > 0:
-            print(f"No sample availability information for the following genes: "
-                  f"{str(unrepresented_genes)}."
-                  "\nThis may be because there are not mutations in those genes in the data, "
-                  "or because the genes are not correctly represented in sequencing data")
-        no_mutation_rate_genes = [gene for gene in all_genes if gene not in mus_keys]
-        if len(no_mutation_rate_genes) > 0:
-            print(f"No mutation rate available for the following genes: "
-                  f"{str(no_mutation_rate_genes)}."
-                  "\nThis may be a problem with the cancereffectsizeR mutation rate estimation")
-        genes_to_remove = set(unrepresented_genes + no_mutation_rate_genes)
-        print("\n")
-
-        if pathways:
-            pathway_prop_missing = {
-                pathway: (len(set.intersection(set(pathway_genes), genes_to_remove))
-                          / len(pathway_genes)) # proportion of missing genes in each pathway
-                for pathway, pathway_genes in genes.items()}
-            print("Proportion of genes in each "
-                  f"pathway for which we can't calculate fluxes: {pathway_prop_missing}")
-            pathways_to_remove = [pathway for pathway, prop_missing in pathway_prop_missing.items()
-                                  if prop_missing > 0.05]
-            if len(pathways_to_remove) > 0:
-                print("\n")
-                print("Dropping the following pathways "
-                      "because more than 5% of genes have incalculable fluxes: "
-                      f"{pathways_to_remove}")
-                computable_genes = genes
-                for pathway in pathways_to_remove:
-                    computable_genes.pop(pathway)
-
-            computable_genes = {pathway: list(filter(lambda gene: gene not in genes_to_remove, pathway_genes))
-                        for pathway, pathway_genes in computable_genes.items()}
-        else:
-            computable_genes = list(filter(lambda gene: gene not in genes_to_remove, genes))
+        computable_genes = get_computable_gene_inputs(
+            genes,
+            key,
+            mus_keys,
+            pathways=pathways,
+            print_info=print_info,
+        )
 
         pool = mp.Pool(processes=N_CORES)
         gene_combos = list(combinations(computable_genes, num_per_combo))
@@ -463,14 +714,16 @@ def compute_samples_for_all_combinations(genes=None,
                                       [({pathway: computable_genes[pathway] for pathway in combo},
                                         key,
                                         pathways,
-                                        print_info) for combo in gene_combos],
+                                        print_info,
+                                        exclude_frameshift) for combo in gene_combos],
                                       chunksize=chunksize)
         else:
             mp_results = pool.starmap(filter_and_compute_samples,
                                       [(combo,
                                         key,
                                         pathways,
-                                        print_info) for combo in gene_combos],
+                                        print_info,
+                                        exclude_frameshift) for combo in gene_combos],
                                       chunksize=chunksize)
 
         counts = {combo: count_array
@@ -830,9 +1083,17 @@ def main(genes=None,
          recompute_samples_per_combination=True,
          recompute_fluxes=True,
          extension=None,
+         exclude_frameshift=None,
          print_info=True,
          save_results=True):
     """Main method for the estimation of all the fluxes.
+
+    Optional cohort overrides:
+    - If plain-text sample-list files are present under
+      `<run root>/sample_id_overrides/`, the cohort definitions in
+      `filter_data.py` are rebuilt from those files before any genotype counts
+      or model fits are computed. This keeps revision reruns file-driven and
+      reproducible.
 
     :type genes: list, dict, or NoneType
     :param genes: Either a list of genes from which gene-set combinations will
@@ -862,6 +1123,34 @@ def main(genes=None,
     all_counts = {}
     all_lambdas = {}
     all_gammas = {}
+    frameshift_summary_rows = []
+
+    refresh_key_filtered_dbs()
+    if not frameshift_table_is_available():
+        raise FileNotFoundError(
+            "The analysis requires `indels_per_sample.txt` in the current run "
+            "root so frameshift-only samples can be excluded consistently."
+        )
+    if exclude_frameshift is None:
+        exclude_frameshift = True
+    if print_info and exclude_frameshift:
+        print("Using default frameshift-only exclusion for fixation counts.")
+        print("")
+    active_sample_id_overrides = get_active_sample_id_overrides()
+    if print_info and active_sample_id_overrides:
+        print("Using task-specific sample-ID overrides from "
+              "output/sample_id_overrides:")
+        for key, metadata in active_sample_id_overrides.items():
+            override_files = [
+                file_name for file_name in [
+                    metadata['replace_file'],
+                    metadata['add_file'],
+                    metadata['drop_file']]
+                if file_name is not None]
+            print(f"  - {key}: mode={metadata['mode']}, "
+                  f"n={metadata['base_n']} -> {metadata['final_n']}, "
+                  f"files={override_files}")
+        print("")
 
     if genes is None:
         genes = subset_genes
@@ -888,6 +1177,7 @@ def main(genes=None,
     if isinstance(num_per_combo, int):
         num_per_combo = {num_per_combo}
 
+    run_root_output = location_output
     if extension is not None:
         set_output_location(extension)
 
@@ -912,7 +1202,8 @@ def main(genes=None,
                     pathways,
                     chunksize,
                     print_info,
-                    save_results)
+                    save_results,
+                    exclude_frameshift)
             else:
                 print(f"Loading counts per combination for {key}...")
                 all_counts[key] = np.load(os.path.join(location_output,f"{key}_samples.npy"),
@@ -967,11 +1258,127 @@ def main(genes=None,
         print("")
         print("")
 
+        if exclude_frameshift:
+            key_summary_rows = summarize_frameshift_exclusions(
+                genes=genes,
+                key=key,
+                num_per_combo=num_per_combo,
+                mus_keys=mus.keys(),
+                pathways=pathways,
+                print_info=False,
+            )
+            frameshift_summary_rows.extend(key_summary_rows)
+
+    if exclude_frameshift and save_results:
+        write_frameshift_exclusion_outputs(
+            frameshift_summary_rows,
+            output_dir=run_root_output,
+        )
 
     return all_counts, all_lambdas, all_gammas
 
 
 
+
+
+def parse_cli_args(argv=None):
+    """Parse CLI arguments for custom main.py runs."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run the lung-smoking fixation/selection pipeline. With no "
+            "arguments, the historical default two-run workflow is executed."
+        )
+    )
+    parser.add_argument(
+        "--genes",
+        choices=["subset", "all"],
+        default="subset",
+        help="Which predefined gene set to run for a custom invocation.",
+    )
+    parser.add_argument(
+        "--num-per-combo",
+        nargs="+",
+        type=int,
+        default=[1, 2, 3],
+        help="Model orders to fit for a custom invocation.",
+    )
+    parser.add_argument(
+        "--keys",
+        nargs="+",
+        choices=results_keys,
+        default=results_keys,
+        help="Cohort keys to run for a custom invocation.",
+    )
+    parser.add_argument(
+        "--mu-method",
+        choices=["variant", "cesR"],
+        default="variant",
+        help="Mutation-rate method to use.",
+    )
+    parser.add_argument(
+        "--extension",
+        default=None,
+        help="Optional model-output subdirectory under the current run root.",
+    )
+    parser.add_argument(
+        f"--{LEGACY_COUNTING_FLAG_NAME}",
+        action="store_true",
+        help=(
+            "Use the historical counting behavior and keep samples whose only "
+            "alteration in a focal gene is a frameshift indel without an SNV. "
+            "By default, those samples are excluded whenever "
+            "`indels_per_sample.txt` is available."
+        ),
+    )
+    parser.add_argument(
+        "--pathways",
+        action="store_true",
+        help="Interpret the provided genes input as pathways. Not used for the preset CLI modes.",
+    )
+    parser.add_argument(
+        "--no-recompute-samples-per-combination",
+        action="store_true",
+        help="Load cached sample counts when available.",
+    )
+    parser.add_argument(
+        "--no-recompute-fluxes",
+        action="store_true",
+        help="Load cached flux estimates when available.",
+    )
+    parser.add_argument(
+        "--no-print-info",
+        action="store_true",
+        help="Suppress verbose progress output.",
+    )
+    parser.add_argument(
+        "--no-save-results",
+        action="store_true",
+        help="Run without writing outputs to disk.",
+    )
+    return parser.parse_args(argv)
+
+
+def run_from_cli(argv=None):
+    """Execute a custom CLI-configured run."""
+    args = parse_cli_args(argv)
+    genes = subset_genes if args.genes == "subset" else all_genes
+    return main(
+        genes=genes,
+        num_per_combo=set(args.num_per_combo),
+        keys=args.keys,
+        mu_method=args.mu_method,
+        pathways=args.pathways,
+        recompute_samples_per_combination=not args.no_recompute_samples_per_combination,
+        recompute_fluxes=not args.no_recompute_fluxes,
+        extension=args.extension,
+        exclude_frameshift=(
+            False
+            if getattr(args, LEGACY_COUNTING_FLAG_NAME.replace("-", "_"))
+            else None
+        ),
+        print_info=not args.no_print_info,
+        save_results=not args.no_save_results,
+    )
 
 
 def run_main():
@@ -997,4 +1404,9 @@ def run_main():
     return out_subset_genes, out_all_genes_M_1
 
 if __name__ == "__main__":
-    run_main()
+    import sys
+
+    if len(sys.argv) == 1:
+        run_main()
+    else:
+        run_from_cli(sys.argv[1:])
