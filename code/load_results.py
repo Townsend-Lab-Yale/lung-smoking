@@ -7,6 +7,12 @@ from locations import location_output
 from locations import results_keys
 
 
+def _location_with_extension(extension=None):
+    if extension is not None:
+        return os.path.join(location_output, extension)
+    return location_output
+
+
 def load_mutation_rates(key, method, extension=None):
     """Load the mutation rates in a format that :func:`compute_gammas` uses.
 
@@ -33,10 +39,7 @@ def load_mutation_rates(key, method, extension=None):
         - gene: mutation rate
     """
 
-    if extension is not None:
-        extended_location_output = os.path.join(location_output, extension)
-    else:
-        extended_location_output = location_output
+    extended_location_output = _location_with_extension(extension)
 
     if key[-4:] == 'plus':
         accession_key = key[:-5]
@@ -44,8 +47,15 @@ def load_mutation_rates(key, method, extension=None):
         accession_key = key
 
     if(method == "variant"):
-        variant_based_mutation_rates = pd.read_csv(os.path.join(extended_location_output,
-                                                                'variant_based_mutation_rates.txt'),
+        variant_rate_file = os.path.join(extended_location_output,
+                                         'variant_based_mutation_rates.txt')
+        if not os.path.exists(variant_rate_file):
+            # Mutation-rate inputs live at the run root, even when model outputs
+            # are nested below it (for example `model_results/subset`).
+            variant_rate_file = os.path.join(location_output,
+                                             'variant_based_mutation_rates.txt')
+
+        variant_based_mutation_rates = pd.read_csv(variant_rate_file,
                                                    index_col=0)
         variant_based_mutation_rates = variant_based_mutation_rates.to_dict()
 
@@ -53,10 +63,13 @@ def load_mutation_rates(key, method, extension=None):
         mus = {gene: mu for gene, mu in mus.items() if not np.isnan(mu)}
 
     elif(method == "cesR"):
-        mus_df = pd.read_csv(
-            os.path.join(extended_location_output,
-                        f"{accession_key}_mutation_rates.txt"),
-            index_col='gene')
+        cesr_rate_file = os.path.join(extended_location_output,
+                                      f"{accession_key}_mutation_rates.txt")
+        if not os.path.exists(cesr_rate_file):
+            cesr_rate_file = os.path.join(location_output,
+                                          f"{accession_key}_mutation_rates.txt")
+
+        mus_df = pd.read_csv(cesr_rate_file, index_col='gene')
 
         mus = mus_df["rate_grp_1"].to_dict()
 
@@ -70,7 +83,7 @@ def load_mutation_rates(key, method, extension=None):
 
 
 
-def load_results(result_type, which=None, extension=None):
+def load_results(result_type, which=None, extension=None, keys=None):
     """Load the results.
 
     :type result_type: str
@@ -97,11 +110,14 @@ def load_results(result_type, which=None, extension=None):
 
     """
 
+    if keys is None:
+        keys = results_keys
+
     if result_type == 'mutations':
         if which is None:
             which = 'variant'
         results = {key: load_mutation_rates(key, which, extension)
-                   for key in results_keys}
+                   for key in keys}
     elif result_type in ['samples',
                          'fluxes',
                          'selections']:
@@ -112,12 +128,9 @@ def load_results(result_type, which=None, extension=None):
                            (f"_{which}" if result_type != 'samples'
                             else "") +
                            ".npy"
-                      for key in results_keys}
+                      for key in keys}
 
-        if extension is not None:
-            extended_location_output = os.path.join(location_output,extension)
-        else:
-            extended_location_output = location_output
+        extended_location_output = _location_with_extension(extension)
 
         results = {key: np.load(os.path.join(extended_location_output,
                                              file_name),
