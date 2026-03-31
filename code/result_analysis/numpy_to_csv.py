@@ -1,8 +1,11 @@
 import os
 import sys
+import argparse
 import pandas as pd
 
-sys.path.insert(0, '../')
+CODE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if CODE_DIR not in sys.path:
+    sys.path.insert(0, CODE_DIR)
 from theory import build_S_with_tuples
 from load_results import load_results
 from locations import location_output
@@ -21,6 +24,16 @@ def get_result_analysis_output_dir(mu_method):
         return os.path.join(location_output, result_dir_name)
 
     return result_dir_name
+
+
+def split_gene_set_columns(gene_set_series):
+    """Split tuple-like gene-set strings into up to three gene columns."""
+    split_df = gene_set_series.str.strip(',()').str.replace("'", "").str.split(', ', expand=True)
+    while split_df.shape[1] < 3:
+        split_df[split_df.shape[1]] = None
+    split_df = split_df.iloc[:, :3]
+    split_df.columns = ['first_gene', 'second_gene', 'third_gene']
+    return split_df
 
 def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     if extension is None: 
@@ -68,7 +81,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     flux_df = pd.merge(flux_df,tmp,on='index')
     flux_df[['key','gene_set','mutation']] = flux_df['index'].str.split('|', expand=True)
     flux_df = flux_df[['key','gene_set','mutation','flux_mle','flux_ci_low','flux_ci_high']]
-    flux_df[['first_gene','second_gene','third_gene']] = flux_df['gene_set'].str.strip(',()').str.replace("'","").str.split(', ',expand=True)
+    flux_df[['first_gene','second_gene','third_gene']] = split_gene_set_columns(flux_df['gene_set'])
     flux_df = flux_df.drop('gene_set', axis=1)
 
     M1_flux_df = flux_df[flux_df['second_gene'].isnull()]
@@ -100,7 +113,7 @@ def convert_all_numpy_to_csv(extension=None, mu_method="variant"):
     gamma_df[['key','gene_set','mutation']] = gamma_df['index'].str.split('|', expand=True)
     gamma_df = gamma_df[['key','gene_set','mutation','gamma_mle','gamma_ci_low','gamma_ci_high']]
 
-    gamma_df[['first_gene','second_gene','third_gene']] = gamma_df['gene_set'].str.strip(',()').str.replace("'","").str.split(', ',expand=True)
+    gamma_df[['first_gene','second_gene','third_gene']] = split_gene_set_columns(gamma_df['gene_set'])
     gamma_df = gamma_df.drop('gene_set', axis=1)
     gamma_df['method'] = mu_method
 
@@ -246,3 +259,166 @@ def convert_M1_subset_numpy_to_csv(extension=None, mu_method="variant"):
     sample_df = sample_df[['key','gene'] + [str(x) for x in build_S_with_tuples(1)]]
 
     sample_df.to_csv(os.path.join(result_output_dir, 'M1_samples_per_combination.csv'),index=False)
+
+
+def convert_subset_numpy_to_csv(extension=None,
+                                mu_method="variant",
+                                keys=None):
+    """Export subset-model numpy outputs to CSV without requiring `all/`.
+
+    Inputs
+    ------
+    extension:
+        Run-specific model-results extension, for example `model_results`.
+    mu_method:
+        Mutation-rate method to export.
+
+    Outputs
+    -------
+    CSV files under the method-specific result directory for the current run.
+    """
+    if extension is None:
+        subset_extension = "subset"
+    else:
+        subset_extension = os.path.join(extension, "subset")
+
+    fluxes_mles = load_results('fluxes', 'mles', subset_extension, keys=keys)
+    fluxes_cis = load_results('fluxes', 'cis', subset_extension, keys=keys)
+
+    selection_mles = load_results('selections', 'mles', subset_extension, keys=keys)
+    selection_cis = load_results('selections', 'cis', subset_extension, keys=keys)
+
+    if mu_method == 'cesR':
+        mu_dict = load_results('mutations', 'cesR', keys=keys)
+    elif mu_method == 'variant':
+        mu_dict = load_results('mutations', 'variant', extension=extension, keys=keys)
+    else:
+        raise ValueError("mu_method must be 'cesR' or 'variant'.")
+
+    result_output_dir = get_result_analysis_output_dir(mu_method)
+    os.makedirs(result_output_dir, exist_ok=True)
+
+    all_samples = load_results('samples', extension=subset_extension, keys=keys)
+
+    mu_df = pd.json_normalize({mu_method: mu_dict}, sep='|').T.reset_index()
+    mu_df.columns = ['index', 'mu']
+    mu_df[['method', 'key', 'gene']] = mu_df['index'].str.split('|', expand=True)
+    mu_df = mu_df[['method', 'key', 'gene', 'mu']]
+    mu_df.to_csv(os.path.join(result_output_dir, 'mutation_rates.csv'), index=False)
+
+    flux_df = pd.json_normalize(fluxes_mles, sep='|').T.reset_index()
+    flux_df.columns = ['index', 'flux_mle']
+
+    tmp = pd.json_normalize(fluxes_cis, sep='|').T.reset_index()
+    tmp.columns = ['index', 'flux_cis']
+    tmp['flux_ci_low'] = tmp['flux_cis'].apply(lambda x: x[0])
+    tmp['flux_ci_high'] = tmp['flux_cis'].apply(lambda x: x[1])
+    tmp = tmp.drop('flux_cis', axis=1)
+
+    flux_df = pd.merge(flux_df, tmp, on='index')
+    flux_df[['key', 'gene_set', 'mutation']] = flux_df['index'].str.split('|', expand=True)
+    flux_df = flux_df[['key', 'gene_set', 'mutation', 'flux_mle', 'flux_ci_low', 'flux_ci_high']]
+    flux_df[['first_gene', 'second_gene', 'third_gene']] = split_gene_set_columns(flux_df['gene_set'])
+    flux_df = flux_df.drop('gene_set', axis=1)
+
+    M1_flux_df = flux_df[flux_df['second_gene'].isnull()]
+    M1_flux_df = M1_flux_df.drop(['second_gene', 'third_gene'], axis=1).rename(columns={'first_gene': 'gene'})
+    M1_flux_df = M1_flux_df[['key', 'gene', 'flux_mle', 'flux_ci_low', 'flux_ci_high']]
+    M1_flux_df.to_csv(os.path.join(result_output_dir, 'M1_gene_fluxes.csv'), index=False)
+
+    M2_flux_df = flux_df[(flux_df['second_gene'].notnull()) & (flux_df['third_gene'].isnull())]
+    M2_flux_df = M2_flux_df.drop('third_gene', axis=1)
+    M2_flux_df = M2_flux_df[['key', 'first_gene', 'second_gene', 'mutation', 'flux_mle', 'flux_ci_low', 'flux_ci_high']]
+    M2_flux_df.to_csv(os.path.join(result_output_dir, 'M2_gene_fluxes.csv'), index=False)
+
+    gamma_df = pd.json_normalize(selection_mles, sep='|').T.reset_index()
+    gamma_df.columns = ['index', 'gamma_mle']
+
+    tmp = pd.json_normalize(selection_cis, sep='|').T.reset_index()
+    tmp.columns = ['index', 'gamma_cis']
+    tmp['gamma_ci_low'] = tmp['gamma_cis'].apply(lambda x: x[0])
+    tmp['gamma_ci_high'] = tmp['gamma_cis'].apply(lambda x: x[1])
+    tmp = tmp.drop('gamma_cis', axis=1)
+
+    gamma_df = pd.merge(gamma_df, tmp, on='index')
+    gamma_df[['key', 'gene_set', 'mutation']] = gamma_df['index'].str.split('|', expand=True)
+    gamma_df = gamma_df[['key', 'gene_set', 'mutation', 'gamma_mle', 'gamma_ci_low', 'gamma_ci_high']]
+    gamma_df[['first_gene', 'second_gene', 'third_gene']] = split_gene_set_columns(gamma_df['gene_set'])
+    gamma_df = gamma_df.drop('gene_set', axis=1)
+    gamma_df['method'] = mu_method
+
+    M1_gamma_df = gamma_df[gamma_df['second_gene'].isnull()]
+    M1_gamma_df = M1_gamma_df.drop(['second_gene', 'third_gene'], axis=1).rename(columns={'first_gene': 'gene'})
+    M1_gamma_df = M1_gamma_df[['method', 'key', 'gene', 'gamma_mle', 'gamma_ci_low', 'gamma_ci_high']]
+    M1_gamma_df.to_csv(os.path.join(result_output_dir, 'M1_gene_gammas.csv'), index=False)
+
+    M2_gamma_df = gamma_df[(gamma_df['second_gene'].notnull()) & (gamma_df['third_gene'].isnull())]
+    M2_gamma_df = M2_gamma_df.drop('third_gene', axis=1)
+    M2_gamma_df = M2_gamma_df[['method', 'key', 'first_gene', 'second_gene', 'mutation', 'gamma_mle', 'gamma_ci_low', 'gamma_ci_high']]
+    M2_gamma_df.to_csv(os.path.join(result_output_dir, 'M2_gene_gammas.csv'), index=False)
+
+    sample_df = pd.json_normalize(all_samples, sep='|').T.reset_index().rename(columns={0: 'counts'})
+    sample_df[['key', 'gene_set']] = sample_df['index'].str.split('|', expand=True)
+    sample_df = sample_df.drop('index', axis=1)
+    sample_df['gene_set'] = sample_df['gene_set'].str.strip(',()')
+
+    sample_dict = dict()
+    for i in [1, 2]:
+        sample_dict[i] = sample_df[sample_df['counts'].apply(len) == 2**i].copy()
+        sample_dict[i][[str(x) for x in build_S_with_tuples(i)]] = sample_dict[i]['counts'].apply(pd.Series)
+
+        if i == 1:
+            sample_dict[i]['gene'] = sample_dict[i]['gene_set'].str.replace("'", "")
+            sample_dict[i] = sample_dict[i][['key', 'gene'] + [str(x) for x in build_S_with_tuples(i)]]
+        elif i == 2:
+            sample_dict[i][['first_gene', 'second_gene']] = (
+                sample_dict[i]['gene_set'].str.replace("'", "").str.split(', ', expand=True)
+            )
+            sample_dict[i] = sample_dict[i][['key', 'first_gene', 'second_gene'] + [str(x) for x in build_S_with_tuples(i)]]
+
+        sample_dict[i].to_csv(
+            os.path.join(result_output_dir, f'M{i}_samples_per_combination.csv'),
+            index=False,
+        )
+
+
+def parse_args():
+    """Parse CLI arguments for numpy-to-CSV export."""
+    parser = argparse.ArgumentParser(
+        description="Export numpy model outputs to CSV for downstream analysis."
+    )
+    parser.add_argument(
+        "--extension",
+        default=None,
+        help="Model-results extension under the current run root, for example `model_results`.",
+    )
+    parser.add_argument(
+        "--mu-method",
+        choices=["variant", "cesR"],
+        default="variant",
+        help="Mutation-rate method to export.",
+    )
+    parser.add_argument(
+        "--subset-only",
+        action="store_true",
+        help="Export only the subset-model outputs and skip `all/`.",
+    )
+    parser.add_argument(
+        "--keys",
+        nargs="+",
+        default=None,
+        help="Optional subset of cohort keys to export.",
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    if args.subset_only:
+        convert_subset_numpy_to_csv(
+            extension=args.extension,
+            mu_method=args.mu_method,
+            keys=args.keys,
+        )
+    else:
+        convert_all_numpy_to_csv(extension=args.extension, mu_method=args.mu_method)
