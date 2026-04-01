@@ -88,7 +88,6 @@ oncosg_df["SMOKING_STATUS"] = oncosg_df["SMOKING_STATUS"].apply(lambda x: True i
 oncosg_df["STAGE"] = oncosg_df["STAGE"].map(stage_dict).fillna(oncosg_df["STAGE"])
 #adding treatment column
 oncosg_df['Treatment'] = oncosg_df.apply(lambda x: True if (x.TKI_TREATMENT == "Yes" or x.CHEMOTHERAPY == "Yes") else False if (x.TKI_TREATMENT == "No" and x.CHEMOTHERAPY == "No") else np.NaN, axis=1)
-oncosg_df['Treatment'] = oncosg_df['TKI_TREATMENT'].apply(lambda x: True if x == 'Yes' else False if x == 'No' else np.NaN)
 oncosg_df = oncosg_df[["PATIENT_ID", "SMOKING_STATUS", "STAGE", "OS_MONTHS", "Treatment"]]
 oncosg_df.columns = ["Sample ID","Smoker","Stage","Overall Survival (months)", "Treatment"]
 #no indication in paper of whether tumors were primary or metastatic
@@ -155,8 +154,8 @@ tracer_df = tracer_df[tracer_df['SAMPLE_TYPE'] == 'Primary']
 tracer_df = tracer_df[~(tracer_df['SAMPLE_ID'].str.contains('DNA'))]
 #randomly sampling from multiple samples per patient (multi-region sampling)
 tracer_df_sampled = pd.DataFrame()
-for id in pd.unique(tracer_df['PATIENT_ID']):
-    tracer_df_sampled = pd.concat([tracer_df_sampled, tracer_df[tracer_df['PATIENT_ID'] == id].sample(random_state=random_seeds[0])])
+for pat_id in pd.unique(tracer_df['PATIENT_ID']):
+    tracer_df_sampled = pd.concat([tracer_df_sampled, tracer_df[tracer_df['PATIENT_ID'] == pat_id].sample(random_state=random_seeds[0])])
 tracer_df_sampled = tracer_df_sampled[['SAMPLE_ID','SMOKING_HISTORY','TUMOR_STAGE','RFS_MONTHS','Treatment']]
 #not sure if regression free survival = progression free survival
 tracer_df_sampled.columns = ["Sample ID","Smoker","Stage","Progression Free Survival (months)","Treatment"]

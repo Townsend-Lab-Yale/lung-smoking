@@ -531,15 +531,6 @@ def write_frameshift_exclusion_outputs(summary_rows,
         index=False,
     )
 
-    obsolete_files = [
-        'frameshift_exclusion_recurrence_summary.csv',
-        'frameshift_recurrently_excluded_sample_ids.csv',
-    ]
-    for file_name in obsolete_files:
-        file_path = os.path.join(output_dir, file_name)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
 
 def summarize_frameshift_exclusions(genes,
                                     key,
@@ -1006,7 +997,7 @@ def compute_all_gammas(key, all_lambdas, mus,
 
     for counter, combo in enumerate(lambdas_mles.keys()):
 
-        if counter+1 % 100 == 0:
+        if (counter + 1) % 100 == 0:
             print(f"Estimating gammas for combination {counter+1}/{total_num_combos}")
 
         M = len(combo)

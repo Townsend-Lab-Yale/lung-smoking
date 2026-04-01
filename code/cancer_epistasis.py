@@ -21,7 +21,6 @@ import numpy as np
 
 import pymc as pm
 import pytensor as pt
-pt.config.cxx = ""
 
 import pytensor.tensor as tt
 from pytensor.compile.ops import as_op
@@ -41,7 +40,6 @@ from theory import generate_paths
 random_seed = 777
 """Random seed to feed the random generators, to be able to replicate
 results."""
-np.random.RandomState(np.random.MT19937(np.random.SeedSequence(random_seed)))
 
 
 T = 1
@@ -152,6 +150,11 @@ def compute_Ps_at_T(positive_lambdas):
     ## This saves time on the last calculation, as we know that the sum
     ## of P_x(t) on x should be 1
     Ps[-1] = 1 - np.sum(Ps[:-1], axis=0)
+
+    if np.any(Ps < -1e-12):
+        raise ValueError("compute_Ps_at_T produced negative probabilities.")
+    if not np.allclose(np.sum(Ps, axis=0), 1.0, atol=1e-10):
+        raise ValueError("compute_Ps_at_T probabilities do not sum to 1.")
 
     return Ps[:, -1]
 

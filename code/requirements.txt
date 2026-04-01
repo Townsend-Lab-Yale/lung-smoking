@@ -64,7 +64,6 @@ sexpdata==0.0.3
 six==1.16.0
 statsmodels==0.13.5
 synapseclient==2.4.0
-Theano-PyMC==1.1.2
 toolz==0.12.1
 traitlets==5.0.5
 typing_extensions==4.12.2
