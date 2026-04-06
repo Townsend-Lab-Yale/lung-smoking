@@ -1117,13 +1117,16 @@ def main(genes=None,
     frameshift_summary_rows = []
 
     refresh_key_filtered_dbs()
-    if not frameshift_table_is_available():
+    if exclude_frameshift is None:
+        exclude_frameshift = frameshift_table_is_available()
+        if not exclude_frameshift:
+            print("WARNING: No frameshift-only exclusion will be applied because no indels_per_sample.txt file exists in the current run root.")
+            print("")
+    if exclude_frameshift and not frameshift_table_is_available():
         raise FileNotFoundError(
             "The analysis requires `indels_per_sample.txt` in the current run "
             "root so frameshift-only samples can be excluded consistently."
         )
-    if exclude_frameshift is None:
-        exclude_frameshift = True
     if print_info and exclude_frameshift:
         print("Using default frameshift-only exclusion for fixation counts.")
         print("")
@@ -1168,7 +1171,8 @@ def main(genes=None,
     if isinstance(num_per_combo, int):
         num_per_combo = {num_per_combo}
 
-    run_root_output = location_output
+    import locations as _loc_mod
+    run_root_output = _loc_mod.location_output
     if extension is not None:
         set_output_location(extension)
 
@@ -1380,6 +1384,7 @@ def run_main():
                             keys=results_keys,
                             mu_method="variant",
                             pathways=False,
+                            exclude_frameshift=None,
                             extension=os.path.join("model_results",
                                                    "subset"))
     out_all_genes_M_1 = main(genes=all_genes,
@@ -1387,6 +1392,7 @@ def run_main():
                              keys=results_keys,
                              mu_method="variant",
                              pathways=False,
+                             exclude_frameshift=None,
                              extension=os.path.join("model_results",
                                                     "all"))
 
