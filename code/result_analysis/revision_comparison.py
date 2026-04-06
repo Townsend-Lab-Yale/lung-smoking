@@ -40,19 +40,41 @@ M1_CLASSIFICATION_ORDER = [
     "stable_non_significant",
 ]
 
-EPI_CLASSIFICATION_ORDER = M1_CLASSIFICATION_ORDER
+EPI_CLASSIFICATION_ORDER = [
+    "preserved_significant_same_direction",
+    "attenuated_same_direction",
+    "reversed_significant",
+    "data_sparse_reversed_significant",
+    "reversed_non_significant",
+    "newly_significant_same_direction",
+    "newly_significant_reversal",
+    "data_sparse_newly_significant_reversal",
+    "stable_non_significant",
+]
 
 CLASSIFICATION_COLORS = {
     "preserved_significant_same_direction": "#1b9e77",
     "attenuated_same_direction": "#7570b3",
     "reversed_significant": "#d95f02",
+    "data_sparse_reversed_significant": "#f4a261",
     "reversed_non_significant": "#e7298a",
     "newly_significant_same_direction": "#66a61e",
     "newly_significant_reversal": "#e6ab02",
+    "data_sparse_newly_significant_reversal": "#f6d55c",
     "stable_non_significant": "#999999",
 }
 
 PAIRWISE_MATRIX_KEYS = ("nonsmoking_plus", "smoking_plus")
+SIGNIFICANT_REVERSAL_CLASSES = {
+    "reversed_significant",
+    "newly_significant_reversal",
+    "data_sparse_reversed_significant",
+    "data_sparse_newly_significant_reversal",
+}
+DATA_SPARSE_SIGNIFICANT_REVERSAL_CLASSES = {
+    "data_sparse_reversed_significant",
+    "data_sparse_newly_significant_reversal",
+}
 
 
 @dataclass(frozen=True)
@@ -228,6 +250,42 @@ def read_csv(result_dir: Path, file_name: str) -> pd.DataFrame:
     return pd.read_csv(csv_path)
 
 
+def log_inner_join_coverage(
+    label: str,
+    left_df: pd.DataFrame,
+    right_df: pd.DataFrame,
+    entity_cols: list[str],
+) -> None:
+    """Log retained and dropped entities for an inner join."""
+
+    def entity_tuples(df: pd.DataFrame) -> set[tuple[object, ...]]:
+        return {
+            tuple(row)
+            for row in df.loc[:, entity_cols].drop_duplicates().itertuples(index=False, name=None)
+        }
+
+    def entity_label(entity: tuple[object, ...]) -> str:
+        if len(entity) == 1:
+            return str(entity[0])
+        return " | ".join(str(item) for item in entity)
+
+    left_entities = entity_tuples(left_df)
+    right_entities = entity_tuples(right_df)
+    shared_entities = left_entities & right_entities
+    left_only = sorted(entity_label(entity) for entity in left_entities - right_entities)
+    right_only = sorted(entity_label(entity) for entity in right_entities - left_entities)
+
+    print(
+        f"{label}: {len(left_entities)} left, {len(right_entities)} right, "
+        f"{len(shared_entities)} shared ({len(left_only)} left-only, "
+        f"{len(right_only)} right-only dropped)"
+    )
+    if left_only:
+        print(f"{label} left-only entities dropped: {', '.join(left_only)}")
+    if right_only:
+        print(f"{label} right-only entities dropped: {', '.join(right_only)}")
+
+
 def load_m1_results(result_dir: Path, method: str) -> pd.DataFrame:
     """Load M1 selection, flux, mutation-rate, and frequency summaries.
 
@@ -271,6 +329,9 @@ def compare_m1_runs(
     """
 
     merge_cols = ["method", "key", "gene"]
+    log_inner_join_coverage(
+        "M1 within-key comparison", baseline_m1, revision_m1, merge_cols
+    )
     comparison = baseline_m1.merge(
         revision_m1,
         on=merge_cols,
@@ -354,6 +415,12 @@ def build_m1_directional_table(
     left = left[shared_cols].rename(columns=lambda col: f"{col}_{key_a}" if col != "gene" else col)
     right = right[shared_cols].rename(columns=lambda col: f"{col}_{key_b}" if col != "gene" else col)
 
+    log_inner_join_coverage(
+        f"M1 directional comparison ({key_a} vs {key_b})",
+        left,
+        right,
+        ["gene"],
+    )
     merged = left.merge(right, on="gene", how="inner")
     merged["comparison"] = f"{key_a}_vs_{key_b}"
     merged["gamma_ratio"] = safe_ratio(
@@ -381,6 +448,7 @@ def compare_directional_tables(
     entity_cols: list[str],
     ratio_col: str,
     baseline_signif_col: str = "signif",
+    comparison_label: str = "Directional comparison",
 ) -> pd.DataFrame:
     """Compare directional summaries between baseline and revision.
 
@@ -400,6 +468,9 @@ def compare_directional_tables(
         Comparison table with directional-classification labels.
     """
 
+    log_inner_join_coverage(
+        comparison_label, baseline_df, revision_df, entity_cols
+    )
     merged = baseline_df.merge(
         revision_df,
         on=entity_cols,
@@ -794,6 +865,31 @@ def compare_epistasis_runs(
         revision_epi,
         entity_cols=entity_cols,
         ratio_col="ratio",
+        comparison_label=(
+            f"M{int(baseline_epi['model_order'].iloc[0])} epistasis comparison"
+        ),
+    )
+    data_sparse_mask = (
+        comparison["classification"].isin(
+            ["reversed_significant", "newly_significant_reversal"]
+        )
+        & comparison["epi_to_count_revision"].fillna(-1).eq(0)
+        & comparison["epi_to_count_baseline"].fillna(0).gt(0)
+    )
+    comparison["data_sparse_reversal"] = data_sparse_mask
+    classification = comparison["classification"].astype(str)
+    classification = classification.mask(
+        data_sparse_mask & classification.eq("reversed_significant"),
+        "data_sparse_reversed_significant",
+    )
+    classification = classification.mask(
+        data_sparse_mask & classification.eq("newly_significant_reversal"),
+        "data_sparse_newly_significant_reversal",
+    )
+    comparison["classification"] = pd.Categorical(
+        classification,
+        categories=EPI_CLASSIFICATION_ORDER,
+        ordered=True,
     )
 
     summary_rows = []
@@ -1034,9 +1130,7 @@ def plot_directional_scatter(
         ax.axvline(0, linestyle=":", color="gray", linewidth=1)
 
     flagged = comparison_df.loc[
-        comparison_df["classification"].isin(
-            ["reversed_significant", "newly_significant_reversal"]
-        )
+        comparison_df["classification"].isin(SIGNIFICANT_REVERSAL_CLASSES)
     ].copy()
     flagged = flagged.sort_values(
         by=[x_col, y_col], key=np.abs, ascending=False
@@ -1088,68 +1182,115 @@ def collect_flagged_findings(
 ) -> pd.DataFrame:
     """Collect high-attention findings that may alter manuscript statements."""
 
-    flagged_frames = []
+    def build_flagged_frames(exclude_data_sparse: bool) -> list[pd.DataFrame]:
+        flagged_frames = []
 
-    if not m1_directional.empty:
-        flagged_m1 = m1_directional.loc[
-            m1_directional["classification"].isin(
-                ["reversed_significant", "newly_significant_reversal"]
+        if not m1_directional.empty:
+            flagged_m1 = m1_directional.loc[
+                m1_directional["classification"].isin(
+                    ["reversed_significant", "newly_significant_reversal"]
+                )
+            ].copy()
+            if not flagged_m1.empty:
+                flagged_m1["analysis_type"] = "M1_directional"
+                flagged_m1["entity_label"] = flagged_m1["gene"]
+                flagged_m1["manuscript_attention"] = (
+                    f"Smoking-differential selection between {key_a} and {key_b} changes direction."
+                )
+                flagged_frames.append(
+                    flagged_m1[
+                        [
+                            "analysis_type",
+                            "entity_label",
+                            "classification",
+                            "signif_baseline",
+                            "signif_revision",
+                            "gamma_ratio_baseline",
+                            "gamma_ratio_revision",
+                            f"gamma_mle_{key_a}_revision",
+                            f"gamma_mle_{key_b}_revision",
+                            "manuscript_attention",
+                        ]
+                    ].rename(
+                        columns={
+                            "gamma_ratio_baseline": "diff_sel_ratio_baseline",
+                            "gamma_ratio_revision": "diff_sel_ratio_revision",
+                        }
+                    )
+                )
+
+        for epi_df in epi_comparisons:
+            if epi_df.empty:
+                continue
+            flagged_epi = epi_df.loc[
+                epi_df["classification"].isin(SIGNIFICANT_REVERSAL_CLASSES)
+            ].copy()
+            if exclude_data_sparse:
+                flagged_epi = flagged_epi.loc[
+                    ~flagged_epi["classification"].isin(
+                        DATA_SPARSE_SIGNIFICANT_REVERSAL_CLASSES
+                    )
+                ]
+            if flagged_epi.empty:
+                continue
+            flagged_epi["analysis_type"] = flagged_epi["model_order"].map(
+                lambda order: f"M{int(order)}_epistasis"
             )
-        ].copy()
-        if not flagged_m1.empty:
-            flagged_m1["analysis_type"] = "M1_directional"
-            flagged_m1["entity_label"] = flagged_m1["gene"]
-            flagged_m1["manuscript_attention"] = (
-                f"Smoking-differential selection between {key_a} and {key_b} changes direction."
+            flagged_epi["entity_label"] = flagged_epi["combo_name"]
+            flagged_epi["manuscript_attention"] = np.select(
+                [
+                    flagged_epi["classification"].isin(
+                        [
+                            "reversed_significant",
+                            "data_sparse_reversed_significant",
+                        ]
+                    ),
+                    flagged_epi["classification"].isin(
+                        [
+                            "newly_significant_reversal",
+                            "data_sparse_newly_significant_reversal",
+                        ]
+                    ),
+                ],
+                [
+                    "Original significant epistatic direction reverses in the rerun.",
+                    "A new significant opposite-direction interaction appears in the rerun.",
+                ],
+                default="Opposite-direction significant interaction detected in the rerun.",
             )
             flagged_frames.append(
-                flagged_m1[
+                flagged_epi[
                     [
                         "analysis_type",
                         "entity_label",
                         "classification",
                         "signif_baseline",
                         "signif_revision",
-                        "gamma_ratio_baseline",
-                        "gamma_ratio_revision",
+                        "ratio_baseline",
+                        "ratio_revision",
                         "manuscript_attention",
                     ]
-                ]
+                ].rename(
+                    columns={
+                        "ratio_baseline": "epistatic_ratio_baseline",
+                        "ratio_revision": "epistatic_ratio_revision",
+                    }
+                )
             )
 
-    for epi_df in epi_comparisons:
-        if epi_df.empty:
+        return flagged_frames
+
+    flagged_frames = []
+    for flagging_rule, exclude_data_sparse in [
+        ("all_significant_reversals", False),
+        ("excluding_data_sparse_significant_reversals", True),
+    ]:
+        frames = build_flagged_frames(exclude_data_sparse=exclude_data_sparse)
+        if not frames:
             continue
-        flagged_epi = epi_df.loc[
-            epi_df["classification"].isin(
-                ["reversed_significant", "newly_significant_reversal"]
-            )
-        ].copy()
-        if flagged_epi.empty:
-            continue
-        flagged_epi["analysis_type"] = flagged_epi["model_order"].map(
-            lambda order: f"M{int(order)}_epistasis"
-        )
-        flagged_epi["entity_label"] = flagged_epi["combo_name"]
-        flagged_epi["manuscript_attention"] = np.where(
-            flagged_epi["classification"] == "reversed_significant",
-            "Original significant epistatic direction reverses in the rerun.",
-            "A new significant opposite-direction interaction appears in the rerun.",
-        )
-        flagged_frames.append(
-            flagged_epi[
-                [
-                    "analysis_type",
-                    "entity_label",
-                    "classification",
-                    "signif_baseline",
-                    "signif_revision",
-                    "ratio_baseline",
-                    "ratio_revision",
-                    "manuscript_attention",
-                ]
-            ]
-        )
+        combined = pd.concat(frames, ignore_index=True)
+        combined["flagging_rule"] = flagging_rule
+        flagged_frames.append(combined)
 
     if not flagged_frames:
         return pd.DataFrame(
@@ -1159,9 +1300,12 @@ def collect_flagged_findings(
                 "classification",
                 "signif_baseline",
                 "signif_revision",
-                "ratio_baseline",
-                "ratio_revision",
+                "diff_sel_ratio_baseline",
+                "diff_sel_ratio_revision",
+                "epistatic_ratio_baseline",
+                "epistatic_ratio_revision",
                 "manuscript_attention",
+                "flagging_rule",
             ]
         )
 
@@ -1298,17 +1442,46 @@ def write_markdown_report(
     if flagged_findings.empty:
         lines.append("- No opposite-direction significant reversals were detected by this comparison run.")
     else:
-        for _, row in flagged_findings.iterrows():
-            ratio_baseline = row.get("ratio_baseline", row.get("gamma_ratio_baseline", np.nan))
-            ratio_revision = row.get("ratio_revision", row.get("gamma_ratio_revision", np.nan))
-            lines.append(
-                "- "
-                f"{row['analysis_type']}: `{row['entity_label']}` is classified as "
-                f"`{row['classification']}` "
-                f"(baseline ratio={format_float(ratio_baseline)}, "
-                f"revision ratio={format_float(ratio_revision)}). "
-                f"{row['manuscript_attention']}"
-            )
+        for flagging_rule, header in [
+            ("all_significant_reversals", "All significant reversals:"),
+            (
+                "excluding_data_sparse_significant_reversals",
+                "Significant reversals after filtering data-sparse entries:",
+            ),
+        ]:
+            lines.append(header)
+            subset = flagged_findings.loc[
+                flagged_findings["flagging_rule"] == flagging_rule
+            ]
+            if subset.empty:
+                lines.append("- None.")
+                lines.append("")
+                continue
+            for _, row in subset.iterrows():
+                ratio_baseline = row.get("diff_sel_ratio_baseline", np.nan)
+                if pd.isna(ratio_baseline):
+                    ratio_baseline = row.get("epistatic_ratio_baseline", np.nan)
+                ratio_revision = row.get("diff_sel_ratio_revision", np.nan)
+                if pd.isna(ratio_revision):
+                    ratio_revision = row.get("epistatic_ratio_revision", np.nan)
+                extra_context = ""
+                if row["analysis_type"] == "M1_directional" and pd.isna(ratio_revision):
+                    gamma_key_a_revision = row.get(f"gamma_mle_{key_a}_revision", np.nan)
+                    gamma_key_b_revision = row.get(f"gamma_mle_{key_b}_revision", np.nan)
+                    extra_context = (
+                        f" Revision gamma values: {key_a}="
+                        f"{format_float(gamma_key_a_revision)}, {key_b}="
+                        f"{format_float(gamma_key_b_revision)}."
+                    )
+                lines.append(
+                    "- "
+                    f"{row['analysis_type']}: `{row['entity_label']}` is classified as "
+                    f"`{row['classification']}` "
+                    f"(baseline ratio={format_float(ratio_baseline)}, "
+                    f"revision ratio={format_float(ratio_revision)}). "
+                    f"{row['manuscript_attention']}{extra_context}"
+                )
+            lines.append("")
 
     lines.extend(
         [
@@ -1493,6 +1666,7 @@ def main() -> None:
         revision_directional,
         entity_cols=["gene", "comparison"],
         ratio_col="gamma_ratio",
+        comparison_label="M1 directional stability across runs",
     )
     m1_direction_summary = summarize_classifications(
         m1_directional, group_cols=["comparison"], order=M1_CLASSIFICATION_ORDER
