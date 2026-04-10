@@ -43,6 +43,7 @@ source("de_functions.R")
 location_data <- "../data"
 location_gene_expression <- file.path(location_data, "gene_expression")
 location_msigdb <- file.path(location_data, "msigdb_gene_sets")
+location_figures <- file.path("../figures")
 
 dir.create(location_msigdb, recursive = TRUE, showWarnings = FALSE)
 msigdb_release_url <- "https://data.broadinstitute.org/gsea-msigdb/msigdb/release/2024.1.Hs"
@@ -106,108 +107,76 @@ tcga_maf <- GDCprepare(query)
 # Metadata and mutation/smoking annotation
 # ============================================ #
 
-# Extract counts and metadata
-tcga_counts <- assay(expr_data)
-tcga_metadata <- colData(expr_data)
-tcga_gene_data <- rowData(expr_data)
+tcga_inputs <- prepare_tcga_transcriptomics_metadata(
+    expr_data = expr_data,
+    tcga_maf = tcga_maf,
+    clinical_path = file.path(location_data, "luad_tcga", "clinical.tsv"),
+    smoking_file = file.path(location_data, "smoking_sample_ids.txt"),
+    nonsmoking_file = file.path(location_data, "nonsmoking_sample_ids.txt")
+)
 
-# Obtain mutation status for EGFR, KRAS, and KEAP1 for each patient
-tcga_maf <- as.data.table(tcga_maf)
-tcga_maf_filtered <- tcga_maf[!Variant_Classification %in% c("Silent","IGR","Intron")]
-tcga_gps <- produce_genes_per_sample(tcga_maf_filtered, c("EGFR","KRAS","KEAP1"))
-any(!(tcga_gps[, mean(EGFR == "Mut"), by = case_id]$V1 %in% c(0, 1)))
-any(!(tcga_gps[, mean(KRAS == "Mut"), by = case_id]$V1 %in% c(0, 1)))
-any(!(tcga_gps[, mean(KEAP1 == "Mut"), by = case_id]$V1 %in% c(0, 1)))
-tcga_gps[, .(percent_mutant = mean(KRAS == "Mut"), N = .N), by = case_id][!percent_mutant %in% c(0, 1)][order(percent_mutant)]
-tcga_gps[, .(percent_mutant = mean(KEAP1 == "Mut"), N = .N), by = case_id][!percent_mutant %in% c(0, 1)][order(percent_mutant)]
-tcga_gpp <- tcga_gps[, .(EGFR = ifelse(any(EGFR == "Mut"), "Mut", "WT"), 
-                         KRAS = ifelse(any(KRAS == "Mut"), "Mut", "WT"),
-                         KEAP1 = ifelse(any(KEAP1 == "Mut"), "Mut", "WT")), by = case_id]
-
-tcga_clinical <- fread(file.path(location_data, "luad_tcga", "clinical.tsv")) # tcga_clinical contained the case_submitter_id needed to join with tcga_metadata
-tcga_samples <- unique(tcga_clinical[, .(case_id, case_submitter_id)])
-tcga_samples <- tcga_gpp[tcga_samples, on = "case_id"] # left join gpp onto tcga_samples
-
-# Obtain smoking status for each patient
-smoking_samples <- fread("../data/smoking_sample_ids.txt", header = F)[[1]]
-nonsmoking_samples <- fread("../data/nonsmoking_sample_ids.txt", header = F)[[1]]
-tcga_samples[case_id %in% smoking_samples, smoking_status := "smoking"]
-tcga_samples[case_id %in% nonsmoking_samples, smoking_status := "nonsmoking"]
-
-# Add mutation and smoking history information to metadata
-if (all(is.na(match(tcga_metadata$patient, tcga_samples$case_submitter_id)))) {
-    stop("No matching case_submitter_id found for all patients in tcga_metadata")
-}
-tcga_metadata[c("egfr_status", "kras_status", "keap1_status", "smoking_status")] <- tcga_samples[match(tcga_metadata$patient, tcga_samples$case_submitter_id), c("EGFR", "KRAS", "KEAP1", "smoking_status")]
-
-# Set mutation status for normal samples to WT
-tcga_metadata$egfr_status <- ifelse(tcga_metadata$sample_type == "Solid Tissue Normal", "WT", tcga_metadata$egfr_status)
-tcga_metadata$kras_status <- ifelse(tcga_metadata$sample_type == "Solid Tissue Normal", "WT", tcga_metadata$kras_status)
-tcga_metadata$keap1_status <- ifelse(tcga_metadata$sample_type == "Solid Tissue Normal", "WT", tcga_metadata$keap1_status)
-
-# Factor all relevant metadata columns to set reference
-tcga_metadata$egfr_status <- factor(tcga_metadata$egfr_status, levels = c("WT", "Mut"))
-tcga_metadata$kras_status <- factor(tcga_metadata$kras_status, levels = c("WT", "Mut"))
-tcga_metadata$keap1_status <- factor(tcga_metadata$keap1_status, levels = c("WT", "Mut"))
-tcga_metadata$smoking_status <- factor(tcga_metadata$smoking_status, levels = c("nonsmoking", "smoking"))
-tcga_metadata$prior_treatment <- factor(tcga_metadata$prior_treatment, levels = c("No", "Yes"))
-tcga_metadata$sample_type <- factor(tcga_metadata$sample_type, levels = c("Solid Tissue Normal", "Primary Tumor"))
+tcga_counts <- tcga_inputs$counts
+tcga_gene_data <- tcga_inputs$gene_data
+tcga_metadata <- tcga_inputs$metadata
 
 # ============================================ #
 # Sample filtering
 # ============================================ #
 
-filtered_cases <- !is.na(tcga_metadata$smoking_status) & 
-                    !is.na(tcga_metadata$egfr_status) & 
-                    !is.na(tcga_metadata$kras_status) &
-                    !is.na(tcga_metadata$keap1_status) &
-                    !is.na(tcga_metadata$sample_type) &
-                    tcga_metadata$preservation_method != "FFPE" &
-                    !is.na(tcga_metadata$prior_treatment) &
-                    tcga_metadata$prior_treatment == "No"
+tcga_filtered <- filter_transcriptomics_samples(
+    counts = tcga_counts,
+    gene_data = tcga_gene_data,
+    metadata = tcga_metadata,
+    required_covariates = c(
+        "smoking_status", "egfr_status", "kras_status", "keap1_status",
+        "sample_type", "stage_group", "sex", "ancestry_proxy"
+    ),
+    exclude_ffpe = TRUE,
+    exclude_prior_treatment = TRUE,
+    min_total_counts = 10
+)
 
-tcga_metadata_clean <- tcga_metadata[filtered_cases,]
-tcga_counts_clean <- tcga_counts[,filtered_cases]
+tcga_counts_clean <- tcga_filtered$counts
+tcga_gene_data <- tcga_filtered$gene_data
+tcga_metadata_clean <- tcga_filtered$metadata
+subgroup_counts <- tcga_filtered$subgroup_counts
+filter_log <- tcga_filtered$filter_log
 
-# Filter out genes with low counts across all samples
-tcga_counts_clean <- tcga_counts_clean[rowSums(tcga_counts_clean) >= 10,]
-
-dcast(as.data.table(dplyr::count(as.data.frame(tcga_metadata_clean), sample_type, smoking_status, egfr_status, keap1_status)), sample_type+smoking_status~egfr_status+keap1_status, value.var='n',fill=0)
+subgroup_counts
 
 # ============================================ #
 # EGFR DESeq2 analysis
 # ============================================ #
 
-dds <- DESeqDataSetFromMatrix(countData = tcga_counts_clean, colData = tcga_metadata_clean, design = ~ sample_type + smoking_status + egfr_status + kras_status + smoking_status:egfr_status + smoking_status:kras_status)
+egfr_de <- run_transcriptomics_deseq(
+    counts = tcga_counts_clean,
+    gene_data = tcga_gene_data,
+    metadata = tcga_metadata_clean,
+    design_terms = c(
+        "sample_type", "smoking_status", "egfr_status", "kras_status",
+        "stage_group", "sex", "ancestry_proxy",
+        "smoking_status:egfr_status", "smoking_status:kras_status"
+    ),
+    primary_contrast = list("smoking_statussmoking.egfr_statusMut"),
+    tumor_normal_contrast = list("sample_type_Primary.Tumor_vs_Solid.Tissue.Normal"),
+    pca_subset = tcga_metadata_clean$sample_type == "Primary Tumor",
+    pca_intgroup = c("smoking_status", "egfr_status"),
+    shrink_type = "ashr"
+)
 
-options(repr.plot.width = 10, repr.plot.height = 10)
-vsd <- vst(dds[,dds$sample_type=="Primary Tumor"], blind = TRUE)  
+dds <- egfr_de$dds
+vsd <- egfr_de$vsd
+results <- egfr_de$primary_results
+results_lfc <- egfr_de$primary_results_lfc
+res <- egfr_de$primary_table
+res_tvn <- egfr_de$tumor_normal_table
+
 plotPCA(vsd,intgroup=c("smoking_status", "egfr_status")) + theme_bw()
 
-dds <- DESeq(dds)
-
-options(repr.plot.width = 8, repr.plot.height = 8)
 plotDispEsts(dds)
 
 # Results for EGFR-Smoking status interaction term
-results <- results(dds, contrast = list("smoking_statussmoking.egfr_statusMut"))
-results_lfc <- lfcShrink(dds, contrast = list("smoking_statussmoking.egfr_statusMut"), res = results, type = "ashr")
-results_lfc$stat <- results[match(rownames(results_lfc), rownames(results)),"stat"]
-rownames(results_lfc) <- tcga_gene_data[match(rownames(results_lfc), rownames(tcga_gene_data)),"gene_name"]
 summary(results_lfc)
-
-res = setDT(as.data.frame(results_lfc), keep.rownames = TRUE)[]
-setnames(res,'rn','gene')
-
-# Tumor vs Normal
-results_tvn <- results(dds, contrast = list("sample_type_Primary.Tumor_vs_Solid.Tissue.Normal"))
-results_tvn_lfc <- lfcShrink(dds, contrast = list("sample_type_Primary.Tumor_vs_Solid.Tissue.Normal"), res = results_tvn, type = "ashr")
-results_tvn_lfc$stat <- results_tvn[match(rownames(results_tvn_lfc), rownames(results_tvn)),"stat"]
-rownames(results_tvn_lfc) <- tcga_gene_data[match(rownames(results_tvn_lfc), rownames(tcga_gene_data)),"gene_name"]
-# summary(results_tvn_lfc)
-
-res_tvn = setDT(as.data.frame(results_tvn_lfc), keep.rownames = TRUE)[]
-setnames(res_tvn,'rn','gene')
 
 # Combining EGFR-Smoking & TvN results
 alpha <- 0.05
@@ -234,7 +203,6 @@ pathways.oncogenic = gmtPathways(file.path(location_msigdb, 'c6.all.v2024.1.Hs.s
 # Interesting genes will compile genes that drove signal of GSEA for pathways of interests (EMT, WNT, TGF-beta, ECM/Adhesion, PI3K-AKT)
 interesting_genes <- data.table()
 
-options(repr.plot.width=20, repr.plot.height = 6)
 fgseaRes <- fgsea(pathways = pathways.hallmark, 
                   stats = egfr_t_stats,
                   minSize  = 10,
@@ -373,7 +341,6 @@ all[gene == "IL17RD", pathway := c("WNT", "EMT")]
 
 all[,pathway:=factor(pathway, levels=c("TM / ECM","WNT","TGF_BETA","EMT","Other"))]
 
-options(repr.plot.width = 4, repr.plot.height = 4)
 pathway_mat <- dcast(all,gene~pathway,value.var="pathway",fun.aggregate=length)
 # Transpose the data.table to cluster columns based on row values
 pathway_mat_t <- t(as.matrix(pathway_mat[, -1, with = FALSE]))
@@ -457,7 +424,6 @@ all_x <- rbind(all, data.table(gene=setdiff(agreed_genes,all$gene),pathway='Othe
 # EGFR figure assembly
 # ============================================ #
 
-options(repr.plot.width = 3.2, repr.plot.height = 10)
 # genes_to_plot <- c(genes_to_plot, "SMAD3", "HHIP", "FZD10", "PRSS2","IQGAP1", "SOX21")
 # agreed_genes <- c(agreed_genes, "SMAD3", "HHIP", "FZD10", "PRSS2","IQGAP1", "SOX21")
 
@@ -495,7 +461,9 @@ p2 = ggplot(all_x[gene %in% median_counts_filtered$gene][, gene := factor(gene, 
                 axis.text.x = element_text(size=12, angle=45, hjust=1),
                 legend.position = "none", legend.title =  ggtext::element_markdown(size=12, hjust=0.5))
 
-plot_grid(p2, p1 + theme(legend.position="none"), nrow = 1, rel_widths = c(1, 1.35))
+p_all <- plot_grid(p2, p1 + theme(legend.position="none"), nrow = 1, rel_widths = c(1, 1.35))
+p_all
+ggsave(file.path(location_figures, "egfr_pathway_analysis.png"), p_all, width = 3.2, height = 10)
 
 # ============================================ #
 # KEAP1 GSVA analysis
@@ -512,10 +480,24 @@ canonical_sets <- getGmt(file.path(location_msigdb, 'c2.cp.v2024.1.Hs.symbols.gm
                         collectionType = BroadCollection(category="c2"))
 combined_sets <- GeneSetCollection(c(hallmark_sets, canonical_sets))
 
-options(repr.plot.width = 10, repr.plot.height = 10)
-dds <- DESeqDataSetFromMatrix(countData = tcga_counts_clean, colData = tcga_metadata_clean, design = ~ sample_type + smoking_status + keap1_status + smoking_status:keap1_status)
+keap1_de <- run_transcriptomics_deseq(
+    counts = tcga_counts_clean,
+    gene_data = tcga_gene_data,
+    metadata = tcga_metadata_clean,
+    design_terms = c(
+        "sample_type", "smoking_status", "keap1_status",
+        "stage_group", "sex", "ancestry_proxy",
+        "smoking_status:keap1_status"
+    ),
+    primary_contrast = NULL,
+    tumor_normal_contrast = NULL,
+    pca_subset = tcga_metadata_clean$sample_type == "Primary Tumor",
+    pca_intgroup = c("smoking_status", "keap1_status"),
+    shrink_type = "ashr"
+)
 
-vsd <- vst(dds[,dds$sample_type=="Primary Tumor"], blind = TRUE)
+dds <- keap1_de$dds
+vsd <- keap1_de$vsd
 plotPCA(vsd,intgroup=c("smoking_status", "keap1_status")) + theme_bw()
 
 vsd_copy <- copy(vsd)
@@ -543,7 +525,6 @@ gsva_res_to_plot_2[,smoking_status:=fcase(
     smoking_status == "ES-LUAD", "ES-\nLUAD"
 )]
 
-options(repr.plot.width = 5, repr.plot.height = 6)
 p = ggplot(gsva_res_to_plot_2,
         aes(x=group,
             y=KEGG_DNA_REPLICATION)) + 
@@ -561,3 +542,5 @@ p = ggplot(gsva_res_to_plot_2,
     theme(axis.title.y = element_text(size=18), axis.text.y = element_text(size=12), axis.title.x = ggtext::element_markdown(size=18), axis.text.x = element_text(size=16),
             legend.position = c(0.35,0.75), legend.title=element_blank(), legend.text = element_text(size=14))
 p
+
+ggsave(file.path(location_figures, "keap1_gsva.png"), p, width = 5, height = 6)
