@@ -122,9 +122,27 @@ def compute_Ps_at_T(positive_lambdas):
     lambda_xx = lambdas[0, 0]
     lambda_xys = lambdas[mutations_per_x == 1, 0]
     lambda_yys = lambdas[mutations_per_x == 1, mutations_per_x == 1]
-    Ps[mutations_per_x == 1] = (
-        lambda_xys[:, np.newaxis] / (lambda_xx - lambda_yys[:, np.newaxis])
-        * (np.exp(lambda_xx*times) - np.exp(lambda_yys[:, np.newaxis]*times)))
+    lambda_diffs = lambda_xx - lambda_yys
+    first_step_probs = np.empty((len(lambda_xys), resolution))
+
+    for i, (lambda_xy, lambda_yy, lambda_diff) in enumerate(
+        zip(lambda_xys, lambda_yys, lambda_diffs)
+    ):
+        if np.isclose(lambda_diff, 0.0, atol=1e-12):
+            # Equal diagonal rates require the analytic limit of the
+            # closed-form expression used when lambda_xx != lambda_yy.
+            first_step_probs[i] = (
+                lambda_xy
+                * times
+                * np.exp(lambda_xx * times)
+            )
+        else:
+            first_step_probs[i] = (
+                lambda_xy / lambda_diff
+                * (np.exp(lambda_xx * times) - np.exp(lambda_yy * times))
+            )
+
+    Ps[mutations_per_x == 1] = first_step_probs
 
     for m in range(2, M):
         for k, y in enumerate(S):
@@ -151,12 +169,14 @@ def compute_Ps_at_T(positive_lambdas):
     ## of P_x(t) on x should be 1
     Ps[-1] = 1 - np.sum(Ps[:-1], axis=0)
 
-    if np.any(Ps < -1e-12):
-        raise ValueError("compute_Ps_at_T produced negative probabilities.")
-    if not np.allclose(np.sum(Ps, axis=0), 1.0, atol=1e-10):
-        raise ValueError("compute_Ps_at_T probabilities do not sum to 1.")
+    final_Ps = Ps[:, -1]
 
-    return Ps[:, -1]
+    if np.any(final_Ps < -1e-12):
+        raise ValueError("compute_Ps_at_T produced negative final probabilities.")
+    if not np.allclose(np.sum(final_Ps), 1.0, atol=1e-10):
+        raise ValueError("compute_Ps_at_T final probabilities do not sum to 1.")
+
+    return final_Ps
 
 
 ## as_op is a decorator that transforms functions so that they can be
