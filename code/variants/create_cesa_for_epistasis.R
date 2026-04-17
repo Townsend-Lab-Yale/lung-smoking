@@ -184,7 +184,12 @@ preloaded_maf = rbind(rbindlist(Broad_maf),
 # }
 
 if(save_results){
-  fwrite(preloaded_maf, paste0(location_data, 'all_preloaded_mafs.txt'))
+  preloaded_maf_output_dir <- if (exists("output_subdir") && nzchar(output_subdir)) {
+    location_output
+  } else {
+    location_data
+  }
+  fwrite(preloaded_maf, paste0(preloaded_maf_output_dir, 'all_preloaded_mafs.txt'))
 }
 
 #' LOADING IN MAF FILES INTO CESA OBJECT
@@ -256,6 +261,19 @@ cesa <- gene_mutation_rates(cesa, covariates = "lung")
 print('Performing mutational signature analysis...')
 treated_samples_signature_exclusions <- suggest_cosmic_signature_exclusions(cancer_type = "LUAD", treatment_naive = F)
 untreated_samples_signature_exclusions <- suggest_cosmic_signature_exclusions(cancer_type = "LUAD", treatment_naive = T)
+classification_output_dir <- if (exists("output_subdir") && nzchar(output_subdir)) {
+  location_output
+} else {
+  location_data
+}
+dir.create(classification_output_dir, recursive = TRUE, showWarnings = FALSE)
+
+sbs4_threshold_raw <- trimws(Sys.getenv("LUNG_SMOKING_SBS4_THRESHOLD", unset = "0"))
+sbs4_threshold <- suppressWarnings(as.numeric(sbs4_threshold_raw))
+if (is.na(sbs4_threshold) || sbs4_threshold < 0 || sbs4_threshold > 1) {
+  stop("LUNG_SMOKING_SBS4_THRESHOLD must be a numeric value between 0 and 1.")
+}
+print(sprintf("Using SBS4 ever-smoker threshold: %.3f", sbs4_threshold))
 
 clin_df = fread(paste0(location_output,'merged_luad_clinical.txt'))
 exome_genome_samples = cesa$samples[coverage %in% c('exome','genome'), Unique_Patient_Identifier]
@@ -279,7 +297,7 @@ cesa <- trinuc_mutation_rates(cesa,
 )
 
 if(save_results){
-  save_cesa(cesa, paste0(location_data,"pan_data_cesa.rds"))
+  save_cesa(cesa, paste0(classification_output_dir,"pan_data_cesa.rds"))
 }
 
 print('Determining smoking history from SBS4 weights...')
@@ -292,9 +310,12 @@ good_samples <- snv_counts[N > 50, Unique_Patient_Identifier]
 NSLC_NCI_patients = unique(maf_list$NCI$Tumor_Sample_Barcode)
 good_samples <- good_samples[! good_samples %in% NSLC_NCI_patients]
 good_sample_weights <- bio_weights_unblended[Unique_Patient_Identifier %in% good_samples,]
-#SMOKING SAMPLES ARE ANY SAMPLES WITH >0 SIGNATURE WEIGHTS.
-smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
-nonsmoking_samples <- good_sample_weights[SBS4 == 0, Unique_Patient_Identifier]
+# WES/WGS smoking assignments are threshold-sensitive for Task 9 reruns.
+smoking_samples <- good_sample_weights[SBS4 > sbs4_threshold, Unique_Patient_Identifier]
+nonsmoking_samples <- good_sample_weights[SBS4 <= sbs4_threshold, Unique_Patient_Identifier]
+
+baseline_smoking_samples <- good_sample_weights[SBS4 > 0, Unique_Patient_Identifier]
+baseline_nonsmoking_samples <- good_sample_weights[SBS4 <= 0, Unique_Patient_Identifier]
 
 # We are confident that these patients are never-smokers, and the publication indicated that they had
 # no smoking signature despite some having a history of secondary smoking.
@@ -307,11 +328,11 @@ panel_smoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][
 panel_nonsmoking_samples = unique(maf_clinical[Source %in% c('MSK2017','MSK2018')][Smoker == F, `Sample ID`])
 
 if(save_results){
-  fwrite(list(smoking_samples), paste0(location_data, 'smoking_sample_ids.txt'))
-  fwrite(list(nonsmoking_samples), paste0(location_data, 'nonsmoking_sample_ids.txt'))
+  fwrite(list(smoking_samples), paste0(classification_output_dir, 'smoking_sample_ids.txt'))
+  fwrite(list(nonsmoking_samples), paste0(classification_output_dir, 'nonsmoking_sample_ids.txt'))
 
-  fwrite(list(panel_smoking_samples), paste0(location_data, 'panel_smoking_sample_ids.txt'))
-  fwrite(list(panel_nonsmoking_samples), paste0(location_data, 'panel_nonsmoking_sample_ids.txt'))
+  fwrite(list(panel_smoking_samples), paste0(classification_output_dir, 'panel_smoking_sample_ids.txt'))
+  fwrite(list(panel_nonsmoking_samples), paste0(classification_output_dir, 'panel_nonsmoking_sample_ids.txt'))
 }
 
 #CALCULATING MUTATION RATES FOR SMOKERS AND NONSMOKERS
