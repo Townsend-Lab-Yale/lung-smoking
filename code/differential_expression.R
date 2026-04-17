@@ -192,6 +192,7 @@ res[,fc_match:=ifelse(padj_tvn<alpha,sign(log2FoldChange)==sign(log2FoldChange_t
 egfr_t_stats = results_lfc$stat
 names(egfr_t_stats) = rownames(results_lfc)
 egfr_t_stats = egfr_t_stats[order(egfr_t_stats,decreasing=TRUE)]
+egfr_t_stats = egfr_t_stats[is.finite(egfr_t_stats)]
 egfr_t_stats = egfr_t_stats[!is.na(names(egfr_t_stats))]
 egfr_t_stats = egfr_t_stats[!duplicated(names(egfr_t_stats))]
 
@@ -413,7 +414,7 @@ genes_to_plot <- interesting_genes[padj<alpha*2 & pathway!="GOBP_LEUKOCYTE_CELL_
 genes_to_plot <- c(genes_to_plot, "FZD10-AS1","SOX21")#, "PIK3C2G", "SMAD1")
 # Only include genes for which the differential expression signal is consistent between median and mean counts
 agreed_genes <- dcast(tmp, gene+padj~method,value.var="greater_in_ns")[mean==median & gene %in% genes_to_plot,gene]
-agreed_genes <- agreed_genes[!agreed_genes %in% c("F2","F7","PROC","DEFB1","PENK","UNC5D","TLL2","HLX","DENND2A","BRMS1L")]
+agreed_genes <- agreed_genes[!agreed_genes %in% c("F2","F7","PROC","DEFB1","PENK","UNC5D","TLL2","HLX","DENND2A","BRMS1L","GRID2","IGF2-AS","SH3TC2","TF")]
 
 median_counts_filtered <- median_counts_x[gene %in% agreed_genes]
 mean_counts_filtered <- mean_counts_x[gene %in% agreed_genes]
@@ -489,7 +490,7 @@ keap1_de <- run_transcriptomics_deseq(
         "stage_group", "sex", "ancestry_proxy",
         "smoking_status:keap1_status"
     ),
-    primary_contrast = NULL,
+    primary_contrast = list("smoking_statussmoking.keap1_statusMut"),
     tumor_normal_contrast = NULL,
     pca_subset = tcga_metadata_clean$sample_type == "Primary Tumor",
     pca_intgroup = c("smoking_status", "keap1_status"),
@@ -498,6 +499,9 @@ keap1_de <- run_transcriptomics_deseq(
 
 dds <- keap1_de$dds
 vsd <- keap1_de$vsd
+keap1_results <- keap1_de$primary_results
+keap1_results_lfc <- keap1_de$primary_results_lfc
+keap1_res <- keap1_de$primary_table
 plotPCA(vsd,intgroup=c("smoking_status", "keap1_status")) + theme_bw()
 
 vsd_copy <- copy(vsd)

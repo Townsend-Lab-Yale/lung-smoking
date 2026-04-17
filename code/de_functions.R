@@ -285,16 +285,27 @@ filter_transcriptomics_samples <- function(counts, gene_data, metadata, required
     list(counts = counts, gene_data = gene_data, metadata = metadata, subgroup_counts = subgroup_counts, filter_log = filter_log)
 }
 
-match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
-                                 id_col = "barcode", smoking_col = "smoking_status",
+match_smoking_groups <- function(metadata, focal_status_col = NULL, priority_covariates,
+                                 summary_covariates = NULL, id_col = "barcode",
+                                 smoking_col = "smoking_status",
                                  sample_type_col = "sample_type", seed = 1) {
-    # Match smoking groups within sample type and a focal genotype stratum, then improve balance on additional covariates.
-    match_cols <- unique(c(id_col, smoking_col, sample_type_col, focal_status_col, balance_covariates))
+    # Match smoking groups within sample type and an optional focal genotype stratum.
+    # Inputs/outputs: metadata with one row per sample plus matching columns; returns selected IDs, matched metadata, balance summaries, and a stratum log.
+    # Assumptions: nonsmoking samples define the reference cohort and priority_covariates are ordered from highest to lowest matching priority.
+    stratum_cols <- c(sample_type_col, focal_status_col)
+    if (is.null(summary_covariates)) {
+        summary_covariates <- priority_covariates
+    }
+    match_cols <- unique(c(id_col, smoking_col, stratum_cols, priority_covariates, summary_covariates))
     metadata <- as.data.table(copy(as.data.frame(metadata)))
     metadata <- metadata[stats::complete.cases(metadata[, ..match_cols])]
-    metadata <- metadata[order(get(sample_type_col), get(focal_status_col), get(smoking_col), get(id_col))]
+    metadata <- metadata[do.call(order, c(lapply(c(stratum_cols, smoking_col, id_col), function(col) metadata[[col]]), list(na.last = TRUE)))]
 
     summarize_balance <- function(dt, covariates) {
+        if (length(covariates) == 0) {
+            return(data.table())
+        }
+
         rbindlist(lapply(covariates, function(covariate) {
             if (is.numeric(dt[[covariate]])) {
                 out <- dt[, .(n = .N, mean = mean(get(covariate)), sd = stats::sd(get(covariate))), by = smoking_col]
@@ -311,14 +322,14 @@ match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
         }), fill = TRUE)
     }
 
-    balance_covariates <- unique(balance_covariates)
-    summary_covariates <- unique(c(sample_type_col, focal_status_col, balance_covariates))
+    priority_covariates <- unique(priority_covariates)
+    summary_covariates <- unique(c(stratum_cols, summary_covariates))
     balance_before <- summarize_balance(metadata, summary_covariates)
 
-    relax_order <- intersect(c("stage_group", "ancestry_proxy", "sex", "kras_status"), balance_covariates)
+    relax_order <- rev(priority_covariates)
+    priority_weights <- 2^((length(priority_covariates) - 1):0)
     ref_dt <- metadata[get(smoking_col) == "nonsmoking"]
     comp_dt <- metadata[get(smoking_col) == "smoking"]
-    stratum_cols <- c(sample_type_col, focal_status_col)
     strata <- unique(ref_dt[, ..stratum_cols])
 
     selected_ref <- data.table()
@@ -331,6 +342,12 @@ match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
         stratum <- strata[i]
         ref_stratum <- ref_dt[stratum, on = c(sample_type_col, focal_status_col), nomatch = 0]
         comp_stratum <- comp_dt[stratum, on = c(sample_type_col, focal_status_col), nomatch = 0]
+        if (nrow(comp_stratum) < nrow(ref_stratum)) {
+            stop(sprintf(
+                "Insufficient smoking samples for matching in stratum %s",
+                paste(paste(stratum_cols, as.character(unlist(stratum)), sep = "="), collapse = ", ")
+            ))
+        }
         available <- copy(comp_stratum)
         matched_ref <- data.table()
         matched_comp <- data.table()
@@ -344,7 +361,7 @@ match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
             candidate <- copy(available)
 
             for (relaxed_n in 0:length(relax_order)) {
-                exact_covariates <- setdiff(balance_covariates, relax_order[seq_len(relaxed_n)])
+                exact_covariates <- setdiff(priority_covariates, relax_order[seq_len(relaxed_n)])
                 candidate <- copy(available)
 
                 if (length(exact_covariates) > 0) {
@@ -364,12 +381,14 @@ match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
             }
 
             candidate[, match_score := 0L]
-            for (covariate in balance_covariates) {
+            for (covariate_i in seq_along(priority_covariates)) {
+                covariate <- priority_covariates[covariate_i]
+                weight <- priority_weights[covariate_i]
                 ref_value <- ref_row[[covariate]]
                 if (is.na(ref_value)) {
-                    candidate[, match_score := match_score + as.integer(is.na(get(covariate)))]
+                    candidate[, match_score := match_score + weight * as.integer(is.na(get(covariate)))]
                 } else {
-                    candidate[, match_score := match_score + as.integer(!is.na(get(covariate)) & get(covariate) == ref_value)]
+                    candidate[, match_score := match_score + weight * as.integer(!is.na(get(covariate)) & get(covariate) == ref_value)]
                 }
             }
 
@@ -381,17 +400,20 @@ match_smoking_groups <- function(metadata, focal_status_col, balance_covariates,
 
         selected_ref <- rbind(selected_ref, matched_ref, fill = TRUE)
         selected_comp <- rbind(selected_comp, matched_comp, fill = TRUE)
-        matching_log <- rbind(matching_log, data.table(
+        matching_log_row <- data.table(
             sample_type = stratum[[sample_type_col]],
-            focal_status = stratum[[focal_status_col]],
             nonsmoking_n = nrow(ref_stratum),
             smoking_n = nrow(comp_stratum),
             matched_n = nrow(matched_ref)
-        ), fill = TRUE)
+        )
+        if (!is.null(focal_status_col)) {
+            matching_log_row[, focal_status := stratum[[focal_status_col]]]
+        }
+        matching_log <- rbind(matching_log, matching_log_row, fill = TRUE)
     }
 
     matched_metadata <- rbind(selected_ref, selected_comp, fill = TRUE)
-    matched_metadata <- matched_metadata[order(get(sample_type_col), get(focal_status_col), get(smoking_col), get(id_col))]
+    matched_metadata <- matched_metadata[do.call(order, c(lapply(c(stratum_cols, smoking_col, id_col), function(col) matched_metadata[[col]]), list(na.last = TRUE)))]
     balance_after <- summarize_balance(matched_metadata, summary_covariates)
 
     list(
