@@ -1,10 +1,14 @@
 import os
+
 import numpy as np
+
 from scipy.optimize import curve_fit
 import matplotlib
 import matplotlib.pyplot as plt
 
 from statsmodels.graphics.mosaicplot import mosaic
+
+from pathlib import Path
 
 from cancer_epistasis import order_genes_by_result_values
 from epistatic_ratios import epistatic_ratios_3rd_gene_effects
@@ -1736,3 +1740,141 @@ def plot_epistatic_ratio_matrices():
                                    all_gammas['smoking_plus'],
                                    all_gammas_cis['smoking_plus'],
                                    gene_list_by_selection)
+
+
+
+def compare_tmb_distributions(
+        source1: str,
+        source2: str,
+        *,
+        log_eps: float = 1,
+        n_perm: int = 20000,
+        quantiles: int = 99,
+        show: bool = True,
+        save_path=None,
+        figsize=(10, 8),
+        random_state: int = 0) -> dict:
+    """
+    Compare unpaired TMB distributions from two sources on the log scale and plot.
+
+    Plots (log scale):
+      - Histogram overlay (density)
+      - ECDF overlay
+      - QQ plot (source2 vs source1)
+    Optionally calibrates source1 → source2 on the log scale (median + IQR)
+    and overlays the calibrated source in ECDF/QQ.
+
+    Parameters
+    ----------
+    source1, source2 : str
+        Labels understood by `compute_tmb`.
+    log_eps : float, default 1e-6
+        Small constant added before log to avoid -inf at zero.
+    n_perm : int, default 20000
+        Resamples for permutation test on median difference (log scale).
+    quantiles : int, default 99
+        Number of quantile points for QQ plot (use 1..99%).
+    show : bool, default True
+        If True, call plt.show(); if False, close the figures (useful in batch).
+    save_path : str | Path | None
+        If provided, save figures to this directory (files auto-named).
+    figsize : tuple, default (10, 8)
+        Figure size in inches.
+    random_state : int, default 0
+        Seed for permutation test.
+
+    Returns
+    -------
+    dict
+        Summary stats for raw comparisons.
+    """
+    from scipy import stats
+    # ---- pull unpaired TMB data ----
+    tmb1 = compute_tmb(source1).to_numpy(dtype=float)
+    tmb2 = compute_tmb(source2).to_numpy(dtype=float)
+
+    # after importing renaming for labels
+    if source1 == "NCI":
+        source_label1 = "NCI (WGS)"
+    else:
+        source_label1 = f"{source1} (WES)"
+
+    if source2 == "NCI":
+        source_label2 = "NCI (WGS)"
+    else:
+        source_label2 = f"{source2} (WES)"
+
+
+    if len(tmb1) < 2 or len(tmb2) < 2:
+        raise ValueError("Need ≥ 2 samples per source to compare distributions.")
+
+    # ---- work on log scale ----
+    x = np.log(tmb1 + log_eps)
+    y = np.log(tmb2 + log_eps)
+
+    # ---- tests on log scale (unpaired) ----
+    ks = stats.ks_2samp(x, y, alternative="two-sided", mode="auto")
+    ad = stats.anderson_ksamp([x, y])               # .statistic, .significance_level
+    bf = stats.levene(x, y, center="median")        # spread equality (robust)
+    wd = stats.wasserstein_distance(x, y)
+
+    # permutation test for median difference
+    def stat_med(a, b): return np.median(a) - np.median(b)
+    pt = stats.permutation_test((x, y), statistic=stat_med,
+                                vectorized=False, n_resamples=n_perm,
+                                random_state=random_state)
+
+    results = dict(
+        n1=len(x), n2=len(y),
+        mean_log1=float(np.mean(x)), mean_log2=float(np.mean(y)),
+        median_log1=float(np.median(x)), median_log2=float(np.median(y)),
+        KS_D=float(ks.statistic), KS_p=float(ks.pvalue),
+        AD_A2=float(ad.statistic), AD_p=float(ad.significance_level),
+        Levene_median_p=float(bf.pvalue),
+        Wasserstein_log=float(wd),
+        Perm_p_median=float(pt.pvalue))
+
+
+    # Plot
+    def _ecdf(z):
+        z = np.sort(z)
+        return z, np.arange(1, len(z)+1) / len(z)
+
+    qgrid = np.linspace(0.01, 0.99, quantiles)
+    qx = np.quantile(x, qgrid)
+    qy = np.quantile(y, qgrid)
+
+    # Figure 1: hist + ECDF
+    fig1, axes = plt.subplots(2, 1, figsize=figsize, constrained_layout=True)
+
+    # Hist overlay (density)
+    axes[0].hist(x, bins=50, density=True, alpha=0.5, label=f"{source_label1} n={len(tmb1)}")
+    axes[0].hist(y, bins=50, density=True, alpha=0.5, label=f"{source_label2} n={len(tmb2)}")
+    axes[0].set_xlabel("log(1+TMB)")
+    axes[0].set_ylabel("Density")
+    axes[0].legend()
+    # axes[0].set_title("Histogram (log scale)")
+
+    # ECDF overlay
+    zx, ecdfx = _ecdf(x)
+    zy, ecdfy = _ecdf(y)
+    axes[1].plot(zx, ecdfx, label=f"{source_label1}")
+    axes[1].plot(zy, ecdfy, label=f"{source_label2}")
+    axes[1].set_xlabel("log(1+TMB)")
+    axes[1].set_ylabel("Empirical CDF")
+    axes[1].legend()
+    axes[1].text(0.05, 0.5, f"Kolmogorov-Smirnov p={float(ks.pvalue):.2e}",
+                 transform=axes[1].transAxes,)
+
+    # save/show
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.mkdir(parents=True, exist_ok=True)
+        fig1.savefig(save_path / f"tmb_{source1}_vs_{source2}__hist_ecdf.png", dpi=300)
+        # fig2.savefig(save_path / f"tmb_{source1}_vs_{source2}__qq.png", dpi=300)
+    if show:
+        plt.show()
+    else:
+        plt.close(fig1)
+
+    return results
