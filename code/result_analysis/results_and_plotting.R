@@ -1,5 +1,5 @@
 source('../pkg_installation.R')
-install_missing_packages("code/result_analysis", plotting_packages)
+install_missing_packages('./',plotting_packages)
 
 library(repr)
 
@@ -26,6 +26,92 @@ output_subdir = trimws(Sys.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", unset = ""))
 if (nzchar(output_subdir)) {
     location_variant_output = file.path("..", "..", "output", output_subdir, "variant_results", "")
     location_cesR_output = file.path("..", "..", "output", output_subdir, "cesR_results", "")
+}
+
+get_epistasis_testing_dir = function(){
+    # Purpose: locate the stable Python-written Wald/BH result directory.
+    # Inputs: optional LUNG_SMOKING_OUTPUT_SUBDIR environment variable.
+    # Output: path to output/<subdir>/epistasis_testing.
+    # Assumption: the testing pipeline has already been run for the same output subdirectory.
+    run_subdir = ifelse(nzchar(output_subdir), output_subdir, "task0_indel_exclusion")
+    file.path("..", "..", "output", run_subdir, "epistasis_testing")
+}
+
+load_epistasis_testing_results = function(){
+    # Purpose: read stable Wald/BH outputs for downstream figures and summaries.
+    # Inputs: files produced by analysis_for_paper_1.py / run_epistasis_testing_pipeline.py.
+    # Output: named list of data frames.
+    # Assumption: Python remains the source of truth for Wald/BH calculations.
+    testing_dir = get_epistasis_testing_dir()
+    run_subdir = ifelse(nzchar(output_subdir), output_subdir, "task0_indel_exclusion")
+    rerun_cmd = paste(
+        "cd code/result_analysis &&",
+        sprintf("LUNG_SMOKING_OUTPUT_SUBDIR=%s", shQuote(run_subdir)),
+        "../.venv/bin/python analysis_for_paper_1.py"
+    )
+    required_files = c(
+        M2_pairwise_primary_tests = "M2_pairwise_primary_tests.csv",
+        M2_pairwise_summary = "M2_pairwise_summary.csv",
+        M3_regime_primary_wt_tests = "M3_regime_primary_wt_tests.csv",
+        M3_regime_descriptive_single_reference_tests = "M3_regime_descriptive_single_reference_tests.csv",
+        M3_regime_summary = "M3_regime_summary.csv",
+        M3_expected_vs_observed_wt_one_sided_tests = "M3_expected_vs_observed_wt_one_sided_tests.csv"
+    )
+    missing_files = names(required_files)[!file.exists(file.path(testing_dir, required_files))]
+    if(length(missing_files) > 0){
+        stop(
+            paste0(
+                "Missing epistasis testing outputs in `", testing_dir, "`: ",
+                paste(required_files[missing_files], collapse = ", "),
+                ". Run `", rerun_cmd, "` first."
+            )
+        )
+    }
+    list(
+        testing_dir = testing_dir,
+        M2_pairwise_primary_tests = fread(file.path(testing_dir, required_files[["M2_pairwise_primary_tests"]])),
+        M2_pairwise_summary = fread(file.path(testing_dir, required_files[["M2_pairwise_summary"]])),
+        M3_regime_primary_wt_tests = fread(file.path(testing_dir, required_files[["M3_regime_primary_wt_tests"]])),
+        M3_regime_descriptive_single_reference_tests = fread(file.path(testing_dir, required_files[["M3_regime_descriptive_single_reference_tests"]])),
+        M3_regime_summary = fread(file.path(testing_dir, required_files[["M3_regime_summary"]])),
+        M3_expected_vs_observed_wt_one_sided_tests = fread(file.path(testing_dir, required_files[["M3_expected_vs_observed_wt_one_sided_tests"]]))
+    )
+}
+
+join_m3_regime_calls = function(df, calls_df){
+    # Purpose: add regime-level M=3 BH call columns to plotting or summary rows.
+    # Inputs: target data frame with key/gene_set/mutated_gene and M3 regime call table.
+    # Output: left-joined data frame.
+    # Assumption: one BH call row exists per cohort x triad-target.
+    call_cols = c(
+        "key", "gene_set", "mutated_gene",
+        "regime", "regime_detail",
+        "q_bh_within_regime", "bh_signif_within_regime", "legacy_signif",
+        "min_dvss_q_bh", "any_dvss_bh_signif", "any_dvss_bh_signif_alpha_0_1",
+        "reported_signif_revised", "reported_signif_revised_alpha_0_1",
+        "reported_signif_rule"
+    )
+    left_join(df, calls_df %>% select(any_of(call_cols)),
+              by = c("key", "gene_set", "mutated_gene"))
+}
+
+join_m3_expected_vs_observed_calls = function(df, calls_df){
+    # Purpose: add expected-vs-observed one-sided WT BH columns to plotting rows.
+    # Inputs: target data frame with key/gene_set/mutated_gene and one-sided call table.
+    # Output: left-joined data frame.
+    # Assumption: one one-sided BH call row exists per ES-LUAD triad-target candidate.
+    call_cols = c(
+        "key", "gene_set", "mutated_gene",
+        "candidate_pairwise_context",
+        "one_sided_q_bh_combined",
+        "one_sided_bh_signif_alpha_0_1",
+        "one_sided_q_bh_within_pairwise_context",
+        "one_sided_bh_within_pairwise_context_alpha_0_1",
+        "higher_order_ci_above_wt",
+        "in_combined_expected_vs_observed_one_sided_family"
+    )
+    left_join(df, calls_df %>% select(any_of(call_cols)),
+              by = c("key", "gene_set", "mutated_gene"))
 }
 
 subset_genes = c("TP53",    "KRAS",  "EGFR",  "BRAF",   "CTNNB1",
@@ -106,8 +192,8 @@ plot_M1_results = function(df, dataset_key, mu_method, var_to_plot, show_freq_le
 
         plot = plot + 
             geom_point(aes(size=freq*100, fill=freq*100), shape=21, color="black", stroke=0.25) + 
-            scale_fill_viridis_c(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,NA)) +
-            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=c(5,10,15,20,30,40), limits=c(0,NA)) + 
+            scale_fill_viridis_c(labels = ~paste0(.x, "%"), breaks=seq(5,40,by=5), limits=c(0,NA)) +
+            scale_size_continuous(labels = ~paste0(.x, "%"), breaks=seq(5,40,by=5), limits=c(0,NA)) +
             #scale_y_continuous(labels = ifelse(var_to_plot %in% c("fixation","frequency"), function(x)format(x, scientific=F), scientific_expr)) +
             guides(fill=guide_legend(title="Prevalence", nrow=1), size = guide_legend(title="Prevalence",nrow=1)) +
             theme_classic() +
@@ -690,18 +776,18 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
         filter(signif) %>%
         filter(if(!is.null(genes)) {mutated_gene %in% genes} else TRUE) %>%
         group_by(mutated_gene, epistatic_gt == "WT") %>%
-            arrange(gamma_mle, .by_group=TRUE) %>%
+            arrange(gamma_mle, ifelse(gamma_mle < 0.1, gamma_ci_high, gamma_mle), .by_group=TRUE) %>%
             mutate(nudge_dist = as.numeric(scale((1:n())/n()**(1/0.8), scale=FALSE)),
                         label_nudge_dist = ifelse(nudge_dist>0,nudge_dist+0.15,nudge_dist-0.15))  %>%
         ungroup()
 
-    if(is.null(low_gamma_label_adjustment)){
-        low_gamma_label_adjustment = 1.2e5
-    }
+    # if(is.null(low_gamma_label_adjustment)){
+    #     low_gamma_label_adjustment = 1.2e5
+    # }
 
-    tmp = tmp %>% rowwise() %>% 
-            mutate(label_y_position = ifelse(gamma_mle<1, low_gamma_label_adjustment, min(ceiling, ifelse(gamma_ci_high-gamma_mle <= 5e4, gamma_ci_high+1e5, gamma_ci_high+5e4)))) %>% 
-            ungroup()
+    # tmp = tmp %>% rowwise() %>% 
+    #         mutate(label_y_position = ifelse(gamma_mle<1, low_gamma_label_adjustment, min(ceiling, ifelse(gamma_ci_high-gamma_mle <= 5e4, gamma_ci_high+1e5, gamma_ci_high+5e4)))) %>% 
+    #         ungroup()
 
     tmp = tmp %>%
         filter(epistatic_gt != "WT") %>%
@@ -730,23 +816,23 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                             linewidth=0.2,
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
                 geom_point(
-                            aes(fill=context, size=context),
-                            shape=21, color="black",
+                            aes(fill=context),
+                            shape=21, size=3, color="black",
                             position=position_nudge(tmp %>% pull(nudge_dist))) + 
-                geom_text(data=tmp %>% filter(context!="WT", signif), 
+                geom_text(data=tmp %>% filter(context!="WT", signif),
                                                 # aes(label=epistatic_gt),
                                                 # position=position_nudge(tmp %>% filter(context!="WT", signif) %>% pull(label_nudge_dist)),
-                                                aes(label=paste0('[',epistatic_gt,']'), y=0.1),
-                                                position=position_nudge(x=tmp %>% filter(context!="WT", signif) %>% pull(nudge_dist), 
-                                                                        y=tmp %>% filter(context!="WT", signif) %>% pull(label_y_position)),
+                                                aes(label=paste0('[',epistatic_gt,']'), y=gamma_ci_high),
+                                                position=position_nudge(x=tmp %>% filter(context!="WT", signif) %>% pull(nudge_dist),
+                                                                        y=5e4),
+                                                hjust=0,
                                                 size = 5,
                                                 check_overlap = TRUE,
                                                 fontface="italic") +
-                labs(x="Mutation under selection", y="Scaled selection coefficient for mutation in somatic genotype",
-                        size="Number of samples\nwith both mutations") +
+                labs(x="Mutation under selection", y="Scaled selection coefficient for mutation in somatic genotype") +
                 scale_alpha_manual(values = alpha_palette, name="Significant difference in selection") +
                 scale_fill_manual(values = fill_palette, name = "Genetic context") +
-                scale_size_manual(values = size_palette, name = "Genetic context") +
+                # scale_size_manual(values = size_palette, name = "Genetic context") +
                 scale_y_continuous(labels = scientific_expr) +
                 theme_classic() +
                 theme(plot.title = element_text(size = 24, hjust=0.5),
@@ -758,7 +844,7 @@ plot_all_pairwise_epistatic_effects = function(interaction_df, baseline_selectio
                         legend.text = element_text(size = 20),
                         legend.title = element_text(size = 20),
                         panel.grid.major.y = element_line(color="gray",linewidth=0.75, linetype=3)) +
-                guides(fill = guide_legend(title.position="top", title.hjust = 0.5, override.aes = list(size=c(6,8))),
+                guides(fill = guide_legend(title.position="top", title.hjust = 0.5, override.aes = list(size=6)),
                         alpha = "none")+#guide_legend(title.position="top", title.hjust = 0.5)) + 
                 coord_flip()
     return(plot)

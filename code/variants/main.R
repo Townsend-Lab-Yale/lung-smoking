@@ -20,14 +20,16 @@ if (nzchar(output_subdir)) {
 } else {
   location_output = '../../output/'
 }
+location_classification = if (nzchar(output_subdir)) location_output else location_data
+location_preloaded = if (nzchar(output_subdir)) location_output else location_data
 dir.create(location_output, recursive = TRUE, showWarnings = FALSE)
 
 save_results = TRUE
 
 #' Create CESA object for mutation rate calculation and MAF construction
-#' Output locations: 
-#'   'data/pan_data_cesa.rds'
-#'   'data/(panel_)(non)smoking_sample_ids.txt'
+#' Output locations:
+#'   'data/pan_data_cesa.rds' or run-local output equivalent
+#'   'data/(panel_)(non)smoking_sample_ids.txt' or run-local output equivalent
 #'   'output/(non)smoking_mutation_rates.txt'
 print('Creating CESA object for mutation rate calculation and MAF cleaning')
 source('create_cesa_for_epistasis.R')
@@ -39,18 +41,24 @@ gene_mut_rate_df[,gene := toupper(gene)]
 
 #' Calculate trinucleotide mutation proportions across the whole genome in preparation for calculating variant mutation rates
 
-cesa = load_cesa(paste0(location_data,"pan_data_cesa.rds"))
-smoking_samples = fread(paste0(location_data, 'smoking_sample_ids.txt'), header=F)[[1]]
-nonsmoking_samples = fread(paste0(location_data, 'nonsmoking_sample_ids.txt'), header=F)[[1]]
-panel_smoking_samples = fread(paste0(location_data, 'panel_smoking_sample_ids.txt'), header=F)[[1]]
-panel_nonsmoking_samples = fread(paste0(location_data, 'panel_nonsmoking_sample_ids.txt'), header=F)[[1]]
+cesa = load_cesa(paste0(location_classification,"pan_data_cesa.rds"))
+smoking_samples = fread(paste0(location_classification, 'smoking_sample_ids.txt'), header=F)[[1]]
+nonsmoking_samples = fread(paste0(location_classification, 'nonsmoking_sample_ids.txt'), header=F)[[1]]
+panel_smoking_samples = fread(paste0(location_classification, 'panel_smoking_sample_ids.txt'), header=F)[[1]]
+panel_nonsmoking_samples = fread(paste0(location_classification, 'panel_nonsmoking_sample_ids.txt'), header=F)[[1]]
+smoking_plus_samples = unique(c(smoking_samples, panel_smoking_samples))
+nonsmoking_plus_samples = unique(c(nonsmoking_samples, panel_nonsmoking_samples))
+
+if (length(intersect(smoking_plus_samples, nonsmoking_plus_samples)) > 0) {
+  stop("Smoking-plus and nonsmoking-plus sample definitions overlap.")
+}
 
 ref_genome_version = 'hg19'
 
 print('Calculating gene-level mutation rates from aggregate of mutation rates of individual variants')
 genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf, ref_genome_version)
 smoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
-                                                                                             c(smoking_samples, panel_smoking_samples)], 
+                                                                                             c(smoking_samples, panel_smoking_samples)],
                                                                                     ref_genome_version)
 nonsmoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proportions(cesa$maf[Unique_Patient_Identifier %in%
                                                                                              c(nonsmoking_samples, panel_nonsmoking_samples)],
@@ -60,46 +68,60 @@ nonsmoking_genome_trinucleotide_mutation_proportions = genome_trinuc_mut_proport
 #'   set of variants are used to calculate the gene mutation rate for all genes)
 cesa_maf = copy(cesa$maf)
 cesa_maf = cesa_maf[lengths(genes) == 1 & !is.na(genes) & is.na(top_gene), top_gene := as.character(genes)]
-preloaded_maf = fread(paste0(location_data, 'all_preloaded_mafs.txt'))
+preloaded_maf = fread(paste0(location_preloaded, 'all_preloaded_mafs.txt'))
 # filtering out silent variants
-variants_per_gene = merge(cesa_maf, preloaded_maf[is.na(problem) & Variant_Classification != 'Silent', 
-                              .(Unique_Patient_Identifier, variant_id)], 
-                          all=F)
+observed_variants_per_gene = merge(
+  cesa_maf,
+  preloaded_maf[
+    is.na(problem) & Variant_Classification != 'Silent',
+    .(Unique_Patient_Identifier, variant_id)
+  ],
+  all = FALSE
+)
 # excluding all non-SNVs
-variants_per_gene = variants_per_gene[top_gene %in% gene_mut_rate_df$gene & variant_type == 'snv' & !is.na(variant_id), .(top_gene, variant_id)]
+observed_variants_per_gene = observed_variants_per_gene[
+  top_gene %in% gene_mut_rate_df$gene & variant_type == 'snv' & !is.na(variant_id),
+  .(Unique_Patient_Identifier, top_gene, variant_id)
+]
+analysis_variants_per_gene = unique(
+  observed_variants_per_gene[, .(top_gene, variant_id)]
+)
 
+if (save_results) {
+  fwrite(analysis_variants_per_gene,
+         paste0(location_output, "analysis_variants_per_gene.txt"))
+}
 
 #' Calculate variant level mutation rates
 #' Then calculate the gene level mutation rate as the sum of all the variant level mutation rates within the gene
 
 pan_data_gene_rates = fread(paste0(location_output, 'pan_data_mutation_rates.txt'))
-gene_mut_rate_df[, pan_data := 
-              sapply(gene, function(x)
-                gene_mutation_rate(x,
-                                   pan_data_gene_rates[gene==x, rate_grp_1],
-                                   genome_trinucleotide_mutation_proportions,
-                                   ref_genome_version,
-                                   variants = variants_per_gene[top_gene == x, variant_id]))]
 smoking_w_panel_gene_rates = fread(paste0(location_output, 'smoking_mutation_rates.txt'))
-gene_mut_rate_df[, smoking := 
-            sapply(gene, function(x) 
-                gene_mutation_rate(x,
-                                   smoking_w_panel_gene_rates[gene==x, rate_grp_1],
-                                   smoking_genome_trinucleotide_mutation_proportions,
-                                   ref_genome_version,
-                                   variants = variants_per_gene[top_gene == x, variant_id]))]
-
 nonsmoking_w_panel_gene_rates = fread(paste0(location_output, 'nonsmoking_mutation_rates.txt'))
-gene_mut_rate_df[, nonsmoking := 
-            sapply(gene, function(x) 
-                gene_mutation_rate(x,
-                                   nonsmoking_w_panel_gene_rates[gene==x, rate_grp_1],
-                                   nonsmoking_genome_trinucleotide_mutation_proportions,
-                                   ref_genome_version,
-                                   variants = variants_per_gene[top_gene == x, variant_id]))]
+variant_specific_mutation_rates = compute_fixed_variant_mutation_rates(
+  analysis_variants_per_gene,
+  pan_data_gene_rates,
+  smoking_w_panel_gene_rates,
+  nonsmoking_w_panel_gene_rates,
+  genome_trinucleotide_mutation_proportions,
+  smoking_genome_trinucleotide_mutation_proportions,
+  nonsmoking_genome_trinucleotide_mutation_proportions,
+  ref_genome_version
+)
+gene_mut_rate_df = sum_fixed_variant_mutation_rates(
+  variant_specific_mutation_rates,
+  analysis_variants_per_gene,
+  gene_mut_rate_df$gene
+)
 print(unique(warnings()))
 
-if(save_results){fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))}
+if(save_results){
+  fwrite(
+    variant_specific_mutation_rates,
+    paste0(location_output,"variant_specific_mutation_rates.txt")
+  )
+  fwrite(gene_mut_rate_df, paste0(location_output,"variant_based_mutation_rates.txt"))
+}
 
 #' Final MAF filtering steps prior to epistasis analysis
 #' Output location: 'output/cesR_maf_for_epistasis_analysis.txt'
@@ -108,7 +130,7 @@ maf_file = read.csv(paste0(location_output,"merged_luad_maf.txt"))
 maf_file = maf_file %>% dplyr::rename('Tumor_Sample_Barcode' = 'Sample.ID',
                                       'Tumor_Allele' = 'Tumor_Seq_Allele2')
 
-final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, variants_per_gene, save_results)
+final_maf = construct_maf(cesa$maf, maf_file, preloaded_maf, analysis_variants_per_gene, save_results)
 
 #' Additionally, create genes per sample table for new compute_samples functionality
 #' Output location: 'output/genes_per_sample.txt'

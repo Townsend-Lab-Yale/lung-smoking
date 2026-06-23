@@ -337,8 +337,28 @@ all <- rbind(all, data.table(
 #     pathway = c("Other")
 # ))
 
+# Pathway annotations from literature review (gene pathway membership matrix)
+all <- rbind(all, data.table(
+    gene = c("TERT", "NCAM1", "LGR5", "DKK3", "CD177"),
+    pathway = "WNT"
+))
+all <- rbind(all, data.table(
+    gene = c("SVEP1", "PRELP", "LTBP2", "COL2A1", "COL12A1", "PCDHB6"),
+    pathway = "TM / ECM"
+))
+all <- rbind(all, data.table(
+    gene = c("PRELP", "LTBP2", "DKK3"),
+    pathway = "TGF_BETA"
+))
+all <- rbind(all, data.table(
+    gene = c("TERT", "SVEP1", "PRELP", "NCAM1", "LTBP2", "LGR5", "IGF2"),
+    pathway = "EMT"
+))
+
 all[gene == "HEY2", pathway := c("TGF_BETA", "EMT")]
 all[gene == "IL17RD", pathway := c("WNT", "EMT")]
+all[gene == "CD177", pathway := "WNT"]
+all <- unique(all)
 
 all[,pathway:=factor(pathway, levels=c("TM / ECM","WNT","TGF_BETA","EMT","Other"))]
 
@@ -393,25 +413,21 @@ mean_counts_x$tvn_change <- factor(mean_counts_x$tvn_change, levels=c('-','none'
 
 smoking_status_abbrev <- c("nonsmoking" = "NS", "smoking" = "ES")
 
-# median_counts_x$gene_name <- glue::glue("<i style='color:{ifelse(median_counts_x$padj<alpha,ifelse(median_counts_x$ratio_of_fc>1, 'red', 'blue'),'grey30')};'>{median_counts_filtered$gene}</i>")
-median_counts_x$gene_name <- glue::glue("<i style='color:{ifelse(median_counts_x$ratio_of_fc>1, 'red', 'blue')};'>{median_counts_x$gene}</i>")
-gene_name_order <- median_counts_x[smoking_status=="nonsmoking"][order(ratio_of_fc>1,tvn_change,log2fc),gene_name]
-median_counts_x[,gene_name:=factor(gene_name, levels=gene_name_order)]
-median_counts_x <- median_counts_x[order(gene_name)]
+gene_order <- median_counts_x[smoking_status=="nonsmoking"][order(ratio_of_fc>1,tvn_change,log2fc),gene]
+median_counts_x[,gene:=factor(gene, levels=gene_order)]
+median_counts_x <- median_counts_x[order(gene)]
 median_counts_x[,smoking_status:=factor(as.character(smoking_status_abbrev[smoking_status]),levels=c("ES","NS"))]
 
-# mean_counts_x$gene_name <- glue::glue("<i style='color:{ifelse(mean_counts_x$padj<alpha,ifelse(mean_counts_x$greater_in_ns, 'red', 'blue'),'grey30')};'>{mean_counts_filtered$gene}</i>")
-mean_counts_x$gene_name <- glue::glue("<i style='color:{ifelse(mean_counts_x$greater_in_ns, 'red', 'blue')};'>{mean_counts_x$gene}</i>")
-gene_name_order <- mean_counts_x[smoking_status=="nonsmoking"][order(greater_in_ns,tvn_change,log2fc),gene_name]
-mean_counts_x[,gene_name:=factor(gene_name, levels=gene_name_order)]
-mean_counts_x <- mean_counts_x[order(gene_name)]
+gene_order <- mean_counts_x[smoking_status=="nonsmoking"][order(greater_in_ns,tvn_change,log2fc),gene]
+mean_counts_x[,gene:=factor(gene, levels=gene_order)]
+mean_counts_x <- mean_counts_x[order(gene)]
 mean_counts_x[,smoking_status:=factor(as.character(smoking_status_abbrev[smoking_status]),levels=c("ES","NS"))]
 
 tmp <- rbind(median_counts_x[,.(method="median",gene,greater_in_ns=ratio_of_fc>1,padj)], mean_counts_x[,.(method="mean",gene,greater_in_ns,padj)])
 tmp <- unique(tmp)
 
 genes_to_plot <- interesting_genes[padj<alpha*2 & pathway!="GOBP_LEUKOCYTE_CELL_CELL_ADHESION" & !(gene %in% c("MYPN","GRIN2B")),unique(gene)]
-genes_to_plot <- c(genes_to_plot, "FZD10-AS1","SOX21")#, "PIK3C2G", "SMAD1")
+# genes_to_plot <- c(genes_to_plot, "FZD10-AS1","SOX21")#, "PIK3C2G", "SMAD1")
 # Only include genes for which the differential expression signal is consistent between median and mean counts
 agreed_genes <- dcast(tmp, gene+padj~method,value.var="greater_in_ns")[mean==median & gene %in% genes_to_plot,gene]
 agreed_genes <- agreed_genes[!agreed_genes %in% c("F2","F7","PROC","DEFB1","PENK","UNC5D","TLL2","HLX","DENND2A","BRMS1L","GRID2","IGF2-AS","SH3TC2","TF")]
@@ -428,7 +444,7 @@ all_x <- rbind(all, data.table(gene=setdiff(agreed_genes,all$gene),pathway='Othe
 # genes_to_plot <- c(genes_to_plot, "SMAD3", "HHIP", "FZD10", "PRSS2","IQGAP1", "SOX21")
 # agreed_genes <- c(agreed_genes, "SMAD3", "HHIP", "FZD10", "PRSS2","IQGAP1", "SOX21")
 
-p1 = ggplot(median_counts_filtered, aes(x=smoking_status,y=gene_name)) + 
+p1 = ggplot(median_counts_filtered, aes(x=smoking_status,y=gene)) + 
         geom_tile(fill=ifelse(median_counts_filtered$tvn_change=='+','red',ifelse(median_counts_filtered$tvn_change=='-','blue','gray')),alpha=0.1) +
         geom_point(aes(fill=log2fc, size=log2(Mut)),shape=21,color="black",alpha=1) + 
         geom_text(aes(label=fcase(
@@ -437,15 +453,17 @@ p1 = ggplot(median_counts_filtered, aes(x=smoking_status,y=gene_name)) +
                 #smoking_status=="NS" & padj < alpha*3, "."
             ), vjust=ifelse(padj<alpha, 0.725, 0.1)), 
             hjust=0.5, size=4, nudge_x=-0.5) +
-        scale_fill_gradient2(low="blue",mid="white",high="red",midpoint=0, breaks=c(-1.5,-0.5,0.5,1.3), labels=c(-1.5,-0.5,0.5,1.3)) + 
+        scale_fill_gradient2(low="blue",mid="white",high="red",midpoint=0, breaks=c(-1.3,-0.5,0.5,1.3,2.1), labels=c(-1.3,-0.5,0.5,1.3,2.1)) + 
+        scale_size_continuous(breaks=seq(0,12,3), labels=seq(0,12,3)) + 
+        guides(size=guide_legend(nrow=2)) +
         scale_x_discrete(labels=c("NS"="NS-LUAD", "ES"="ES-LUAD")) +
         labs(x ="",
             y="", # "Gene",
-            size = "log2(median expression) in<br>*EGFR* mutant samples",
+            size = "log2(median expression)\nin EGFR mutant samples",
             # fill = "Change in expression\nfrom Normal to Tumor",
-            fill = "log2FC from<br>*EGFR* WT to mutant") +
+            fill = "log2FC from EGFR\nWT to mutant") +
         theme_minimal() + 
-        theme(axis.text.y = ggtext::element_markdown(size=12, hjust=0.5),
+        theme(axis.text.y = element_text(size=12, hjust=0.5, face="italic"),
                 axis.text.x = element_text(size=12, angle=45, hjust=1),
                 panel.grid.major = element_blank())
 p2 = ggplot(all_x[gene %in% median_counts_filtered$gene][, gene := factor(gene, levels = unique(median_counts_filtered$gene))], aes(x=pathway, y=gene)) + 
@@ -460,7 +478,7 @@ p2 = ggplot(all_x[gene %in% median_counts_filtered$gene][, gene := factor(gene, 
                 plot.margin = margin(, , , 5, "mm"),
                 axis.text.y = element_blank(), axis.ticks = element_blank(),
                 axis.text.x = element_text(size=12, angle=45, hjust=1),
-                legend.position = "none", legend.title =  ggtext::element_markdown(size=12, hjust=0.5))
+                legend.position = "none", legend.title = element_text(size=12, hjust=0.5))
 
 p_all <- plot_grid(p2, p1 + theme(legend.position="none"), nrow = 1, rel_widths = c(1, 1.35))
 p_all
@@ -473,9 +491,6 @@ ggsave(file.path(location_figures, "egfr_pathway_analysis.png"), p_all, width = 
 library(GSVA)
 library(GSEABase)
 
-hallmark_sets <- getGmt(file.path(location_msigdb, 'h.all.v2024.1.Hs.symbols.gmt'),
-                        geneIdType=SymbolIdentifier(),
-                        collectionType = BroadCollection(category="h"))
 canonical_sets <- getGmt(file.path(location_msigdb, 'c2.cp.v2024.1.Hs.symbols.gmt'),
                         geneIdType=SymbolIdentifier(),
                         collectionType = BroadCollection(category="c2"))

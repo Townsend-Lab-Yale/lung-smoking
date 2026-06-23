@@ -174,7 +174,8 @@ def plot_epistatic_ratios_2_matrices(results_nonsmoking,
                       fraction=0.01,
                       pad=0.1)
     cb.set_ticks([0, 1, 10, 20, 30])
-    cb.set_label('Epistatic ratio')
+    cb.set_label('Epistatic ratio', fontsize=14)
+    cb.ax.tick_params(labelsize=12, labelrotation=90)
     cb.ax.yaxis.set_label_position('left')
 
 
@@ -329,7 +330,8 @@ def plot_epistatic_ratios_2_matrices_poster(results_nonsmoking,
                       fraction=0.01,
                       pad=0.1)
     cb.set_ticks([0, 1, 10, 20, 30])
-    cb.set_label('Epistatic ratio')
+    cb.set_label('Epistatic ratio', fontsize=14)
+    cb.ax.tick_params(labelsize=12)
     cb.ax.yaxis.set_label_position('left')
 
 
@@ -354,7 +356,9 @@ def plot_epistatic_ratios_separate(results_nonsmoking,
                                    results_smoking_cis,
                                    gene_list_by_selection,
                                    third_gene_effects=None,
-                                   plot_name=None):
+                                   plot_name=None,
+                                   axis_label_size=16,
+                                   axis_title_size=18):
     """Create a plot with the epistatic ratios.
 
     This function plots the matrices in different figures, so that it
@@ -403,12 +407,12 @@ def plot_epistatic_ratios_separate(results_nonsmoking,
     ax_smoking.set_aspect('equal', adjustable='box')
 
     ax_smoking.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90)
-    ax_smoking.set_xlabel("Context (mutated gene in somatic genotype)")
+    ax_smoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size, style='italic')
+    ax_smoking.set_xlabel("Context (mutated gene in somatic genotype)", fontsize=axis_title_size)
 
     ax_smoking.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax_smoking.set_yticklabels(gene_list_by_selection[::-1])
-    ax_smoking.set_ylabel("Gene mutation under selection")
+    ax_smoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size, style='italic')
+    ax_smoking.set_ylabel("Mutation under selection", fontsize=axis_title_size)
 
     ax_smoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
     ax_smoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
@@ -441,12 +445,12 @@ def plot_epistatic_ratios_separate(results_nonsmoking,
     ax_nonsmoking.set_aspect('equal', adjustable='box')
 
     ax_nonsmoking.set_xticks(np.arange(len(gene_list_by_selection)))
-    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90)
-    ax_nonsmoking.set_xlabel("Context (mutated gene in somatic genotype)")
+    ax_nonsmoking.set_xticklabels(gene_list_by_selection, rotation=90, fontsize=axis_label_size, style='italic')
+    ax_nonsmoking.set_xlabel("Context (mutated gene in somatic genotype)", fontsize=axis_title_size)
 
     ax_nonsmoking.set_yticks(np.arange(len(gene_list_by_selection)))
-    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1])
-    ax_nonsmoking.set_ylabel("Gene mutation under selection")
+    ax_nonsmoking.set_yticklabels(gene_list_by_selection[::-1], fontsize=axis_label_size, style='italic')
+    ax_nonsmoking.set_ylabel("Mutation under selection", fontsize=axis_title_size)
 
     ax_nonsmoking.set_xticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
     ax_nonsmoking.set_yticks(np.arange(0.5, len(gene_list_by_selection), 1), minor=True)
@@ -468,7 +472,8 @@ def plot_epistatic_ratios_separate(results_nonsmoking,
     fig_colorbar, ax_colorbar = plt.subplots(figsize=(2, 8))
     cb = fig_colorbar.colorbar(pcm_smoking, cax=ax_colorbar, orientation='vertical')
     cb.set_ticks([0, 1, 10, 20, 30])
-    cb.set_label('Epistatic ratio')
+    cb.set_label('Epistatic ratio', fontsize=14)
+    cb.ax.tick_params(labelsize=12)
     fig_colorbar.subplots_adjust(right=0.78)
     fig_colorbar.savefig(os.path.join(location_figures, f"{plot_name}_colorbar.png"), dpi=200)
     plt.close(fig_colorbar)

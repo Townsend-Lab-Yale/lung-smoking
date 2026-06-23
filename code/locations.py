@@ -97,7 +97,7 @@ cesR_filtered_maf_file_name = os.path.join(location_output, 'cesR_maf_for_epista
 genes_per_sample_file_name = os.path.join(location_output, 'genes_per_sample.txt')
 indels_per_sample_file_name = os.path.join(location_output, 'indels_per_sample.txt')
 
-results_keys = ["pan_data", "smoking", "nonsmoking", "smoking_plus", "nonsmoking_plus"]
+results_keys = ["pan_data", "smoking_plus", "nonsmoking_plus"]
 """List with possible keys to classify the data.
 
 """
