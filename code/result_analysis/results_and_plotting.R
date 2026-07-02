@@ -19,13 +19,16 @@ library(glue)
 library(stringr)
 
 
-location_variant_output = "variant_results/"
-location_cesR_output = "cesR_results/"
 output_subdir = trimws(Sys.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", unset = ""))
 
+# When LUNG_SMOKING_OUTPUT_SUBDIR is empty, results live directly under output/;
+# otherwise they live under output/<subdir>/.
 if (nzchar(output_subdir)) {
     location_variant_output = file.path("..", "..", "output", output_subdir, "variant_results", "")
     location_cesR_output = file.path("..", "..", "output", output_subdir, "cesR_results", "")
+} else {
+    location_variant_output = file.path("..", "..", "output", "variant_results", "")
+    location_cesR_output = file.path("..", "..", "output", "cesR_results", "")
 }
 
 get_epistasis_testing_dir = function(){
@@ -33,8 +36,11 @@ get_epistasis_testing_dir = function(){
     # Inputs: optional LUNG_SMOKING_OUTPUT_SUBDIR environment variable.
     # Output: path to output/<subdir>/epistasis_testing.
     # Assumption: the testing pipeline has already been run for the same output subdirectory.
-    run_subdir = ifelse(nzchar(output_subdir), output_subdir, "task0_indel_exclusion")
-    file.path("..", "..", "output", run_subdir, "epistasis_testing")
+    if (nzchar(output_subdir)) {
+        file.path("..", "..", "output", output_subdir, "epistasis_testing")
+    } else {
+        file.path("..", "..", "output", "epistasis_testing")
+    }
 }
 
 load_epistasis_testing_results = function(){
@@ -43,11 +49,13 @@ load_epistasis_testing_results = function(){
     # Output: named list of data frames.
     # Assumption: Python remains the source of truth for Wald/BH calculations.
     testing_dir = get_epistasis_testing_dir()
-    run_subdir = ifelse(nzchar(output_subdir), output_subdir, "task0_indel_exclusion")
     rerun_cmd = paste(
-        "cd code/result_analysis &&",
-        sprintf("LUNG_SMOKING_OUTPUT_SUBDIR=%s", shQuote(run_subdir)),
-        "../.venv/bin/python analysis_for_paper_1.py"
+        c(
+            "cd code/result_analysis &&",
+            if (nzchar(output_subdir)) sprintf("LUNG_SMOKING_OUTPUT_SUBDIR=%s", shQuote(output_subdir)),
+            "../.venv/bin/python analysis_for_paper_1.py"
+        ),
+        collapse = " "
     )
     required_files = c(
         M2_pairwise_primary_tests = "M2_pairwise_primary_tests.csv",

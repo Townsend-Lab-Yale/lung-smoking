@@ -8,7 +8,6 @@ mu_method = "variant"
 
 from numpy_to_csv import convert_all_numpy_to_csv
 from run_epistasis_testing_pipeline import run_epistasis_testing
-# Export task0-style CSV tables and stable Wald/BH summaries before plotting.
 convert_all_numpy_to_csv(extension=model_results_extension, mu_method=mu_method)
 run_epistasis_testing(method=mu_method)
 

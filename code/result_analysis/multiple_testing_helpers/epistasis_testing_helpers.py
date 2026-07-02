@@ -26,7 +26,7 @@ import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_RUN_ROOT = PROJECT_ROOT / "output" / "task0_indel_exclusion"
+DEFAULT_RUN_ROOT = PROJECT_ROOT / "output"
 Z_975 = 1.959963984540054
 DELTA_TOL = 1e-12
 

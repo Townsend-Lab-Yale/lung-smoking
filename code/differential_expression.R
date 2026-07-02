@@ -494,7 +494,6 @@ library(GSEABase)
 canonical_sets <- getGmt(file.path(location_msigdb, 'c2.cp.v2024.1.Hs.symbols.gmt'),
                         geneIdType=SymbolIdentifier(),
                         collectionType = BroadCollection(category="c2"))
-combined_sets <- GeneSetCollection(c(hallmark_sets, canonical_sets))
 
 keap1_de <- run_transcriptomics_deseq(
     counts = tcga_counts_clean,
@@ -525,7 +524,7 @@ vsd_copy <- vsd_copy[!is.na(vsd_copy_gene_names) & !duplicated(vsd_copy_gene_nam
 rownames(vsd_copy) <- vsd_copy_gene_names[!is.na(vsd_copy_gene_names) & !duplicated(vsd_copy_gene_names)]
 assayNames(vsd_copy) <- "counts"
 
-keap1_par <- gsvaParam(exprData=vsd_copy[,vsd_copy$sample_type=="Primary Tumor"],geneSets=combined_sets,kcdf="Gaussian",assay='counts')
+keap1_par <- gsvaParam(exprData=vsd_copy[,vsd_copy$sample_type=="Primary Tumor"],geneSets=canonical_sets,kcdf="Gaussian",assay='counts')
 keap1_es <- gsva(keap1_par)
 
 gsva_res <- as.data.table(t(assay(keap1_es)),keep.rownames = T)

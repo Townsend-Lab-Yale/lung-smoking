@@ -1,7 +1,5 @@
-setwd("code/result_analysis")
-
 if (!nzchar(Sys.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", unset = ""))) {
-    Sys.setenv(LUNG_SMOKING_OUTPUT_SUBDIR = "task0_indel_exclusion")
+    Sys.setenv(LUNG_SMOKING_OUTPUT_SUBDIR = "")
 }
 
 source('results_and_plotting.R')
@@ -24,7 +22,7 @@ save_figure <- function(plot, stem, width, height, dpi = 300) {
     # Inputs: plot object; file stem; width/height in inches.
     # Output: PNG file under the task-specific figure directory.
     # Assumption: plot was generated from the result directory selected by
-    # LUNG_SMOKING_OUTPUT_SUBDIR, set above to task0_indel_exclusion by default.
+    # LUNG_SMOKING_OUTPUT_SUBDIR, set above to "" by default.
     png_path <- file.path(location_figures, paste0(stem, ".png"))
     ggsave(png_path, plot, width = width, height = height, dpi = dpi, bg = "white", limitsize = FALSE)
     saved_figures <<- rbind(
@@ -282,7 +280,7 @@ variant_M2_smoking_interaction_df %>% filter(signif, epistatic_gt != "WT") %>%
     arrange(ratio) %>%
     filter(!epistatic_gt %in% c("TP53","KRAS"))
 
-variant_M2_smoking_interaction_df %>% filter(siognif, epistatic_gt != "WT") %>%
+variant_M2_smoking_interaction_df %>% filter(signif, epistatic_gt != "WT") %>%
     filter(ratio > 1) %>%
     arrange(ratio) %>%
     filter(!epistatic_gt %in% c("TP53","KRAS"))
@@ -709,7 +707,7 @@ shape_palette = c("Wild-type"=21, "Single-mutant"=22, "Double-mutant"=23)
 fill_palette = c("TP53_KRAS_EGFR_EGFR"="springgreen3", "STK11_ATM_ALK_ALK"="coral3", "TP53_KRAS_ARID1A_ARID1A"="mediumpurple2","KEAP1_STK11_APC_APC"="plum2")
 
 tmp_df = 
-    smoking_plotting_df %>% filter(extra_effect_strict & signif | (gene_set == "STK11_ATM_ALK" & mutated_gene == "ALK")) %>%
+    smoking_plotting_df %>% filter(extra_effect_strict | (gene_set == "STK11_ATM_ALK" & mutated_gene == "ALK")) %>%
     bind_rows(variant_M3_smoking_interaction_df %>% filter(epistatic_gt=="WT") %>% mutate(pairwise_combo = combo_name)) %>%
     #filter(pairwise_combo %in% smoking_interactions_to_plot) %>% 
     group_by(gene_set, pairwise_combo) %>% filter(n()==3) %>% ungroup() %>%
@@ -728,7 +726,9 @@ tmp_df =
     group_by(gene_set, pairwise_combo) %>% mutate(order = max(order), max_gamma = NULL) %>% ungroup() %>% 
     rowwise() %>% mutate(other_genes = gsub('(__|_)',',<br>',trimws(gsub(mutated_gene, '',gene_set), "right", '_'))) %>% ungroup() %>% 
     arrange(mutated_gene, other_genes, group) %>%
-    mutate_cond(mutated_gene == "SMARCA4" & gene_set == "KRAS_KEAP1_SMARCA4" & group != "Wild-type", label = c('KE+KR','KR'), label_nudge_dist = label_nudge_dist + c(0.15,0.075)) %>%
+    mutate_cond(mutated_gene == "SMARCA4" & gene_set == "KRAS_KEAP1_SMARCA4" & group != "Wild-type",
+                label = ifelse(group == "Double-mutant", 'KE+KR', 'KR'),
+                label_nudge_dist = label_nudge_dist + ifelse(group == "Double-mutant", 0.15, 0.075)) %>%
     join_m3_regime_calls(regime_m3_calls) %>%
     mutate(bh_point_alpha = ifelse(group == "Double-mutant",
                                    ifelse(reported_signif_revised_alpha_0_1 %in% TRUE, 1, 0.25),
@@ -784,7 +784,7 @@ shape_palette = c("Wild-type"=21, "Single-mutant"=22, "Double-mutant"=23)
 fill_palette = c("EGFR_PIK3CA_ARID1A_ARID1A"=NA)
 
 tmp_df = 
-    nonsmoking_plotting_df %>% filter(extra_effect_strict, signif) %>%
+    nonsmoking_plotting_df %>% filter(extra_effect_strict) %>%
     bind_rows(variant_M3_nonsmoking_interaction_df %>% filter(epistatic_gt=="WT") %>% mutate(pairwise_combo = combo_name)) %>%
     group_by(gene_set, pairwise_combo) %>% filter(n()==3) %>% ungroup() %>%
     mutate(group = ifelse(epistatic_gt=="WT","Wild-type", ifelse(str_detect(epistatic_gt, "_"), "Double-mutant","Single-mutant")),
