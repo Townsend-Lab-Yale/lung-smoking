@@ -20,10 +20,7 @@ def get_result_analysis_output_dir(mu_method):
     else:
         raise ValueError("mu_method must be 'cesR' or 'variant'.")
 
-    if os.getenv("LUNG_SMOKING_OUTPUT_SUBDIR", "").strip():
-        return os.path.join(location_output, result_dir_name)
-
-    return result_dir_name
+    return os.path.join(location_output, result_dir_name)
 
 
 def split_gene_set_columns(gene_set_series):
